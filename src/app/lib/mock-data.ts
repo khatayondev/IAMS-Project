@@ -197,47 +197,7 @@ export const programsByDepartment: Record<string, string[]> = {
 // Flat list of all programs across departments (convenience for selectors).
 export const programs: string[] = Object.values(programsByDepartment).flat();
 
-export const terms: Term[] = [
-  {
-    id: "t1",
-    name: "2026 L300 Semestrial Internship",
-    type: "Semestrial",
-    status: "Active",
-    applicationStart: "2026-03-01",
-    applicationEnd: "2026-05-31",
-    internshipStart: "2026-06-01",
-    internshipEnd: "2026-07-31",
-    eligibleLevels: ["L300"],
-    departments: departments,
-    programs: [],
-  },
-  {
-    id: "t2",
-    name: "2025 L200 Vacation Internship",
-    type: "Vacation",
-    status: "Archived",
-    applicationStart: "2025-05-01",
-    applicationEnd: "2025-05-20",
-    internshipStart: "2025-07-01",
-    internshipEnd: "2025-08-31",
-    eligibleLevels: ["L200"],
-    departments: departments,
-    programs: [],
-  },
-  {
-    id: "t3",
-    name: "2026 L200 Vacation Internship",
-    type: "Vacation",
-    status: "Upcoming",
-    applicationStart: "2026-05-01",
-    applicationEnd: "2026-05-20",
-    internshipStart: "2026-07-01",
-    internshipEnd: "2026-08-31",
-    eligibleLevels: ["L200"],
-    departments: ["Computer Science", "Electrical Engineering"],
-    programs: ["BSc Computer Science", "BEng Electrical & Electronic Engineering"],
-  },
-];
+export const terms: Term[] = [];
 
 export const companies: Company[] = [
   {
@@ -279,30 +239,7 @@ export const branches: Branch[] = [
   { id: "b-c6-main", companyId: "c6", name: "Airport City Branch", region: "Greater Accra Region", location: "Accra", address: "Airport City, Accra", telephone: "+233244556677", status: "Rejected", addedBy: "Akua Manu", dateAdded: "2026-03-05", rejectionReason: "Parent company rejected" },
 ];
 
-export const applications: Application[] = [
-  // Demo student John Doe (CS/2023/001) intentionally has no seeded application so the
-  // student flow can be walked through from a fresh state. Use other accounts to demo
-  // the Active / Completed tracker views.
-  { id: "a2", studentName: "Jane Smith", studentId: "EE/2023/015", department: "Electrical Engineering", level: "L300", companyId: "c2", companyName: "Volta River Authority", companyStatus: "Approved", branchId: "b-c2-main", branchName: "Akosombo Plant", status: "Completed", dateApplied: "2026-03-04", supervisorAssigned: "Prof. Danso" },
-  { id: "a3", studentName: "Kwesi Mensah", studentId: "CS/2023/022", department: "Computer Science", level: "L300", companyId: "c3", companyName: "TechHub Ghana", companyStatus: "Pending", branchId: "b-c3-main", branchName: "Osu HQ", status: "Pending", dateApplied: "2026-03-10" },
-  { id: "a4", studentName: "Ama Darko", studentId: "CE/2023/008", department: "Civil Engineering", level: "L300", companyId: "c4", companyName: "Ashanti Construction Co.", companyStatus: "Pending", branchId: "b-c4-main", branchName: "Kumasi Site", status: "Pending", dateApplied: "2026-03-11" },
-  { id: "a5", studentName: "Yaw Frimpong", studentId: "ME/2023/003", department: "Mechanical Engineering", level: "L300", companyId: "c5", companyName: "GoldFields Mining", companyStatus: "Approved", branchId: "b-c5-main", branchName: "Tarkwa Mine", status: "Company Accepted", dateApplied: "2026-03-06" },
-  { id: "a6", studentName: "Abena Osei", studentId: "CS/2023/045", department: "Computer Science", level: "L300", companyId: "c1", companyName: "Ghana Telecom Ltd", companyStatus: "Approved", branchId: "b-c1-kumasi", branchName: "Kumasi Branch", status: "Approved", dateApplied: "2026-03-07" },
-  { id: "a7", studentName: "Kofi Asare", studentId: "BA/2023/012", department: "Business Administration", level: "L300", companyId: "c1", companyName: "Ghana Telecom Ltd", companyStatus: "Approved", branchId: "b-c1-main", branchName: "Head Office", status: "Active", dateApplied: "2026-03-03", supervisorAssigned: "Dr. Mensah" },
-  { id: "a8", studentName: "Efua Mensah", studentId: "AF/2023/007", department: "Accounting & Finance", level: "L300", companyId: "c6", companyName: "Stanbic Bank Ghana", companyStatus: "Approved", branchId: "b-c6-main", branchName: "Airport City Branch", status: "Active", dateApplied: "2026-03-04", supervisorAssigned: "Mr. Appiah" },
-  { id: "a9", studentName: "Nana Adjei", studentId: "EE/2023/031", department: "Electrical Engineering", level: "L300", companyId: "c2", companyName: "Volta River Authority", companyStatus: "Approved", branchId: "b-c2-accra", branchName: "Accra Office", status: "Active", dateApplied: "2026-03-05", supervisorAssigned: "Prof. Danso" },
-  { id: "a10", studentName: "Akosua Boateng", studentId: "ME/2023/019", department: "Mechanical Engineering", level: "L300", companyId: "c5", companyName: "GoldFields Mining", companyStatus: "Approved", branchId: "b-c5-main", branchName: "Tarkwa Mine", status: "Pending", dateApplied: "2026-03-12" },
-  // Approved/Accepted CS students awaiting supervisor auto-assignment
-  { id: "a11", studentName: "Selorm Agbeko", studentId: "CS/2023/051", department: "Computer Science", level: "L300", companyId: "c1", companyName: "Ghana Telecom Ltd", companyStatus: "Approved", branchId: "b-c1-main", branchName: "Head Office", status: "Active", dateApplied: "2026-03-08", supervisorAssigned: "Dr. Abena Osei" },
-  { id: "a12", studentName: "Linda Owusu", studentId: "CS/2023/058", department: "Computer Science", level: "L300", companyId: "c1", companyName: "Ghana Telecom Ltd", companyStatus: "Approved", branchId: "b-c1-main", branchName: "Head Office", status: "Company Accepted", dateApplied: "2026-03-08" },
-  { id: "a13", studentName: "Michael Tetteh", studentId: "CS/2023/063", department: "Computer Science", level: "L300", companyId: "c1", companyName: "Ghana Telecom Ltd", companyStatus: "Approved", branchId: "b-c1-kumasi", branchName: "Kumasi Branch", status: "Active", dateApplied: "2026-03-09", supervisorAssigned: "Dr. Abena Osei" },
-  { id: "a14", studentName: "Grace Antwi", studentId: "CS/2023/070", department: "Computer Science", level: "L300", companyId: "c1", companyName: "Ghana Telecom Ltd", companyStatus: "Approved", branchId: "b-c1-kumasi", branchName: "Kumasi Branch", status: "Company Accepted", dateApplied: "2026-03-09" },
-  { id: "a15", studentName: "Daniel Boakye", studentId: "CS/2023/074", department: "Computer Science", level: "L300", companyId: "c1", companyName: "Ghana Telecom Ltd", companyStatus: "Approved", branchId: "b-c1-main", branchName: "Head Office", status: "Active", dateApplied: "2026-03-10", supervisorAssigned: "Dr. Abena Osei" },
-  { id: "a16", studentName: "Patience Acquah", studentId: "CS/2023/081", department: "Computer Science", level: "L300", companyId: "c1", companyName: "Ghana Telecom Ltd", companyStatus: "Approved", branchId: "b-c1-kumasi", branchName: "Kumasi Branch", status: "Approved", dateApplied: "2026-03-10" },
-  // Additional EE / BA students for cross-department demos
-  { id: "a17", studentName: "Kojo Bediako", studentId: "EE/2023/044", department: "Electrical Engineering", level: "L300", companyId: "c2", companyName: "Volta River Authority", companyStatus: "Approved", branchId: "b-c2-accra", branchName: "Accra Office", status: "Approved", dateApplied: "2026-03-11" },
-  { id: "a18", studentName: "Adwoa Manu", studentId: "BA/2023/029", department: "Business Administration", level: "L300", companyId: "c1", companyName: "Ghana Telecom Ltd", companyStatus: "Approved", branchId: "b-c1-main", branchName: "Head Office", status: "Company Accepted", dateApplied: "2026-03-11" },
-];
+export const applications: Application[] = [];
 
 export const supervisors: Supervisor[] = [
   { id: "s1", name: "Dr. Agyeman", email: "agyeman@htu.edu.gh", department: "Computer Science", currentLoad: 4, maxLoad: 8 },
@@ -409,85 +346,16 @@ export const departmentGradingConfigs: DepartmentGradingConfig[] = [
   // Business Administration & Accounting & Finance — no config yet → falls back to default
 ];
 
-export const industrialAssessments: IndustrialSupervisorAssessment[] = [
-  // Jane Smith (EE) — fully assessed
-  {
-    id: "ind-a2", applicationId: "a2",
-    ratings: ratings([5, 4, 4, 5, 5, 4, 4, 5, 4, 5, 5, 5, 4, 4, 5, 5, 4, 4]),
-    comments: "Excellent intern. Quick learner with strong technical foundation.",
-    submittedBy: "Eng. Boateng", submittedAt: "2026-04-10T16:00:00",
-  },
-  // Efua Mensah (AF) — partially assessed
-  {
-    id: "ind-a8", applicationId: "a8",
-    ratings: ratings([4, 4, 3, 4, 4, 5, 3, 4, 5, 5, 5, 5, 4, 4, 4, 5, 5, 4]),
-    comments: "Reliable and thorough. Excellent attendance.",
-    submittedBy: "Mrs. Osei", submittedAt: "2026-04-11T15:00:00",
-  },
-];
+export const industrialAssessments: IndustrialSupervisorAssessment[] = [];
 
-export const siteVisitations: SiteVisitationScore[] = [
-  {
-    id: "sv-a2", applicationId: "a2", score: 88, comments: "Strong site engagement, great team integration.", visitedAt: "2026-04-12T10:00:00", submittedBy: "Prof. Danso",
-    ratings: {
-      V1: 3, V2: 3, V3: 3, V4: 3, V5: 3, V6: 3, V7: 3, V8: 3, V9: 3, V10: 3
-    }
-  },
-  {
-    id: "sv-a8", applicationId: "a8", score: 82, comments: "Good progress, needs more independent project work.", visitedAt: "2026-04-13T11:00:00", submittedBy: "Mr. Appiah",
-    ratings: {
-      V1: 2, V2: 3, V3: 2, V4: 3, V5: 3, V6: 2, V7: 3, V8: 2, V9: 3, V10: 2
-    }
-  },
-];
+export const siteVisitations: SiteVisitationScore[] = [];
 
-export const reportScores: ReportScore[] = [
-  // EE uses Structure A → only report. Jane's report graded.
-  { id: "rs-a2", applicationId: "a2", score: 90, comments: "Well-structured, thorough analysis.", submittedBy: "Dr. Kofi Amankwah", submittedAt: "2026-04-20T09:00:00" },
-];
+export const reportScores: ReportScore[] = [];
 
-export const presentationScores: PresentationScore[] = [
-  // No presentations graded yet.
-];
+export const presentationScores: PresentationScore[] = [];
 
-// Compiled grades — only Jane Smith (a2) has all components present (EE Structure A)
-// Final = (87.78 * 40 + 88 * 30 + 90 * 30) / 100 — recompiled at runtime; seeded value below is illustrative.
-export const compiledGrades: CompiledGrade[] = [
-  {
-    applicationId: "a2",
-    components: { industrial: 88, departmental: 88, report: 90 },
-    configSnapshot: departmentGradingConfigs[1],
-    finalPercent: 88.6,
-    status: "Approved",
-    updatedAt: "2026-04-20T10:00:00",
-    approvedBy: "Dr. Kofi Amankwah",
-    approvedAt: "2026-04-20T10:00:00",
-  },
-];
+export const compiledGrades: CompiledGrade[] = [];
 
-// Weekly Assessment Rubric entries (qualitative — NOT scored).
-// Seeded for Jane Smith (a2) so DLO/Academic dashboards have something to show.
-export const weeklyRubrics: WeeklyRubricEntry[] = [
-  {
-    id: "wr-a2-w1", applicationId: "a2", termId: "t1", weekNumber: 1,
-    weekStart: "2026-06-01", weekEnd: "2026-06-07",
-    ratings: { WR1: "Good", WR2: "Very Good", WR3: "Good", WR4: "Average", WR5: "Average", WR6: "Above Average" },
-    notes: "Settling in well. Asked thoughtful questions during onboarding.",
-    submittedBy: "Eng. Boateng", submittedAt: "2026-06-07T17:00:00",
-  },
-  {
-    id: "wr-a2-w2", applicationId: "a2", termId: "t1", weekNumber: 2,
-    weekStart: "2026-06-08", weekEnd: "2026-06-14",
-    ratings: { WR1: "Very Good", WR2: "Very Good", WR3: "Very Good", WR4: "Above Average", WR5: "Above Average", WR6: "Above Average" },
-    notes: "Took initiative on the network audit task.",
-    submittedBy: "Eng. Boateng", submittedAt: "2026-06-14T17:30:00",
-  },
-];
+export const weeklyRubrics: WeeklyRubricEntry[] = [];
 
-// Student activity mock data
-export const studentActivity = [
-  { studentName: "John Doe", lastLogDate: "2026-04-17", daysSinceLog: 1, status: "green" as const },
-  { studentName: "Kofi Asare", lastLogDate: "2026-04-15", daysSinceLog: 3, status: "yellow" as const },
-  { studentName: "Nana Adjei", lastLogDate: "2026-04-10", daysSinceLog: 8, status: "red" as const },
-  { studentName: "Efua Mensah", lastLogDate: "2026-04-16", daysSinceLog: 2, status: "green" as const },
-];
+export const studentActivity: { studentName: string; lastLogDate: string; daysSinceLog: number; status: "green" | "yellow" | "red" }[] = [];
