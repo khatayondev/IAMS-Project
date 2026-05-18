@@ -42,6 +42,7 @@ export interface Term {
 }
 
 export interface Company {
+  branchCount: number;
   id: string;
   name: string;
   contactPerson: string;
@@ -239,12 +240,30 @@ export const terms: Term[] = [
 ];
 
 export const companies: Company[] = [
-  { id: "c1", name: "Ghana Telecom Ltd", address: "Independence Ave, Accra", contactPerson: "Mr. Mensah", contactEmail: "mensah@ghtel.com", contactPhone: "+233201234567", industry: "Telecommunications", status: "Approved", addedBy: "John Doe", department: "Computer Science", dateAdded: "2026-03-02" },
-  { id: "c2", name: "Volta River Authority", address: "28th Feb Road, Accra", contactPerson: "Eng. Boateng", contactEmail: "boateng@vra.gov.gh", contactPhone: "+233209876543", industry: "Energy", status: "Approved", addedBy: "Jane Smith", department: "Electrical Engineering", dateAdded: "2026-03-03" },
-  { id: "c3", name: "TechHub Ghana", address: "Osu, Accra", contactPerson: "Ms. Adjei", contactEmail: "adjei@techhub.gh", contactPhone: "+233241112233", industry: "Technology", status: "Pending", addedBy: "Kwesi Mensah", department: "Computer Science", dateAdded: "2026-03-10" },
-  { id: "c4", name: "Ashanti Construction Co.", address: "Kumasi CBD", contactPerson: "Mr. Owusu", contactEmail: "owusu@ashconst.com", contactPhone: "+233272223344", industry: "Construction", status: "Pending", addedBy: "Ama Darko", department: "Civil Engineering", dateAdded: "2026-03-11" },
-  { id: "c5", name: "GoldFields Mining", address: "Tarkwa", contactPerson: "Dr. Antwi", contactEmail: "antwi@goldfields.com", contactPhone: "+233303334455", industry: "Mining", status: "Approved", addedBy: "Yaw Frimpong", department: "Mechanical Engineering", dateAdded: "2026-02-28" },
-  { id: "c6", name: "Stanbic Bank Ghana", address: "Airport City, Accra", contactPerson: "Mrs. Osei", contactEmail: "osei@stanbic.gh", contactPhone: "+233244556677", industry: "Banking", status: "Rejected", addedBy: "Akua Manu", department: "Accounting & Finance", dateAdded: "2026-03-05", rejectionReason: "Company does not meet department requirements" },
+  {
+    id: "c1", name: "Ghana Telecom Ltd", address: "Independence Ave, Accra", contactPerson: "Mr. Mensah", contactEmail: "mensah@ghtel.com", contactPhone: "+233201234567", industry: "Telecommunications", status: "Approved", addedBy: "John Doe", department: "Computer Science", dateAdded: "2026-03-02",
+    branchCount: 0
+  },
+  {
+    id: "c2", name: "Volta River Authority", address: "28th Feb Road, Accra", contactPerson: "Eng. Boateng", contactEmail: "boateng@vra.gov.gh", contactPhone: "+233209876543", industry: "Energy", status: "Approved", addedBy: "Jane Smith", department: "Electrical Engineering", dateAdded: "2026-03-03",
+    branchCount: 0
+  },
+  {
+    id: "c3", name: "TechHub Ghana", address: "Osu, Accra", contactPerson: "Ms. Adjei", contactEmail: "adjei@techhub.gh", contactPhone: "+233241112233", industry: "Technology", status: "Pending", addedBy: "Kwesi Mensah", department: "Computer Science", dateAdded: "2026-03-10",
+    branchCount: 0
+  },
+  {
+    id: "c4", name: "Ashanti Construction Co.", address: "Kumasi CBD", contactPerson: "Mr. Owusu", contactEmail: "owusu@ashconst.com", contactPhone: "+233272223344", industry: "Construction", status: "Pending", addedBy: "Ama Darko", department: "Civil Engineering", dateAdded: "2026-03-11",
+    branchCount: 0
+  },
+  {
+    id: "c5", name: "GoldFields Mining", address: "Tarkwa", contactPerson: "Dr. Antwi", contactEmail: "antwi@goldfields.com", contactPhone: "+233303334455", industry: "Mining", status: "Approved", addedBy: "Yaw Frimpong", department: "Mechanical Engineering", dateAdded: "2026-02-28",
+    branchCount: 0
+  },
+  {
+    id: "c6", name: "Stanbic Bank Ghana", address: "Airport City, Accra", contactPerson: "Mrs. Osei", contactEmail: "osei@stanbic.gh", contactPhone: "+233244556677", industry: "Banking", status: "Rejected", addedBy: "Akua Manu", department: "Accounting & Finance", dateAdded: "2026-03-05", rejectionReason: "Company does not meet department requirements",
+    branchCount: 0
+  },
 ];
 
 // One "Main Branch" auto-seeded per company so existing applications can link.
@@ -330,10 +349,10 @@ function ratings(values: number[]): Record<string, CriterionRating> {
   // 20 criteria — A1-A4 (4), B1-B8 (8), C1-C5 (5), D1-D3 (3).
   // Older 18-value seed arrays are auto-padded for B7/B8 with a default 3.
   const keys = [
-    "A1","A2","A3","A4",
-    "B1","B2","B3","B4","B5","B6","B7","B8",
-    "C1","C2","C3","C4","C5",
-    "D1","D2","D3",
+    "A1", "A2", "A3", "A4",
+    "B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8",
+    "C1", "C2", "C3", "C4", "C5",
+    "D1", "D2", "D3",
   ];
   const out: Record<string, CriterionRating> = {} as any;
   // If the caller passed the legacy 18-length array (pre-B7/B8), splice in defaults.
@@ -394,22 +413,32 @@ export const industrialAssessments: IndustrialSupervisorAssessment[] = [
   // Jane Smith (EE) — fully assessed
   {
     id: "ind-a2", applicationId: "a2",
-    ratings: ratings([5,4,4,5, 5,4,4,5,4,5, 5,5,4,4,5, 5,4,4]),
+    ratings: ratings([5, 4, 4, 5, 5, 4, 4, 5, 4, 5, 5, 5, 4, 4, 5, 5, 4, 4]),
     comments: "Excellent intern. Quick learner with strong technical foundation.",
     submittedBy: "Eng. Boateng", submittedAt: "2026-04-10T16:00:00",
   },
   // Efua Mensah (AF) — partially assessed
   {
     id: "ind-a8", applicationId: "a8",
-    ratings: ratings([4,4,3,4, 4,5,3,4,5,5, 5,5,4,4,4, 5,5,4]),
+    ratings: ratings([4, 4, 3, 4, 4, 5, 3, 4, 5, 5, 5, 5, 4, 4, 4, 5, 5, 4]),
     comments: "Reliable and thorough. Excellent attendance.",
     submittedBy: "Mrs. Osei", submittedAt: "2026-04-11T15:00:00",
   },
 ];
 
 export const siteVisitations: SiteVisitationScore[] = [
-  { id: "sv-a2", applicationId: "a2", score: 88, comments: "Strong site engagement, great team integration.", visitedAt: "2026-04-12T10:00:00", submittedBy: "Prof. Danso" },
-  { id: "sv-a8", applicationId: "a8", score: 82, comments: "Good progress, needs more independent project work.", visitedAt: "2026-04-13T11:00:00", submittedBy: "Mr. Appiah" },
+  {
+    id: "sv-a2", applicationId: "a2", score: 88, comments: "Strong site engagement, great team integration.", visitedAt: "2026-04-12T10:00:00", submittedBy: "Prof. Danso",
+    ratings: {
+      V1: 3, V2: 3, V3: 3, V4: 3, V5: 3, V6: 3, V7: 3, V8: 3, V9: 3, V10: 3
+    }
+  },
+  {
+    id: "sv-a8", applicationId: "a8", score: 82, comments: "Good progress, needs more independent project work.", visitedAt: "2026-04-13T11:00:00", submittedBy: "Mr. Appiah",
+    ratings: {
+      V1: 2, V2: 3, V3: 2, V4: 3, V5: 3, V6: 2, V7: 3, V8: 2, V9: 3, V10: 2
+    }
+  },
 ];
 
 export const reportScores: ReportScore[] = [

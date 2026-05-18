@@ -193,6 +193,199 @@ export function getState(): StoreState {
   return state;
 }
 
+export function simulateStudentStage(stage: "fresh" | "pending" | "active" | "completed", studentId: string) {
+  let filteredApps = state.applications.filter(a => a.studentId !== studentId);
+  let filteredLogs = state.logbookEntries.filter(l => l.studentId !== studentId);
+  let filteredVisits = state.siteVisitations.filter(v => v.applicationId !== "a-demo-john");
+  let filteredAssessments = state.industrialAssessments.filter(x => x.applicationId !== "a-demo-john");
+  let filteredReports = state.reportScores.filter(r => r.applicationId !== "a-demo-john");
+  let filteredCompiled = state.compiledGrades.filter(g => g.applicationId !== "a-demo-john");
+
+  if (stage === "fresh") {
+    state = {
+      ...state,
+      applications: filteredApps,
+      logbookEntries: filteredLogs,
+      siteVisitations: filteredVisits,
+      industrialAssessments: filteredAssessments,
+      reportScores: filteredReports,
+      compiledGrades: filteredCompiled,
+    };
+  } else if (stage === "pending") {
+    const newApp: Application = {
+      id: "a-demo-john",
+      studentName: "John Doe",
+      studentId: studentId,
+      department: "Computer Science",
+      level: "L300",
+      companyId: "c1",
+      companyName: "Ghana Telecom Ltd",
+      companyStatus: "Approved",
+      branchId: "b-c1-main",
+      branchName: "Head Office",
+      status: "Pending",
+      dateApplied: new Date().toISOString().split("T")[0],
+    };
+    state = {
+      ...state,
+      applications: [...filteredApps, newApp],
+      logbookEntries: filteredLogs,
+      siteVisitations: filteredVisits,
+      industrialAssessments: filteredAssessments,
+      reportScores: filteredReports,
+      compiledGrades: filteredCompiled,
+    };
+  } else if (stage === "active") {
+    const newApp: Application = {
+      id: "a-demo-john",
+      studentName: "John Doe",
+      studentId: studentId,
+      department: "Computer Science",
+      level: "L300",
+      companyId: "c1",
+      companyName: "Ghana Telecom Ltd",
+      companyStatus: "Approved",
+      branchId: "b-c1-main",
+      branchName: "Head Office",
+      status: "Active",
+      dateApplied: "2026-03-03",
+      supervisorAssigned: "Dr. Abena Osei",
+    };
+    const mockLogs: LogbookEntry[] = [
+      {
+        id: "lb-demo-1",
+        studentId: studentId,
+        date: "2026-04-15",
+        activities: "Attended company orientation. Met industrial mentor Mr. Mensah and configured development workspace.",
+        skills: "Workspace configuration, Onboarding",
+        challenges: "None",
+        approvalStatus: "Approved",
+        approvedBy: "Mr. Mensah",
+        approvedAt: "2026-04-15T17:00:00",
+        createdAt: "2026-04-15T16:00:00",
+      },
+      {
+        id: "lb-demo-2",
+        studentId: studentId,
+        date: "2026-04-16",
+        activities: "Assisted database administrators with SQL backup queries. Handled security audit logs.",
+        skills: "SQL databases, Security audits",
+        challenges: "Backup storage was full; resolved by migrating old logs.",
+        approvalStatus: "Approved",
+        approvedBy: "Mr. Mensah",
+        approvedAt: "2026-04-16T17:00:00",
+        createdAt: "2026-04-16T16:00:00",
+      },
+      {
+        id: "lb-demo-3",
+        studentId: studentId,
+        date: "2026-04-17",
+        activities: "Wrote python automation script to scrape network diagnostic metrics.",
+        skills: "Python scripting, Automation",
+        challenges: "API endpoints required authentication headers.",
+        approvalStatus: "Pending",
+        createdAt: "2026-04-17T16:00:00",
+      },
+    ];
+    state = {
+      ...state,
+      applications: [...filteredApps, newApp],
+      logbookEntries: [...filteredLogs, ...mockLogs],
+      siteVisitations: filteredVisits,
+      industrialAssessments: filteredAssessments,
+      reportScores: filteredReports,
+      compiledGrades: filteredCompiled,
+    };
+  } else if (stage === "completed") {
+    const newApp: Application = {
+      id: "a-demo-john",
+      studentName: "John Doe",
+      studentId: studentId,
+      department: "Computer Science",
+      level: "L300",
+      companyId: "c1",
+      companyName: "Ghana Telecom Ltd",
+      companyStatus: "Approved",
+      branchId: "b-c1-main",
+      branchName: "Head Office",
+      status: "Completed",
+      dateApplied: "2026-03-03",
+      supervisorAssigned: "Dr. Abena Osei",
+    };
+    const mockLogs: LogbookEntry[] = [
+      {
+        id: "lb-demo-1",
+        studentId: studentId,
+        date: "2026-04-15",
+        activities: "Attended company orientation. Met industrial mentor Mr. Mensah.",
+        skills: "Workspace configuration",
+        challenges: "None",
+        approvalStatus: "Approved",
+        approvedBy: "Mr. Mensah",
+        approvedAt: "2026-04-15T17:00:00",
+        createdAt: "2026-04-15T16:00:00",
+      },
+    ];
+    const mockAssessment: IndustrialSupervisorAssessment = {
+      id: "ind-demo-john",
+      applicationId: "a-demo-john",
+      ratings: {
+        A1: 5, A2: 5, A3: 4, A4: 5,
+        B1: 5, B2: 5, B3: 4, B4: 5, B5: 4, B6: 5, B7: 5, B8: 5,
+        C1: 5, C2: 5, C3: 4, C4: 4, C5: 5,
+        D1: 5, D2: 5, D3: 4
+      },
+      comments: "John is outstanding! Incredible coding speed and technical knowledge.",
+      submittedBy: "Mr. Mensah",
+      submittedAt: "2026-04-20T16:00:00"
+    };
+    const mockVisit: SiteVisitationScore = {
+      id: "sv-demo-john",
+      applicationId: "a-demo-john",
+      score: 28,
+      comments: "Highly disciplined and well-integrated into the local branch office.",
+      visitedAt: "2026-04-12T10:00:00",
+      submittedBy: "Dr. Abena Osei",
+      ratings: {
+        V1: 3, V2: 3, V3: 3, V4: 3, V5: 3, V6: 3, V7: 3, V8: 2, V9: 3, V10: 2
+      }
+    };
+    const mockReport: ReportScore = {
+      id: "rep-demo-john",
+      applicationId: "a-demo-john",
+      score: 92,
+      comments: "Thorough internship report. Clear software architecture diagrams.",
+      submittedBy: "Dr. Abena Osei",
+      submittedAt: "2026-04-25T11:00:00"
+    };
+    const mockCompiled: CompiledGrade = {
+      applicationId: "a-demo-john",
+      components: {
+        industrial: 94,
+        departmental: 93,
+        report: 92,
+        presentation: 90
+      },
+      configSnapshot: state.gradingConfigs[0],
+      finalPercent: 93,
+      status: "Approved",
+      updatedAt: "2026-04-28T12:00:00"
+    };
+
+    state = {
+      ...state,
+      applications: [...filteredApps, newApp],
+      logbookEntries: [...filteredLogs, ...mockLogs],
+      siteVisitations: [...filteredVisits, mockVisit],
+      industrialAssessments: [...filteredAssessments, mockAssessment],
+      reportScores: [...filteredReports, mockReport],
+      compiledGrades: [...filteredCompiled, mockCompiled],
+    };
+  }
+
+  notify();
+}
+
 // --- Mutations ---
 
 export function updateApplication(id: string, updates: Partial<Application>) {

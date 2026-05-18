@@ -13,6 +13,7 @@ import { getNotifications } from "../services/notification-service";
 import { getOverdueWeeklyRubrics } from "../services/grading-service";
 import { CheckInModal } from "./check-in-modal";
 import { hasCheckedInToday, subscribeAttendance } from "../services/attendance-service";
+import { StudentLifecycleSimulator } from "./student-lifecycle-simulator";
 
 interface NavItem {
   to: string;
@@ -485,7 +486,8 @@ export function DashboardLayout() {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+          {user.role === "student" && <StudentLifecycleSimulator />}
           <Outlet />
         </main>
       </div>
