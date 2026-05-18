@@ -5,7 +5,7 @@ import { getAttendanceRecords } from "../../services/attendance-service";
 import { getCompiledGrade, getActiveConfig } from "../../services/grading-service";
 import { updateApplication, addNotification, addAuditLog } from "../../lib/store";
 import { GradeBreakdownCard } from "../../components/grading/grade-breakdown-card";
-import { ChevronLeft, Building2, ClipboardCheck } from "lucide-react";
+import { ChevronLeft, Building2, ClipboardCheck, BookMarked, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
 import { StudentListReview } from "../../components/academic/student-list-review";
