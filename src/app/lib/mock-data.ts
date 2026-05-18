@@ -242,31 +242,18 @@ export const branches: Branch[] = [
 export const applications: Application[] = [];
 
 export const supervisors: Supervisor[] = [
-  { id: "s1", name: "Dr. Agyeman", email: "agyeman@htu.edu.gh", department: "Computer Science", currentLoad: 4, maxLoad: 8 },
+  { id: "s1", name: "Dr. Agyeman", email: "agyeman@htu.edu.gh", department: "Computer Science", currentLoad: 0, maxLoad: 8 },
   { id: "s7", name: "Dr. Owusu", email: "owusu@htu.edu.gh", department: "Computer Science", currentLoad: 0, maxLoad: 6 },
-  { id: "s2", name: "Prof. Danso", email: "danso@htu.edu.gh", department: "Electrical Engineering", currentLoad: 6, maxLoad: 8 },
-  { id: "s3", name: "Dr. Mensah", email: "mensah@htu.edu.gh", department: "Business Administration", currentLoad: 3, maxLoad: 6 },
-  { id: "s4", name: "Mr. Appiah", email: "appiah@htu.edu.gh", department: "Accounting & Finance", currentLoad: 5, maxLoad: 7 },
-  { id: "s5", name: "Dr. Ofori", email: "ofori@htu.edu.gh", department: "Mechanical Engineering", currentLoad: 2, maxLoad: 6 },
-  { id: "s6", name: "Eng. Tetteh", email: "tetteh@htu.edu.gh", department: "Civil Engineering", currentLoad: 1, maxLoad: 5 },
+  { id: "s2", name: "Prof. Danso", email: "danso@htu.edu.gh", department: "Electrical Engineering", currentLoad: 0, maxLoad: 8 },
+  { id: "s3", name: "Dr. Mensah", email: "mensah@htu.edu.gh", department: "Business Administration", currentLoad: 0, maxLoad: 6 },
+  { id: "s4", name: "Mr. Appiah", email: "appiah@htu.edu.gh", department: "Accounting & Finance", currentLoad: 0, maxLoad: 7 },
+  { id: "s5", name: "Dr. Ofori", email: "ofori@htu.edu.gh", department: "Mechanical Engineering", currentLoad: 0, maxLoad: 6 },
+  { id: "s6", name: "Eng. Tetteh", email: "tetteh@htu.edu.gh", department: "Civil Engineering", currentLoad: 0, maxLoad: 5 },
 ];
 
-export const notifications: Notification[] = [
-  { id: "n1", type: "company", title: "New Company Pending", message: "TechHub Ghana needs approval (Computer Science)", read: false, timestamp: "2026-03-10T10:30:00" },
-  { id: "n2", type: "company", title: "New Company Pending", message: "Ashanti Construction Co. needs approval (Civil Engineering)", read: false, timestamp: "2026-03-11T09:15:00" },
-  { id: "n3", type: "application", title: "Applications Ready", message: "3 new applications pending review", read: false, timestamp: "2026-03-12T08:00:00" },
-  { id: "n4", type: "grade", title: "Grade Ready for Approval", message: "Efua Mensah's final grade submitted by Mr. Appiah", read: true, timestamp: "2026-03-09T14:20:00" },
-  { id: "n5", type: "application", title: "Company Acceptance", message: "Yaw Frimpong has uploaded signed acceptance form", read: false, timestamp: "2026-03-08T11:45:00" },
-  { id: "n6", type: "system", title: "Term Reminder", message: "Application deadline for 2026 L300 Semestrial Internship ends in 3 days", read: true, timestamp: "2026-03-12T07:00:00" },
-];
+export const notifications: Notification[] = [];
 
-export const auditLogs: AuditLog[] = [
-  { id: "al1", user: "Dr. Kwame Asante", action: "Created Term", target: "2026 L300 Semestrial Internship", timestamp: "2026-02-25T10:00:00", details: "Term created with semestrial type" },
-  { id: "al2", user: "Dr. Kwame Asante", action: "Approved Company", target: "Ghana Telecom Ltd", timestamp: "2026-03-02T14:30:00", details: "Company approved for system-wide access" },
-  { id: "al3", user: "Mrs. Esi Mensah", action: "Approved Application", target: "John Doe (CS/2023/001)", timestamp: "2026-03-06T09:00:00", details: "Application approved, placement letter generated" },
-  { id: "al4", user: "Mrs. Esi Mensah", action: "Assigned Supervisor", target: "John Doe → Dr. Agyeman", timestamp: "2026-03-07T11:20:00", details: "Academic supervisor assigned after company acceptance" },
-  { id: "al5", user: "Dr. Kwame Asante", action: "Updated Template", target: "Placement Letter Template", timestamp: "2026-02-20T16:00:00", details: "New letterhead uploaded" },
-];
+export const auditLogs: AuditLog[] = [];
 
 export const staffList = [
   { id: "st1", name: "Mrs. Esi Mensah", email: "e.mensah@htu.edu.gh", department: "Computer Science", isLiaison: true },
