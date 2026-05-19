@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Sliders, Sparkles, RefreshCw, Briefcase, GraduationCap, Clock, CheckCircle2 } from "lucide-react";
 import { useAppContext } from "../lib/context";
-import { simulateStudentStage } from "../lib/store";
+import { simulateStudentStage, getLatestApplicationForStudent } from "../lib/store";
 
 export function StudentLifecycleSimulator() {
   const { user, store } = useAppContext();
@@ -10,7 +10,7 @@ export function StudentLifecycleSimulator() {
   // This simulator only concerns our primary student: John Doe (CS/2023/001)
   if (!user || user.email !== "john.doe@st.htu.edu.gh") return null;
 
-  const currentApp = store.applications.find((a) => a.studentId === user.studentId);
+  const currentApp = getLatestApplicationForStudent(user.studentId || "");
   const currentStatus = currentApp?.status || "Fresh";
 
   const handleStageTransition = (stage: "fresh" | "pending" | "active" | "completed") => {

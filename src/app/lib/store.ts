@@ -149,15 +149,34 @@ export function getState(): StoreState {
   return state;
 }
 
+// Helpers for student-specific queries and demo seeding
+export function getLatestApplicationForStudent(studentId: string) {
+  return [...state.applications].reverse().find((a) => a.studentId === studentId);
+}
+
+export function getStudentApplicationHistory(studentId: string) {
+  return state.applications
+    .filter((a) => a.studentId === studentId)
+    .slice()
+    .sort((x, y) => (x.dateApplied || "") < (y.dateApplied || "") ? -1 : 1);
+}
+
+export function ensureDemoStudentApplication(studentId: string) {
+  const exists = state.applications.some((a) => a.studentId === studentId);
+  if (!exists) simulateStudentStage("pending", studentId);
+}
+
 export function simulateStudentStage(stage: "fresh" | "pending" | "active" | "completed", studentId: string) {
-  let filteredApps = state.applications.filter(a => a.studentId !== studentId);
-  let filteredLogs = state.logbookEntries.filter(l => l.studentId !== studentId);
-  let filteredVisits = state.siteVisitations.filter(v => v.applicationId !== "a-demo-john");
-  let filteredAssessments = state.industrialAssessments.filter(x => x.applicationId !== "a-demo-john");
-  let filteredReports = state.reportScores.filter(r => r.applicationId !== "a-demo-john");
-  let filteredCompiled = state.compiledGrades.filter(g => g.applicationId !== "a-demo-john");
+  const prevAppIds = state.applications.filter(a => a.studentId === studentId).map(a => a.id);
 
   if (stage === "fresh") {
+    const filteredApps = state.applications.filter(a => a.studentId !== studentId);
+    const filteredLogs = state.logbookEntries.filter(l => l.studentId !== studentId);
+    const filteredVisits = state.siteVisitations.filter(v => !prevAppIds.includes(v.applicationId));
+    const filteredAssessments = state.industrialAssessments.filter(x => !prevAppIds.includes(x.applicationId));
+    const filteredReports = state.reportScores.filter(r => !prevAppIds.includes(r.applicationId));
+    const filteredCompiled = state.compiledGrades.filter(g => !prevAppIds.includes(g.applicationId));
+
     state = {
       ...state,
       applications: filteredApps,
@@ -167,9 +186,17 @@ export function simulateStudentStage(stage: "fresh" | "pending" | "active" | "co
       reportScores: filteredReports,
       compiledGrades: filteredCompiled,
     };
-  } else if (stage === "pending") {
+    notify();
+    return;
+  }
+
+  // create a unique application id so prior internships are preserved
+  const appId = `a-demo-${studentId.replace(/[^a-zA-Z0-9]/g, "").toLowerCase()}-${Date.now()}`;
+  const dateApplied = new Date().toISOString().split("T")[0];
+
+  if (stage === "pending") {
     const newApp: Application = {
-      id: "a-demo-john",
+      id: appId,
       studentName: "John Doe",
       studentId: studentId,
       department: "Computer Science",
@@ -180,21 +207,17 @@ export function simulateStudentStage(stage: "fresh" | "pending" | "active" | "co
       branchId: "b-c1-main",
       branchName: "Head Office",
       status: "Pending",
-      dateApplied: new Date().toISOString().split("T")[0],
+      dateApplied,
       termId: undefined
     };
-    state = {
-      ...state,
-      applications: [...filteredApps, newApp],
-      logbookEntries: filteredLogs,
-      siteVisitations: filteredVisits,
-      industrialAssessments: filteredAssessments,
-      reportScores: filteredReports,
-      compiledGrades: filteredCompiled,
-    };
-  } else if (stage === "active") {
+    state = { ...state, applications: [...state.applications, newApp] };
+    notify();
+    return;
+  }
+
+  if (stage === "active") {
     const newApp: Application = {
-      id: "a-demo-john",
+      id: appId,
       studentName: "John Doe",
       studentId: studentId,
       department: "Computer Science",
@@ -205,23 +228,22 @@ export function simulateStudentStage(stage: "fresh" | "pending" | "active" | "co
       branchId: "b-c1-main",
       branchName: "Head Office",
       status: "Active",
-      dateApplied: "2026-03-03",
+      dateApplied,
       supervisorAssigned: "Dr. Abena Osei",
       termId: undefined
     };
-    const mockLogs: LogbookEntry[] = [];
+    // currently we don't seed detailed logbook rows here — keep it simple
     state = {
       ...state,
-      applications: [...filteredApps, newApp],
-      logbookEntries: [...filteredLogs, ...mockLogs],
-      siteVisitations: filteredVisits,
-      industrialAssessments: filteredAssessments,
-      reportScores: filteredReports,
-      compiledGrades: filteredCompiled,
+      applications: [...state.applications, newApp],
     };
-  } else if (stage === "completed") {
+    notify();
+    return;
+  }
+
+  if (stage === "completed") {
     const newApp: Application = {
-      id: "a-demo-john",
+      id: appId,
       studentName: "John Doe",
       studentId: studentId,
       department: "Computer Science",
@@ -232,18 +254,16 @@ export function simulateStudentStage(stage: "fresh" | "pending" | "active" | "co
       branchId: "b-c1-main",
       branchName: "Head Office",
       status: "Completed",
-      dateApplied: "2026-03-03",
+      dateApplied,
       supervisorAssigned: "Dr. Abena Osei",
       grade: "A",
       gradeStatus: "Submitted",
       termId: undefined
     };
-    const mockLogs: LogbookEntry[] = [
 
-    ];
     const mockAssessment: IndustrialSupervisorAssessment = {
-      id: "ind-demo-john",
-      applicationId: "a-demo-john",
+      id: `ind-${appId}`,
+      applicationId: appId,
       ratings: {
         A1: 5, A2: 5, A3: 4, A4: 5,
         B1: 5, B2: 5, B3: 4, B4: 5, B5: 4, B6: 5, B7: 5, B8: 5,
@@ -252,54 +272,49 @@ export function simulateStudentStage(stage: "fresh" | "pending" | "active" | "co
       },
       comments: "John is outstanding! Incredible coding speed and technical knowledge.",
       submittedBy: "Mr. Mensah",
-      submittedAt: "2026-04-20T16:00:00"
+      submittedAt: new Date().toISOString()
     };
+
     const mockVisit: SiteVisitationScore = {
-      id: "sv-demo-john",
-      applicationId: "a-demo-john",
+      id: `sv-${appId}`,
+      applicationId: appId,
       score: 28,
       comments: "Highly disciplined and well-integrated into the local branch office.",
-      visitedAt: "2026-04-12T10:00:00",
+      visitedAt: new Date().toISOString(),
       submittedBy: "Dr. Abena Osei",
-      ratings: {
-        V1: 3, V2: 3, V3: 3, V4: 3, V5: 3, V6: 3, V7: 3, V8: 2, V9: 3, V10: 2
-      },
-      studentId: undefined
+      ratings: { V1: 3, V2: 3, V3: 3, V4: 3, V5: 3, V6: 3, V7: 3, V8: 2, V9: 3, V10: 2 },
+      studentId: studentId
     };
+
     const mockReport: ReportScore = {
-      id: "rep-demo-john",
-      applicationId: "a-demo-john",
+      id: `rep-${appId}`,
+      applicationId: appId,
       score: 92,
       comments: "Thorough internship report. Clear software architecture diagrams.",
       submittedBy: "Dr. Abena Osei",
-      submittedAt: "2026-04-25T11:00:00"
+      submittedAt: new Date().toISOString()
     };
+
     const mockCompiled: CompiledGrade = {
-      applicationId: "a-demo-john",
-      components: {
-        industrial: 94,
-        departmental: 93,
-        report: 92,
-        presentation: 90
-      },
+      applicationId: appId,
+      components: { industrial: 94, departmental: 93, report: 92, presentation: 90 },
       configSnapshot: state.gradingConfigs[0],
       finalPercent: 93,
       status: "Approved",
-      updatedAt: "2026-04-28T12:00:00"
+      updatedAt: new Date().toISOString()
     };
 
     state = {
       ...state,
-      applications: [...filteredApps, newApp],
-      logbookEntries: [...filteredLogs, ...mockLogs],
-      siteVisitations: [...filteredVisits, mockVisit],
-      industrialAssessments: [...filteredAssessments, mockAssessment],
-      reportScores: [...filteredReports, mockReport],
-      compiledGrades: [...filteredCompiled, mockCompiled],
+      applications: [...state.applications, newApp],
+      siteVisitations: [...state.siteVisitations, mockVisit],
+      industrialAssessments: [...state.industrialAssessments, mockAssessment],
+      reportScores: [...state.reportScores, mockReport],
+      compiledGrades: [...state.compiledGrades, mockCompiled],
     };
+    notify();
+    return;
   }
-
-  notify();
 }
 
 // --- Mutations ---

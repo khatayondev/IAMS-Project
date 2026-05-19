@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useAppContext } from "../../lib/context";
+import { getLatestApplicationForStudent } from "../../lib/store";
 import { apiClient } from "../../lib/api-client";
 import { useToastAction } from "../../lib/hooks";
 import { ghanaRegions } from "../../lib/mock-data";
@@ -79,11 +80,7 @@ export function StudentApplicationsPage() {
   const { user, store } = useAppContext();
 
   // Pick the most recent application for this student
-  const myApp = useMemo(() => {
-    const mine = store.applications.filter((a) => a.studentId === user?.studentId);
-    if (mine.length === 0) return undefined;
-    return [...mine].sort((a, b) => b.dateApplied.localeCompare(a.dateApplied))[0];
-  }, [store.applications, user?.studentId]);
+  const myApp = useMemo(() => getLatestApplicationForStudent(user?.studentId || ""), [store.applications, user?.studentId]);
 
   const [view, setView] = useState<View>(myApp ? "tracker" : "windows");
   const [step, setStep] = useState<Step>(1);

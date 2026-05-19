@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAppContext } from "../../lib/context";
+import { getStudentApplicationHistory } from "../../lib/store";
 import { apiClient } from "../../lib/api-client";
 import { useToastAction } from "../../lib/hooks";
 import { Plus, BookMarked, Calendar, CheckCircle2, Clock, AlertTriangle, X, AlertCircle } from "lucide-react";
@@ -29,7 +30,7 @@ export function LogbookPage() {
         setCheckedInToday(hasCheckedInToday(user.studentId || ""));
       };
       updateCheckInStatus();
-      return subscribeAttendance(updateCheckInStatus);
+      subscribeAttendance(updateCheckInStatus);
     }
   }, [user]);
 
