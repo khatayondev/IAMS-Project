@@ -1,5 +1,6 @@
+import { useState, useEffect } from "react";
 import { useAppContext } from "../../lib/context";
-import { getLatestApplicationForStudent } from "../../lib/store";
+import { apiClient } from "../../lib/api-client";
 import { StatusBadge } from "../../components/status-badge";
 import { StatCard } from "../../components/stat-card";
 import { getStudentLogbook } from "../../services/logbook-service";
@@ -7,12 +8,30 @@ import { BookMarked, FileText, Clock, CheckCircle2, Upload, Award, Send } from "
 import { useNavigate } from "react-router";
 
 export function StudentDashboard() {
-  const { user, store } = useAppContext();
+  const { user } = useAppContext();
   const navigate = useNavigate();
+  const [myApp, setMyApp] = useState<any | null>(null);
 
-  const myApp = getLatestApplicationForStudent(user?.studentId || "");
+  useEffect(() => {
+    apiClient.getApplications().then((res) => {
+      if (res.success && res.data.length > 0) {
+        const sorted = [...res.data].sort((a, b) =>
+          (b.created_at ?? "") > (a.created_at ?? "") ? 1 : -1
+        );
+        setMyApp(sorted[0]);
+      }
+    });
+  }, []);
+
   const logEntries = getStudentLogbook(user?.studentId || "");
   const lastEntry = logEntries[0];
+
+  const companyName = myApp?.company?.name ?? myApp?.companyName ?? "N/A";
+  const appStatus = myApp?.status ?? "None";
+  const supervisorName = myApp?.academic_supervisor?.name ?? myApp?.supervisorAssigned ?? null;
+  const dateApplied = myApp?.created_at ?? myApp?.dateApplied ?? "";
+
+  const isDone = (statuses: string[]) => statuses.includes(appStatus);
 
   return (
     <div className="space-y-6">
@@ -26,15 +45,15 @@ export function StudentDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Application Status"
-          value={myApp?.status || "None"}
-          subtitle={myApp ? `Applied: ${myApp.dateApplied}` : "Not applied yet"}
+          value={appStatus}
+          subtitle={myApp ? `Applied: ${dateApplied}` : "Not applied yet"}
           icon={<FileText className="w-4 h-4" />}
           highlight
         />
         <StatCard
           title="Company"
-          value={myApp?.companyName || "N/A"}
-          subtitle={myApp ? `Status: ${myApp.companyStatus}` : ""}
+          value={companyName}
+          subtitle={myApp ? `Status: ${myApp?.company?.approval_status ?? appStatus}` : ""}
           icon={<CheckCircle2 className="w-4 h-4" />}
         />
         <StatCard
@@ -45,8 +64,8 @@ export function StudentDashboard() {
         />
         <StatCard
           title="Supervisor"
-          value={myApp?.supervisorAssigned || "Not assigned"}
-          subtitle={myApp?.supervisorAssigned ? "Academic supervisor" : "Pending"}
+          value={supervisorName || "Not assigned"}
+          subtitle={supervisorName ? "Academic supervisor" : "Pending"}
           icon={<Clock className="w-4 h-4" />}
         />
       </div>
@@ -136,13 +155,11 @@ export function StudentDashboard() {
           <h3 className="mb-4">Application Timeline</h3>
           <div className="space-y-4">
             {[
-              { label: "Application Submitted", date: myApp.dateApplied, done: true },
-              { label: "Company Approved", date: myApp.companyStatus === "Approved" ? "Approved" : "Pending", done: myApp.companyStatus === "Approved" },
-              { label: "Application Approved", date: ["Approved", "Company Accepted", "Active", "Completed"].includes(myApp.status) ? "Approved" : "Pending", done: ["Approved", "Company Accepted", "Active", "Completed"].includes(myApp.status) },
-              { label: "Company Accepted", date: ["Company Accepted", "Active", "Completed"].includes(myApp.status) ? "Done" : "Pending", done: ["Company Accepted", "Active", "Completed"].includes(myApp.status) },
-              { label: "Supervisor Assigned", date: myApp.supervisorAssigned || "Pending", done: !!myApp.supervisorAssigned },
-              { label: "Internship Active", date: myApp.status === "Active" || myApp.status === "Completed" ? "Active" : "Pending", done: myApp.status === "Active" || myApp.status === "Completed" },
-              { label: "Completed", date: myApp.status === "Completed" ? "Done" : "Pending", done: myApp.status === "Completed" },
+              { label: "Application Submitted", date: dateApplied, done: true },
+              { label: "Application Approved", date: isDone(["approved", "active", "completed"]) ? "Approved" : "Pending", done: isDone(["approved", "active", "completed"]) },
+              { label: "Supervisor Assigned", date: supervisorName ?? "Pending", done: !!supervisorName },
+              { label: "Internship Active", date: isDone(["active", "completed"]) ? "Active" : "Pending", done: isDone(["active", "completed"]) },
+              { label: "Completed", date: isDone(["completed"]) ? "Done" : "Pending", done: isDone(["completed"]) },
             ].map((step, i) => (
               <div key={i} className="flex items-start gap-3">
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${step.done ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>

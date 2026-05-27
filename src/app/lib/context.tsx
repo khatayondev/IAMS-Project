@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useContext, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { AuthUser, ExtendedRole } from "../services/auth-service";
 import { subscribe, getState, type StoreState } from "./store";
 
@@ -18,11 +18,22 @@ const AppContext = createContext<AppContextType>({
   store: getState(),
 });
 
+function normalizeApiUser(u: any): AuthUser {
+  return {
+    id: String(u.id),
+    name: u.name,
+    email: u.email,
+    role: u.role as ExtendedRole,
+    department: u.department?.name ?? u.department ?? undefined,
+    studentId: u.student_id ?? u.studentId ?? undefined,
+    avatar: u.avatar ?? "",
+  };
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Subscribe to store changes for reactivity
   const store = useSyncExternalStore(subscribe, getState, getState);
 
   return (
@@ -32,13 +43,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 }
 
+export { normalizeApiUser };
+
 export const useAppContext = () => {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error("useAppContext must be used within AppProvider");
   return ctx;
 };
 
-// Convenience hook for role checking
 export function useRole(): ExtendedRole | null {
   const { user } = useAppContext();
   return user?.role ?? null;

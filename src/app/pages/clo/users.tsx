@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { staffList, departments } from "../../lib/mock-data";
 import { Search, UserPlus, Mail, Shield, X, Users, CheckCircle2, XCircle, MoreVertical, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { apiClient } from "../../lib/api-client";
 
 type RoleFilter = "All" | "DLO" | "Academic Supervisor" | "HOD" | "Staff";
 
@@ -21,6 +22,30 @@ const enrichedStaff: StaffMember[] = staffList.map((s, i) => ({
   status: "Active" as const,
 }));
 
+function normalizeRemoteUsers(users: any[]): StaffMember[] {
+  return users.map((user, index) => {
+    const fullName = user.name ?? user.full_name ?? [user.first_name, user.last_name].filter(Boolean).join(" ") ?? `User ${index + 1}`;
+    const rawRole = String(user.role ?? user.user_role ?? user.type ?? "Staff").toLowerCase();
+    const role = rawRole.includes("hod")
+      ? "HOD"
+      : rawRole.includes("supervisor")
+        ? "Academic Supervisor"
+        : rawRole.includes("dlo")
+          ? "DLO"
+          : "Staff";
+
+    return {
+      id: String(user.id ?? user.user_id ?? `user-${index}`),
+      name: fullName,
+      email: user.email ?? user.email_address ?? "",
+      department: user.department?.name ?? user.department_name ?? user.department ?? departments[index % departments.length],
+      isLiaison: role === "DLO",
+      role,
+      status: user.status === "invited" ? "Inactive" : "Active",
+    };
+  });
+}
+
 export function UsersPage() {
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("All");
@@ -29,13 +54,44 @@ export function UsersPage() {
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [actionMenu, setActionMenu] = useState<string | null>(null);
   const [inviteForm, setInviteForm] = useState({ name: "", email: "", department: departments[0], role: "DLO" });
+  const [users, setUsers] = useState<StaffMember[]>(enrichedStaff);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = enrichedStaff.filter((s) => {
+  useEffect(() => {
+    let active = true;
+
+    async function loadUsers() {
+      setLoading(true);
+      const response = await apiClient.getUsers();
+      if (!active) return;
+
+      if (response.success && response.data.length > 0) {
+        setUsers(normalizeRemoteUsers(response.data));
+      } else {
+        setUsers(enrichedStaff);
+      }
+      setLoading(false);
+    }
+
+    loadUsers().catch(() => {
+      if (!active) return;
+      setUsers(enrichedStaff);
+      setLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const filtered = users.filter((s) => {
     const matchSearch = s.name.toLowerCase().includes(search.toLowerCase()) || s.email.toLowerCase().includes(search.toLowerCase());
     const matchDept = deptFilter === "All" || s.department === deptFilter;
     const matchRole = roleFilter === "All" || s.role === roleFilter;
     return matchSearch && matchDept && matchRole;
   });
+
+  const visibleUsers = useMemo(() => filtered, [filtered]);
 
   const toggleSelect = (id: string) => {
     const next = new Set(selectedUsers);
@@ -51,11 +107,26 @@ export function UsersPage() {
     }
   };
 
-  const handleInvite = () => {
+  const handleInvite = async () => {
     if (!inviteForm.name || !inviteForm.email) {
       toast.error("Name and email are required.");
       return;
     }
+
+    if (inviteForm.role === "DLO") {
+      const result = await apiClient.createDLOAccount({
+        name: inviteForm.name,
+        email: inviteForm.email,
+        department_id: departments.indexOf(inviteForm.department) + 1,
+        staff_id: `STAFF-${Date.now().toString().slice(-6)}`,
+      });
+
+      if (!result.success) {
+        toast.error(result.message ?? "Failed to create DLO account.");
+        return;
+      }
+    }
+
     toast.success(`Invitation sent to ${inviteForm.name} (${inviteForm.email}) as ${inviteForm.role}.`);
     setShowInvite(false);
     setInviteForm({ name: "", email: "", department: departments[0], role: "DLO" });
@@ -72,11 +143,11 @@ export function UsersPage() {
   };
 
   const roleCounts = {
-    All: enrichedStaff.length,
-    DLO: enrichedStaff.filter((s) => s.role === "DLO").length,
-    "Academic Supervisor": enrichedStaff.filter((s) => s.role === "Academic Supervisor").length,
-    HOD: enrichedStaff.filter((s) => s.role === "HOD").length,
-    Staff: enrichedStaff.filter((s) => s.role === "Staff").length,
+    All: users.length,
+    DLO: users.filter((s) => s.role === "DLO").length,
+    "Academic Supervisor": users.filter((s) => s.role === "Academic Supervisor").length,
+    HOD: users.filter((s) => s.role === "HOD").length,
+    Staff: users.filter((s) => s.role === "Staff").length,
   };
 
   return (
@@ -85,7 +156,7 @@ export function UsersPage() {
         <div>
           <h1>User Management</h1>
           <p className="text-muted-foreground" style={{ fontSize: "0.85rem" }}>
-            Manage system users, roles, and access permissions
+            {loading ? "Loading users from the API..." : "Manage system users, roles, and access permissions"}
           </p>
         </div>
         <button
@@ -198,7 +269,7 @@ export function UsersPage() {
               <th className="text-left px-4 py-3" style={{ fontSize: "0.75rem" }}>
                 <input
                   type="checkbox"
-                  checked={selectedUsers.size === filtered.length && filtered.length > 0}
+                  checked={selectedUsers.size === visibleUsers.length && visibleUsers.length > 0}
                   onChange={toggleSelectAll}
                   className="rounded"
                 />
@@ -212,7 +283,7 @@ export function UsersPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((s) => (
+            {visibleUsers.map((s) => (
               <tr key={s.id} className={`border-b border-border last:border-0 hover:bg-muted/20 ${selectedUsers.has(s.id) ? "bg-primary/5" : ""}`}>
                 <td className="px-4 py-3">
                   <input
@@ -289,7 +360,7 @@ export function UsersPage() {
                 </td>
               </tr>
             ))}
-            {filtered.length === 0 && (
+            {visibleUsers.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground" style={{ fontSize: "0.85rem" }}>
                   No users match your filters.

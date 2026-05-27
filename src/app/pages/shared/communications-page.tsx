@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Bell, MessageSquare, Megaphone } from "lucide-react";
 import { useAppContext } from "../../lib/context";
-import { getUnreadMessageCount } from "../../services/messaging-service";
 import { NotificationsPanel } from "./comms/notifications-panel";
 import { MessagesPanel } from "./comms/messages-panel";
 import { AnnouncementsPanel } from "./comms/announcements-panel";
@@ -14,11 +13,11 @@ interface Props {
 }
 
 export function CommunicationsPage({ viewRole }: Props) {
-  const { user, store } = useAppContext();
+  const { store } = useAppContext();
   const [activeTab, setActiveTab] = useState<CommTab>("notifications");
 
   const unreadNotifs = store.notifications.filter((n) => !n.read).length;
-  const unreadMsgs = getUnreadMessageCount(user?.id || "");
+  const unreadMsgs = 0;
 
   // Only CLO/DLO can compose announcements; all roles can view them
   const canComposeAnnouncements = viewRole === "clo" || viewRole === "dlo";

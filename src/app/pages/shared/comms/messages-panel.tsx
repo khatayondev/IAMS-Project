@@ -1,13 +1,28 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAppContext } from "../../../lib/context";
-import {
-  getThreadsForUser, getMessagesInThread, sendMessage, markThreadRead,
-  getUnreadMessageCount, createThread, type Thread, type Message,
-} from "../../../services/messaging-service";
+import { apiClient } from "../../../lib/api-client";
 import { MessageSquare, Send, ArrowLeft, Plus, Search, X, Paperclip, Phone, Video, MoreVertical } from "lucide-react";
 
+interface Thread {
+  id: string | number;
+  subject: string;
+  lastMessage: string;
+  lastTimestamp: string;
+  unreadCount: number;
+  participants?: any[];
+}
+
+interface Message {
+  id: string | number;
+  senderId: string | number;
+  senderName: string;
+  senderRole?: string;
+  content: string;
+  timestamp: string;
+}
+
 interface NewConversationForm {
-  recipientName: string;
+  recipientId: string;
   subject: string;
   message: string;
 }
@@ -19,23 +34,33 @@ export function MessagesPanel() {
   const [search, setSearch] = useState("");
   const [threads, setThreads] = useState<Thread[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [contacts, setContacts] = useState<any[]>([]);
   const [showNewConversation, setShowNewConversation] = useState(false);
-  const [newForm, setNewForm] = useState<NewConversationForm>({ recipientName: "", subject: "", message: "" });
+  const [newForm, setNewForm] = useState<NewConversationForm>({ recipientId: "", subject: "", message: "" });
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const userId = user?.id || "";
+  const userId = String(user?.id || "");
 
-  useEffect(() => {
-    setThreads(getThreadsForUser(userId));
+  const fetchThreads = useCallback(async () => {
+    const res = await apiClient.getThreads(userId);
+    if (res.success) setThreads(res.data);
   }, [userId]);
 
   useEffect(() => {
+    fetchThreads();
+    apiClient.getUsers().then((res) => {
+      if (res.success) setContacts(res.data.filter((u: any) => String(u.id) !== userId));
+    });
+  }, [fetchThreads, userId]);
+
+  useEffect(() => {
     if (selectedThread) {
-      setMessages(getMessagesInThread(selectedThread));
-      markThreadRead(selectedThread, userId);
-      setThreads(getThreadsForUser(userId));
+      apiClient.getMessages(selectedThread).then((res) => {
+        if (res.success) setMessages(res.data);
+      });
+      apiClient.markThreadRead(selectedThread).then(() => fetchThreads());
     }
-  }, [selectedThread, userId]);
+  }, [selectedThread, fetchThreads]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -45,71 +70,41 @@ export function MessagesPanel() {
 
   const filteredThreads = threads.filter(
     (t) =>
-      t.subject.toLowerCase().includes(search.toLowerCase()) ||
-      t.participantNames.some((n) => n.toLowerCase().includes(search.toLowerCase()))
+      t.subject.toLowerCase().includes(search.toLowerCase())
   );
 
-  const currentThread = threads.find((t) => t.id === selectedThread);
+  const currentThread = threads.find((t) => String(t.id) === selectedThread);
 
-  const roleLabel =
-    user?.role === "clo" ? "CLO" :
-    user?.role === "dlo" ? "DLO" :
-    user?.role === "student" ? "Student" :
-    user?.role === "supervisor" ? "Industry Supervisor" :
-    user?.role === "academic" ? "Academic Supervisor" : "HOD";
-
-  const handleSend = () => {
-    if (!messageText.trim() || !currentThread) return;
-    const recipientId = currentThread.participantIds.find((id) => id !== userId) || "";
-    const recipientName = currentThread.participantNames.find((_, i) => currentThread.participantIds[i] !== userId) || "";
-
-    sendMessage(selectedThread!, userId, user?.name || "", roleLabel, recipientId, recipientName, messageText);
+  const handleSend = async () => {
+    if (!messageText.trim() || !selectedThread) return;
+    await apiClient.sendMessage(selectedThread, { content: messageText });
     setMessageText("");
-    setMessages(getMessagesInThread(selectedThread!));
-    setThreads(getThreadsForUser(userId));
+    const res = await apiClient.getMessages(selectedThread);
+    if (res.success) setMessages(res.data);
+    fetchThreads();
   };
 
-  const handleNewConversation = () => {
-    if (!newForm.recipientName.trim() || !newForm.subject.trim() || !newForm.message.trim()) return;
-
-    const recipientId = `u-${Date.now()}`;
-    const result = createThread(
-      [userId, recipientId],
-      [user?.name || "", newForm.recipientName],
-      newForm.subject,
-      "",
-      newForm.message,
-      userId,
-      user?.name || "",
-      roleLabel,
-      recipientId,
-      newForm.recipientName
-    );
-
+  const handleNewConversation = async () => {
+    if (!newForm.recipientId || !newForm.subject.trim() || !newForm.message.trim()) return;
+    const res = await apiClient.createThread({
+      recipient_id: Number(newForm.recipientId),
+      subject: newForm.subject,
+      message: newForm.message,
+    } as any);
     setShowNewConversation(false);
-    setNewForm({ recipientName: "", subject: "", message: "" });
-    setThreads(getThreadsForUser(userId));
-    setSelectedThread(result.threadId);
+    setNewForm({ recipientId: "", subject: "", message: "" });
+    if (res.success && res.data?.threadId) {
+      setSelectedThread(String(res.data.threadId));
+    }
+    fetchThreads();
   };
 
-  const otherParticipant = (thread: Thread) => {
-    const idx = thread.participantIds.indexOf(userId);
-    return thread.participantNames[idx === 0 ? 1 : 0] || "Unknown";
+  const getInitials = (name: string) => name?.split(" ").map((w) => w[0]).join("").slice(0, 2) || "?";
+
+  const getThreadLabel = (thread: Thread) => {
+    const other = thread.participants?.find((p: any) => String(p.id) !== userId);
+    return other?.name ?? thread.subject ?? "Conversation";
   };
-
-  const getInitials = (name: string) => name.split(" ").map((w) => w[0]).join("").slice(0, 2);
-
-  const onlineUsers = new Set(["Dr. Kwame Asante", "Kofi Mensah", "Mr. Mensah"]);
-
-  const availableContacts = [
-    { name: "Dr. Kwame Asante", role: "CLO" },
-    { name: "Dr. Ama Serwaa", role: "DLO - Computer Science" },
-    { name: "Prof. Yaw Boateng", role: "HOD - Computer Science" },
-    { name: "Dr. Kweku Mensah", role: "Academic Supervisor" },
-    { name: "Mr. Mensah", role: "Industry Supervisor" },
-    { name: "Kofi Mensah", role: "Student" },
-    { name: "Ama Owusu", role: "Student" },
-  ].filter((c) => c.name !== user?.name);
 
   return (
     <div className="space-y-4">
@@ -159,28 +154,22 @@ export function MessagesPanel() {
               </div>
             ) : (
               filteredThreads.map((thread) => {
-                const other = otherParticipant(thread);
-                const isOnline = onlineUsers.has(other);
+                const label = getThreadLabel(thread);
                 return (
                   <button
                     key={thread.id}
-                    onClick={() => setSelectedThread(thread.id)}
+                    onClick={() => setSelectedThread(String(thread.id))}
                     className={`w-full text-left p-4 border-b border-border hover:bg-accent transition-colors ${
-                      selectedThread === thread.id ? "bg-primary/5" : ""
+                      selectedThread === String(thread.id) ? "bg-primary/5" : ""
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="relative shrink-0">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary" style={{ fontSize: "0.75rem" }}>
-                          {getInitials(other)}
-                        </div>
-                        {isOnline && (
-                          <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-card" />
-                        )}
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0" style={{ fontSize: "0.75rem" }}>
+                        {getInitials(label)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-0.5">
-                          <span style={{ fontSize: "0.85rem" }} className="text-foreground truncate">{other}</span>
+                          <span style={{ fontSize: "0.85rem" }} className="text-foreground truncate">{label}</span>
                           <div className="flex items-center gap-2 shrink-0 ml-2">
                             {thread.unreadCount > 0 && (
                               <span className="w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center" style={{ fontSize: "0.6rem" }}>
@@ -230,25 +219,15 @@ export function MessagesPanel() {
                   <button onClick={() => setSelectedThread(null)} className="md:hidden text-muted-foreground hover:text-foreground">
                     <ArrowLeft className="w-5 h-5" />
                   </button>
-                  <div className="relative">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary" style={{ fontSize: "0.75rem" }}>
-                      {currentThread ? getInitials(otherParticipant(currentThread)) : ""}
-                    </div>
-                    {currentThread && onlineUsers.has(otherParticipant(currentThread)) && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-card" />
-                    )}
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary" style={{ fontSize: "0.75rem" }}>
+                    {currentThread ? getInitials(getThreadLabel(currentThread)) : ""}
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <p style={{ fontSize: "0.9rem" }} className="text-foreground">
-                        {currentThread ? otherParticipant(currentThread) : ""}
-                      </p>
-                      {currentThread && onlineUsers.has(otherParticipant(currentThread)) && (
-                        <span className="text-emerald-600" style={{ fontSize: "0.7rem" }}>Online</span>
-                      )}
-                    </div>
+                    <p style={{ fontSize: "0.9rem" }} className="text-foreground">
+                      {currentThread ? getThreadLabel(currentThread) : ""}
+                    </p>
                     <p className="text-muted-foreground" style={{ fontSize: "0.75rem" }}>
-                      {currentThread?.subject} {currentThread?.context ? `· ${currentThread.context}` : ""}
+                      {currentThread?.subject}
                     </p>
                   </div>
                 </div>
@@ -267,7 +246,7 @@ export function MessagesPanel() {
                   </div>
                 )}
                 {messages.map((msg) => {
-                  const isMine = msg.senderId === userId;
+                  const isMine = String(msg.senderId) === userId;
                   return (
                     <div key={msg.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
                       {!isMine && (
@@ -281,7 +260,7 @@ export function MessagesPanel() {
                         }`}
                       >
                         {!isMine && (
-                          <p style={{ fontSize: "0.7rem" }} className="opacity-75 mb-1">{msg.senderName} · {msg.senderRole}</p>
+                          <p style={{ fontSize: "0.7rem" }} className="opacity-75 mb-1">{msg.senderName}{msg.senderRole ? ` · ${msg.senderRole}` : ""}</p>
                         )}
                         <p style={{ fontSize: "0.85rem" }}>{msg.content}</p>
                         <p style={{ fontSize: "0.65rem" }} className={`mt-1 ${isMine ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
@@ -335,14 +314,14 @@ export function MessagesPanel() {
               <div>
                 <label style={{ fontSize: "0.8rem" }}>Recipient</label>
                 <select
-                  value={newForm.recipientName}
-                  onChange={(e) => setNewForm({ ...newForm, recipientName: e.target.value })}
+                  value={newForm.recipientId}
+                  onChange={(e) => setNewForm({ ...newForm, recipientId: e.target.value })}
                   className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background"
                   style={{ fontSize: "0.85rem" }}
                 >
                   <option value="">Select a contact...</option>
-                  {availableContacts.map((c) => (
-                    <option key={c.name} value={c.name}>{c.name} — {c.role}</option>
+                  {contacts.map((c) => (
+                    <option key={c.id} value={String(c.id)}>{c.name} — {c.role}</option>
                   ))}
                 </select>
               </div>
@@ -359,7 +338,7 @@ export function MessagesPanel() {
               <button onClick={() => setShowNewConversation(false)} className="px-4 py-2 border border-border rounded-lg hover:bg-accent" style={{ fontSize: "0.85rem" }}>Cancel</button>
               <button
                 onClick={handleNewConversation}
-                disabled={!newForm.recipientName || !newForm.subject.trim() || !newForm.message.trim()}
+                disabled={!newForm.recipientId || !newForm.subject.trim() || !newForm.message.trim()}
                 className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
                 style={{ fontSize: "0.85rem" }}
               >

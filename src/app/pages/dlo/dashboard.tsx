@@ -1,7 +1,10 @@
+import { useState, useEffect } from "react";
 import { StatCard } from "../../components/stat-card";
 import { StatusBadge } from "../../components/status-badge";
 import { useAppContext } from "../../lib/context";
 import { checkInactiveStudents } from "../../services/logbook-service";
+import { apiClient } from "../../lib/api-client";
+import type { ApplicationResponse, CompanyResponse } from "../../types/api";
 import {
   Building2, FileText, GraduationCap, Clock, AlertTriangle, UserPlus,
   ArrowRight, TrendingUp, CheckCircle2, BarChart3
@@ -19,11 +22,24 @@ export function DLODashboard() {
   const navigate = useNavigate();
   const dept = user?.department || "Computer Science";
 
-  const deptApps = store.applications.filter((a) => a.department === dept);
+  const [applications, setApplications] = useState<ApplicationResponse[]>([]);
+  const [allCompanies, setAllCompanies] = useState<CompanyResponse[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([apiClient.getApplications(), apiClient.getCompanies()]).then(([appsRes, cosRes]) => {
+      if (cancelled) return;
+      if (appsRes.success) setApplications(appsRes.data);
+      if (cosRes.success) setAllCompanies(cosRes.data);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const deptApps = applications.filter((a) => a.department === dept);
   const pendingApps = deptApps.filter((a) => a.status === "Pending").length;
   const activeStudents = deptApps.filter((a) => a.status === "Active").length;
   const completedStudents = deptApps.filter((a) => a.status === "Completed").length;
-  const pendingCompanies = store.companies.filter((c) => c.status === "Pending" && c.department === dept).length;
+  const pendingCompanies = allCompanies.filter((c) => c.status === "Pending" && c.department === dept).length;
   const needSupervisor = deptApps.filter((a) => a.status === "Company Accepted").length;
   const activityData = checkInactiveStudents();
 

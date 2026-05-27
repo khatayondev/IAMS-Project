@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useAppContext } from "../../../lib/context";
-import { sendAnnouncement } from "../../../services/notification-service";
-import { Megaphone, Send, CheckCircle2, Search, Pin, X, Eye, Clock, Users } from "lucide-react";
+import { Megaphone, Send, CheckCircle2, Search, Pin, X, Eye, Clock } from "lucide-react";
 import { toast } from "sonner";
 import type { ExtendedRole } from "../../../services/auth-service";
 import { AnnouncementComposer } from "../../../components/announcement-composer";
@@ -85,8 +84,6 @@ export function AnnouncementsPanel({ viewRole, canCompose }: Props) {
       return t;
     });
 
-    sendAnnouncement(data.title, data.message, user?.name || "", formattedTargets);
-    
     // Simple mock math for recipient counts based on targets
     const recipientCount = data.targets.includes("Students") ? 210 : data.targets.length * 30;
     

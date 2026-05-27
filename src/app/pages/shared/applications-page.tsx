@@ -1,13 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { StatusBadge } from "../../components/status-badge";
 import { useAppContext } from "../../lib/context";
-import { supervisors } from "../../lib/mock-data";
-import {
-  approveApplication,
-  rejectApplication,
-  assignSupervisor,
-  bulkApproveApplications,
-} from "../../services/application-service";
+import { apiClient } from "../../lib/api-client";
 import { Search, CheckCircle2, XCircle, UserPlus, Download } from "lucide-react";
 import { toast } from "sonner";
 import type { ExtendedRole } from "../../services/auth-service";
@@ -18,64 +12,95 @@ interface Props {
 }
 
 export function ApplicationsPage({ viewRole }: Props) {
-  const { user, store } = useAppContext();
+  const { user } = useAppContext();
+  const [applications, setApplications] = useState<any[]>([]);
+  const [academicSupervisors, setAcademicSupervisors] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedApp, setSelectedApp] = useState<string | null>(null);
   const [showAssign, setShowAssign] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const department = viewRole === "dlo" ? user?.department : undefined;
 
-  const filtered = store.applications.filter((a) => {
+  const fetchApplications = useCallback(async () => {
+    setLoading(true);
+    const res = await apiClient.getApplications(department ? { department } : undefined);
+    if (res.success) setApplications(res.data);
+    setLoading(false);
+  }, [department]);
+
+  useEffect(() => {
+    fetchApplications();
+  }, [fetchApplications]);
+
+  useEffect(() => {
+    apiClient.getUsers({ role: "academic" }).then((res) => {
+      if (res.success) setAcademicSupervisors(res.data);
+    });
+  }, []);
+
+  const filtered = applications.filter((a) => {
+    const studentName = a.student?.name ?? a.studentName ?? "";
+    const companyName = a.company?.name ?? a.companyName ?? "";
+    const appDept = a.student?.department ?? a.department ?? "";
     const matchSearch =
-      a.studentName.toLowerCase().includes(search.toLowerCase()) ||
-      a.companyName.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "All" || a.status === statusFilter;
-    const matchDept = !department || a.department === department;
+      studentName.toLowerCase().includes(search.toLowerCase()) ||
+      companyName.toLowerCase().includes(search.toLowerCase());
+    const appStatus = a.status ?? "";
+    const matchStatus = statusFilter === "All" || appStatus === statusFilter;
+    const matchDept = !department || appDept === department;
     return matchSearch && matchStatus && matchDept;
   });
 
-  const statuses = ["All", "Pending", "Approved", "Active", "Company Accepted", "Completed", "Rejected"];
+  const statuses = ["All", "draft", "submitted", "under_review", "approved", "rejected"];
 
-  const handleApprove = (id: string) => {
-    const result = approveApplication(id, user?.name || "System");
-    if (result.success) {
-      toast.success(result.message);
+  const handleApprove = async (id: string) => {
+    const res = await apiClient.approveApplication(id);
+    if (res.success) {
+      toast.success(res.message ?? "Application approved.");
+      fetchApplications();
     } else {
-      toast.error(result.message);
+      toast.error(res.message ?? "Failed to approve application.");
     }
   };
 
-  const handleReject = (id: string) => {
-    const result = rejectApplication(id, user?.name || "System", "Application does not meet requirements");
-    if (result.success) {
-      toast.error(result.message);
+  const handleReject = async (id: string) => {
+    const reason = prompt("Enter rejection reason:");
+    if (!reason) return;
+    const res = await apiClient.rejectApplication(id, reason);
+    if (res.success) {
+      toast.success(res.message ?? "Application rejected.");
+      fetchApplications();
     } else {
-      toast.error(result.message);
+      toast.error(res.message ?? "Failed to reject application.");
     }
   };
 
-  const handleBulkApprove = () => {
-    const pendingIds = filtered.filter((a) => a.status === "Pending").map((a) => a.id);
-    if (pendingIds.length === 0) {
-      toast.info("No pending applications to approve.");
-      return;
+  const handleBulkApprove = async () => {
+    const pendingIds = filtered.filter((a) => a.status === "submitted").map((a) => String(a.id));
+    if (pendingIds.length === 0) { toast.info("No submitted applications to approve."); return; }
+    const res = await apiClient.bulkApproveApplications(pendingIds);
+    if (res.success) {
+      toast.success(res.message ?? "Applications approved.");
+      fetchApplications();
+    } else {
+      toast.error(res.message ?? "Bulk approve failed.");
     }
-    const result = bulkApproveApplications(pendingIds, user?.name || "System");
-    toast.success(result.message);
   };
 
-  const handleAssignSupervisor = (appId: string, supName: string) => {
-    const result = assignSupervisor(appId, supName, user?.name || "System");
-    if (result.success) {
-      toast.success(result.message);
+  const handleAssignSupervisor = async (appId: string, supervisorId: number) => {
+    const res = await apiClient.assignSupervisor(appId, supervisorId);
+    if (res.success) {
+      toast.success(res.message ?? "Supervisor assigned.");
+      fetchApplications();
     } else {
-      toast.error(result.message);
+      toast.error(res.message ?? "Failed to assign supervisor.");
     }
     setShowAssign(null);
   };
 
-  const detail = selectedApp ? store.applications.find((a) => a.id === selectedApp) : null;
+  const detail = selectedApp ? applications.find((a) => String(a.id) === selectedApp) : null;
 
   return (
     <div className="space-y-6">
@@ -83,7 +108,7 @@ export function ApplicationsPage({ viewRole }: Props) {
         <div>
           <h1>Applications</h1>
           <p className="text-muted-foreground" style={{ fontSize: "0.85rem" }}>
-            {viewRole === "clo" ? "All departments" : `${department} Department`}
+            {viewRole === "clo" ? "All departments" : `${department ?? ""} Department`}
           </p>
         </div>
         <button
@@ -94,10 +119,19 @@ export function ApplicationsPage({ viewRole }: Props) {
           <CheckCircle2 className="w-4 h-4" /> <span className="hidden sm:inline">Bulk Approve</span>
         </button>
         <button
-          onClick={() => exportToCSV(
-            filtered.map(a => ({ Student: a.studentName, ID: a.studentId, Company: a.companyName, Department: a.department, Status: a.status, "Company Status": a.companyStatus, Date: a.dateApplied, Supervisor: a.supervisorAssigned || "" })),
-            "applications_export"
-          )}
+          onClick={() =>
+            exportToCSV(
+              filtered.map((a) => ({
+                Student: a.student?.name ?? a.studentName ?? "",
+                ID: a.student?.student_id ?? a.studentId ?? "",
+                Company: a.company?.name ?? a.companyName ?? "",
+                Department: a.student?.department ?? a.department ?? "",
+                Status: a.status,
+                Date: a.created_at ?? a.dateApplied ?? "",
+              })),
+              "applications_export"
+            )
+          }
           className="px-3 md:px-4 py-2 bg-card border border-border rounded-lg hover:bg-accent flex items-center gap-2"
           style={{ fontSize: "0.85rem" }}
         >
@@ -129,7 +163,7 @@ export function ApplicationsPage({ viewRole }: Props) {
               }`}
               style={{ fontSize: "0.8rem" }}
             >
-              {s}
+              {s === "All" ? "All" : s.replace("_", " ")}
             </button>
           ))}
         </div>
@@ -138,91 +172,96 @@ export function ApplicationsPage({ viewRole }: Props) {
       <div className="grid grid-cols-1 gap-4">
         <div className="bg-card rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border bg-muted/30">
-                  <th className="text-left px-4 py-3" style={{ fontSize: "0.75rem" }}>Student</th>
-                  <th className="text-left px-4 py-3" style={{ fontSize: "0.75rem" }}>ID</th>
-                  <th className="text-left px-4 py-3" style={{ fontSize: "0.75rem" }}>Company</th>
-                  {viewRole === "clo" && <th className="text-left px-4 py-3" style={{ fontSize: "0.75rem" }}>Dept</th>}
-                  <th className="text-left px-4 py-3" style={{ fontSize: "0.75rem" }}>Co. Status</th>
-                  <th className="text-left px-4 py-3" style={{ fontSize: "0.75rem" }}>Status</th>
-                  <th className="text-left px-4 py-3" style={{ fontSize: "0.75rem" }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((app) => (
-                  <tr
-                    key={app.id}
-                    className={`border-b border-border last:border-0 hover:bg-muted/20 cursor-pointer ${selectedApp === app.id ? "bg-secondary/50" : ""}`}
-                    onClick={() => setSelectedApp(app.id)}
-                  >
-                    <td className="px-4 py-3" style={{ fontSize: "0.85rem" }}>{app.studentName}</td>
-                    <td className="px-4 py-3 text-muted-foreground" style={{ fontSize: "0.8rem" }}>{app.studentId}</td>
-                    <td className="px-4 py-3" style={{ fontSize: "0.85rem" }}>{app.companyName}</td>
-                    {viewRole === "clo" && <td className="px-4 py-3" style={{ fontSize: "0.8rem" }}>{app.department.split(" ")[0]}</td>}
-                    <td className="px-4 py-3"><StatusBadge status={app.companyStatus} /></td>
-                    <td className="px-4 py-3"><StatusBadge status={app.status} /></td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                        {app.status === "Pending" && (
-                          <>
-                            <button onClick={() => handleApprove(app.id)} className="p-1.5 rounded-md hover:bg-emerald-100 text-emerald-600">
-                              <CheckCircle2 className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => handleReject(app.id)} className="p-1.5 rounded-md hover:bg-red-100 text-red-600">
-                              <XCircle className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
-                        {app.status === "Company Accepted" && (
-                          <div className="relative">
-                            <button
-                              onClick={() => setShowAssign(showAssign === app.id ? null : app.id)}
-                              className="p-1.5 rounded-md hover:bg-blue-100 text-blue-600"
-                            >
-                              <UserPlus className="w-4 h-4" />
-                            </button>
-                            {showAssign === app.id && (
+            {loading ? (
+              <div className="p-8 text-center text-muted-foreground" style={{ fontSize: "0.85rem" }}>Loading applications…</div>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    <th className="text-left px-4 py-3" style={{ fontSize: "0.75rem" }}>Student</th>
+                    <th className="text-left px-4 py-3" style={{ fontSize: "0.75rem" }}>ID</th>
+                    <th className="text-left px-4 py-3" style={{ fontSize: "0.75rem" }}>Company</th>
+                    {viewRole === "clo" && <th className="text-left px-4 py-3" style={{ fontSize: "0.75rem" }}>Dept</th>}
+                    <th className="text-left px-4 py-3" style={{ fontSize: "0.75rem" }}>Status</th>
+                    <th className="text-left px-4 py-3" style={{ fontSize: "0.75rem" }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((app) => {
+                    const appId = String(app.id);
+                    const studentName = app.student?.name ?? app.studentName ?? "—";
+                    const studentNum = app.student?.student_id ?? app.studentId ?? "—";
+                    const companyName = app.company?.name ?? app.companyName ?? "—";
+                    const dept = (app.student?.department ?? app.department ?? "").split(" ")[0];
+                    return (
+                      <tr
+                        key={appId}
+                        className={`border-b border-border last:border-0 hover:bg-muted/20 cursor-pointer ${selectedApp === appId ? "bg-secondary/50" : ""}`}
+                        onClick={() => setSelectedApp(appId)}
+                      >
+                        <td className="px-4 py-3" style={{ fontSize: "0.85rem" }}>{studentName}</td>
+                        <td className="px-4 py-3 text-muted-foreground" style={{ fontSize: "0.8rem" }}>{studentNum}</td>
+                        <td className="px-4 py-3" style={{ fontSize: "0.85rem" }}>{companyName}</td>
+                        {viewRole === "clo" && <td className="px-4 py-3" style={{ fontSize: "0.8rem" }}>{dept}</td>}
+                        <td className="px-4 py-3"><StatusBadge status={app.status} /></td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                            {app.status === "submitted" && (
                               <>
-                                <div className="fixed inset-0 z-40" onClick={() => setShowAssign(null)} />
-                                <div className="absolute right-0 top-8 w-56 bg-card border border-border rounded-lg shadow-xl z-50 p-2">
-                                  <p style={{ fontSize: "0.75rem" }} className="text-muted-foreground px-2 py-1">
-                                    Assign Supervisor
-                                  </p>
-                                  {supervisors
-                                    .filter((s) => s.department === app.department)
-                                    .map((sup) => (
-                                      <button
-                                        key={sup.id}
-                                        onClick={() => handleAssignSupervisor(app.id, sup.name)}
-                                        className="w-full text-left px-2 py-1.5 rounded hover:bg-accent flex justify-between"
-                                        style={{ fontSize: "0.8rem" }}
-                                      >
-                                        <span>{sup.name}</span>
-                                        <span className="text-muted-foreground">
-                                          {sup.currentLoad}/{sup.maxLoad}
-                                        </span>
-                                      </button>
-                                    ))}
-                                </div>
+                                <button onClick={() => handleApprove(appId)} className="p-1.5 rounded-md hover:bg-emerald-100 text-emerald-600">
+                                  <CheckCircle2 className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => handleReject(appId)} className="p-1.5 rounded-md hover:bg-red-100 text-red-600">
+                                  <XCircle className="w-4 h-4" />
+                                </button>
                               </>
                             )}
+                            {app.status === "approved" && (
+                              <div className="relative">
+                                <button
+                                  onClick={() => setShowAssign(showAssign === appId ? null : appId)}
+                                  className="p-1.5 rounded-md hover:bg-blue-100 text-blue-600"
+                                >
+                                  <UserPlus className="w-4 h-4" />
+                                </button>
+                                {showAssign === appId && (
+                                  <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setShowAssign(null)} />
+                                    <div className="absolute right-0 top-8 w-56 bg-card border border-border rounded-lg shadow-xl z-50 p-2">
+                                      <p style={{ fontSize: "0.75rem" }} className="text-muted-foreground px-2 py-1">Assign Supervisor</p>
+                                      {academicSupervisors.length === 0 && (
+                                        <p className="px-2 py-1.5 text-muted-foreground" style={{ fontSize: "0.8rem" }}>No supervisors available</p>
+                                      )}
+                                      {academicSupervisors.map((sup) => (
+                                        <button
+                                          key={sup.id}
+                                          onClick={() => handleAssignSupervisor(appId, sup.id)}
+                                          className="w-full text-left px-2 py-1.5 rounded hover:bg-accent"
+                                          style={{ fontSize: "0.8rem" }}
+                                        >
+                                          {sup.name}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={viewRole === "clo" ? 7 : 6} className="px-4 py-8 text-center text-muted-foreground">
-                      No applications found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {filtered.length === 0 && !loading && (
+                    <tr>
+                      <td colSpan={viewRole === "clo" ? 6 : 5} className="px-4 py-8 text-center text-muted-foreground">
+                        No applications found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
@@ -238,13 +277,12 @@ export function ApplicationsPage({ viewRole }: Props) {
                 </div>
                 <div className="space-y-3">
                   {[
-                    ["Student", detail.studentName],
-                    ["Student ID", detail.studentId],
-                    ["Department", detail.department],
-                    ["Level", detail.level],
-                    ["Company", detail.companyName],
-                    ["Date Applied", detail.dateApplied],
-                    ["Supervisor", detail.supervisorAssigned || "Not assigned"],
+                    ["Student", detail.student?.name ?? detail.studentName ?? "—"],
+                    ["Student ID", detail.student?.student_id ?? detail.studentId ?? "—"],
+                    ["Department", detail.student?.department ?? detail.department ?? "—"],
+                    ["Company", detail.company?.name ?? detail.companyName ?? "—"],
+                    ["Date Applied", detail.created_at ?? detail.dateApplied ?? "—"],
+                    ["Type", detail.application_type ?? "individual"],
                   ].map(([label, val]) => (
                     <div key={label}>
                       <p style={{ fontSize: "0.7rem" }} className="text-muted-foreground uppercase tracking-wider">{label}</p>
@@ -255,18 +293,14 @@ export function ApplicationsPage({ viewRole }: Props) {
                     <p style={{ fontSize: "0.7rem" }} className="text-muted-foreground uppercase tracking-wider">Status</p>
                     <StatusBadge status={detail.status} />
                   </div>
-                  <div>
-                    <p style={{ fontSize: "0.7rem" }} className="text-muted-foreground uppercase tracking-wider">Company Approval</p>
-                    <StatusBadge status={detail.companyStatus} />
-                  </div>
                 </div>
                 <div className="pt-3 border-t border-border space-y-2">
-                  {detail.status === "Pending" && (
+                  {detail.status === "submitted" && (
                     <>
-                      <button onClick={() => handleApprove(detail.id)} className="w-full py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90" style={{ fontSize: "0.85rem" }}>
+                      <button onClick={() => { handleApprove(String(detail.id)); setSelectedApp(null); }} className="w-full py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90" style={{ fontSize: "0.85rem" }}>
                         Approve Application
                       </button>
-                      <button onClick={() => handleReject(detail.id)} className="w-full py-2 bg-destructive text-destructive-foreground rounded-lg hover:opacity-90" style={{ fontSize: "0.85rem" }}>
+                      <button onClick={() => { handleReject(String(detail.id)); setSelectedApp(null); }} className="w-full py-2 bg-destructive text-destructive-foreground rounded-lg hover:opacity-90" style={{ fontSize: "0.85rem" }}>
                         Reject Application
                       </button>
                     </>

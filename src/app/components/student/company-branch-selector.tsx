@@ -2,12 +2,6 @@ import { useState, useMemo } from "react";
 import { GitBranch, Search, Building2, Plus, AlertCircle, Info, User, Mail, Phone, MapPin } from "lucide-react";
 import { StatusBadge } from "../status-badge";
 import { ghanaRegions } from "../../lib/mock-data";
-import {
-  searchCompanies,
-  findCompanyByName,
-  getBranchesForCompany,
-  findBranchByName,
-} from "../../services/company-service";
 
 type CompanyChoice = "none" | "existing" | "new";
 type BranchChoice = "none" | "existing" | "new";
@@ -50,6 +44,24 @@ export function CompanyBranchSelector({
   const [companySearch, setCompanySearch] = useState("");
 
   const selectedCompany = store.companies.find((c: any) => c.id === form.selectedCompanyId);
+
+  const searchCompanies = (query: string, limit: number) => {
+    if (!query.trim()) return [];
+    const q = query.toLowerCase();
+    return (store.companies as any[])
+      .filter((c: any) => c.name?.toLowerCase().includes(q))
+      .slice(0, limit)
+      .map((c: any) => ({ company: c }));
+  };
+
+  const findCompanyByName = (name: string) =>
+    (store.companies as any[]).find((c: any) => c.name?.toLowerCase() === name.trim().toLowerCase());
+
+  const getBranchesForCompany = (companyId: string) =>
+    (store.branches as any[]).filter((b: any) => String(b.companyId ?? b.company_id) === String(companyId));
+
+  const findBranchByName = (companyId: string, name: string) =>
+    getBranchesForCompany(companyId).find((b: any) => b.name?.toLowerCase() === name.trim().toLowerCase());
 
   // Live search results
   const matches = useMemo(() => searchCompanies(companySearch, 8), [companySearch, store.companies]);

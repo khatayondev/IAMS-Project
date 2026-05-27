@@ -1,10 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAppContext } from "../../lib/context";
-import { getLatestApplicationForStudent } from "../../lib/store";
 import { apiClient } from "../../lib/api-client";
 import { useToastAction } from "../../lib/hooks";
 import { ghanaRegions } from "../../lib/mock-data";
-import { findCompanyByName, findBranchByName } from "../../services/company-service";
 import {
   Calendar,
   FileText,
@@ -78,11 +76,20 @@ const defaultForm: FormData = {
 
 export function StudentApplicationsPage() {
   const { user, store } = useAppContext();
+  const [myApp, setMyApp] = useState<any | null>(null);
 
-  // Pick the most recent application for this student
-  const myApp = useMemo(() => getLatestApplicationForStudent(user?.studentId || ""), [store.applications, user?.studentId]);
+  useEffect(() => {
+    apiClient.getApplications().then((res) => {
+      if (res.success && res.data.length > 0) {
+        const sorted = [...res.data].sort((a, b) =>
+          (b.created_at ?? "") > (a.created_at ?? "") ? 1 : -1
+        );
+        setMyApp(sorted[0]);
+      }
+    });
+  }, []);
 
-  const [view, setView] = useState<View>(myApp ? "tracker" : "windows");
+  const [view, setView] = useState<View>("windows");
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<FormData>({ ...defaultForm });
   const [eligibilityError, setEligibilityError] = useState<string | null>(null);
@@ -147,7 +154,7 @@ export function StudentApplicationsPage() {
     }
 
     // Check for existing active application
-    if (myApp && !["Completed", "Rejected"].includes(myApp.status)) {
+    if (myApp && !["completed", "rejected", "Completed", "Rejected"].includes(myApp.status)) {
       setEligibilityError(
         "You already have an active application. You cannot submit another one until your current application is resolved."
       );
@@ -173,7 +180,10 @@ export function StudentApplicationsPage() {
           if (form.branchChoice === "existing") return !!form.selectedBranchId;
           if (form.branchChoice === "new") {
             const hasDuplicateBranch = form.selectedCompanyId && form.newBranchName.trim()
-              ? !!findBranchByName(form.selectedCompanyId, form.newBranchName)
+              ? store.branches.some((b: any) =>
+                  String(b.companyId ?? b.company_id) === form.selectedCompanyId &&
+                  b.name?.toLowerCase() === form.newBranchName.trim().toLowerCase()
+                )
               : false;
             return !!(
               form.newBranchName &&
@@ -188,7 +198,7 @@ export function StudentApplicationsPage() {
         }
         if (form.companyChoice === "new") {
           const hasDuplicateCompany = form.newCompanyName.trim()
-            ? !!findCompanyByName(form.newCompanyName)
+            ? store.companies.some((c: any) => c.name?.toLowerCase() === form.newCompanyName.trim().toLowerCase())
             : false;
           return !!(
             form.newCompanyName &&

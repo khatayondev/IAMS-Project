@@ -20,26 +20,31 @@ export const ROLE_LABELS: Record<string, string> = {
   hod: "Head of Department",
 };
 
-// ── Application Status ──
+// ── Application Status — real API values ──
 export const APPLICATION_STATUS = {
-  PENDING: "Pending",
-  APPROVED: "Approved",
-  REJECTED: "Rejected",
-  COMPANY_ACCEPTED: "Company Accepted",
-  ACTIVE: "Active",
-  COMPLETED: "Completed",
+  DRAFT: "draft",
+  SUBMITTED: "submitted",
+  UNDER_REVIEW: "under_review",
+  APPROVED: "approved",
+  REJECTED: "rejected",
 } as const;
 
 export type ApplicationStatus = (typeof APPLICATION_STATUS)[keyof typeof APPLICATION_STATUS];
 
-// ── Company Status ──
+// ── Company Approval Status — real API values ──
 export const COMPANY_STATUS = {
-  PENDING: "Pending",
-  APPROVED: "Approved",
-  REJECTED: "Rejected",
+  PENDING: "pending",
+  APPROVED: "approved",
+  REJECTED: "rejected",
 } as const;
 
 export type CompanyStatus = (typeof COMPANY_STATUS)[keyof typeof COMPANY_STATUS];
+
+// ── Company Active Status — real API values ──
+export const COMPANY_ACTIVE_STATUS = {
+  ACTIVE: "active",
+  INACTIVE: "inactive",
+} as const;
 
 // ── Term Status ──
 export const TERM_STATUS = {
@@ -75,11 +80,17 @@ export const ATTENDANCE_CHECKIN_TYPE = {
   MANUAL: "manual",
 } as const;
 
-export const ATTENDANCE_VERIFICATION_STATUS = {
-  VERIFIED: "Verified",
-  PENDING: "Pending Verification",
-  REJECTED: "Rejected",
+// Real API attendance status values
+export const ATTENDANCE_STATUS = {
+  PRESENT: "present",
+  ABSENT: "absent",
+  LATE: "late",
+  HALF_DAY: "half_day",
+  EXCUSED: "excused",
 } as const;
+
+// Legacy alias kept for any code still referencing this name
+export const ATTENDANCE_VERIFICATION_STATUS = ATTENDANCE_STATUS;
 
 // ── Issue Status & Priority ──
 export const ISSUE_STATUS = {
@@ -197,70 +208,106 @@ export const GRADING_CONFIG_STATUS = {
 // ── API Endpoints (for backend team reference) ──
 export const API_ENDPOINTS = {
   // Auth
-  AUTH_LOGIN: "/api/auth/login",
-  AUTH_LOGOUT: "/api/auth/logout",
-  AUTH_ME: "/api/auth/me",
-  AUTH_MAGIC_LINK: "/api/auth/magic-link",
+  AUTH_LOGIN: "/api/v1/auth/login",
+  AUTH_LOGOUT: "/api/v1/auth/logout",
+  AUTH_ME: "/api/v1/auth/me",
+  AUTH_REFRESH: "/api/v1/auth/refresh",
+  AUTH_GOOGLE: "/api/v1/auth/google",
+  AUTH_GOOGLE_CALLBACK: "/api/v1/auth/google/callback",
+  AUTH_MAGIC_LINK: "/api/v1/auth/magic-link",
+  AUTH_MAGIC_LINK_VERIFY: "/api/v1/auth/magic-link/verify",
 
   // Applications
-  APPLICATIONS: "/api/applications",
-  APPLICATION_APPROVE: "/api/applications/:id/approve",
-  APPLICATION_REJECT: "/api/applications/:id/reject",
-  APPLICATION_BULK_APPROVE: "/api/applications/bulk-approve",
-  APPLICATION_ASSIGN_SUPERVISOR: "/api/applications/:id/assign-supervisor",
+  APPLICATIONS: "/api/v1/applications",
+  APPLICATION_APPROVE: "/api/v1/applications/:id/approve",
+  APPLICATION_REJECT: "/api/v1/applications/:id/reject",
+  APPLICATION_BULK_APPROVE: "/api/v1/applications/bulk-approve",
+  APPLICATION_ASSIGN_SUPERVISOR: "/api/v1/applications/:id/assign-supervisor",
 
   // Companies
-  COMPANIES: "/api/companies",
-  COMPANY_APPROVE: "/api/companies/:id/approve",
-  COMPANY_REJECT: "/api/companies/:id/reject",
-  COMPANY_OVERRIDE: "/api/companies/:id/override",
+  COMPANIES: "/api/v1/companies",
+  COMPANY_APPROVE: "/api/v1/companies/:id/approve",
+  COMPANY_REJECT: "/api/v1/companies/:id/reject",
+  COMPANY_OVERRIDE: "/api/v1/companies/:id/override",
 
   // Terms
-  TERMS: "/api/terms",
+  TERMS: "/api/v1/terms",
 
   // Students
-  STUDENTS: "/api/students",
-  STUDENT_INACTIVE: "/api/students/inactive",
+  STUDENTS: "/api/v1/students",
+  STUDENT_INACTIVE: "/api/v1/students/inactive",
+
+  // CLO users
+  USERS: "/api/v1/users",
+  DLOS: "/api/v1/users/dlos",
 
   // Logbook
-  LOGBOOK_ENTRIES: "/api/logbook",
-  LOGBOOK_APPROVE: "/api/logbook/:id/approve",
-  LOGBOOK_REVISION: "/api/logbook/:id/revision",
+  LOGBOOK_ENTRIES: "/api/v1/logbooks",
+  LOGBOOK_APPROVE: "/api/v1/logbooks/:id/approve",
+  LOGBOOK_REVISION: "/api/v1/logbooks/:id/comment",
 
   // Attendance
-  ATTENDANCE: "/api/attendance",
-  ATTENDANCE_CHECKIN: "/api/attendance/check-in",
-  ATTENDANCE_VERIFY: "/api/attendance/:id/verify",
+  ATTENDANCE: "/api/v1/attendance",
+  ATTENDANCE_CHECKIN: "/api/v1/attendance/check-in",
+  ATTENDANCE_VERIFY: "/api/v1/attendance/:id/verify",
 
   // Grades
-  GRADES: "/api/grades",
-  GRADE_APPROVE: "/api/grades/:id/approve",
-  GRADE_REVISION: "/api/grades/:id/revision",
+  GRADES: "/api/v1/grades",
+  GRADE_APPROVE: "/api/v1/grades/:id/approve",
+  GRADE_REVISION: "/api/v1/grades/:id/revision",
 
   // Notifications
-  NOTIFICATIONS: "/api/notifications",
-  NOTIFICATION_READ: "/api/notifications/:id/read",
-  NOTIFICATIONS_READ_ALL: "/api/notifications/read-all",
+  NOTIFICATIONS: "/api/v1/notifications",
+  NOTIFICATION_READ: "/api/v1/notifications/:id/read",
+  NOTIFICATIONS_READ_ALL: "/api/v1/notifications/read-all",
 
   // Messages
-  THREADS: "/api/messages/threads",
-  THREAD_MESSAGES: "/api/messages/threads/:id",
-  THREAD_SEND: "/api/messages/threads/:id/send",
-  THREAD_CREATE: "/api/messages/threads",
+  THREADS: "/api/v1/messages/threads",
+  THREAD_MESSAGES: "/api/v1/messages/threads/:id",
+  THREAD_SEND: "/api/v1/messages/threads/:id/send",
+  THREAD_CREATE: "/api/v1/messages/threads",
 
   // Issues
-  ISSUES: "/api/issues",
-  ISSUE_NOTE: "/api/issues/:id/notes",
-  ISSUE_STATUS: "/api/issues/:id/status",
-  ISSUE_ESCALATE: "/api/issues/:id/escalate",
+  ISSUES: "/api/v1/issues",
+  ISSUE_NOTE: "/api/v1/issues/:id/notes",
+  ISSUE_STATUS: "/api/v1/issues/:id/status",
+  ISSUE_ESCALATE: "/api/v1/issues/:id/escalate",
 
   // Reports & Audit
-  AUDIT_LOGS: "/api/audit-logs",
-  REPORTS_EXPORT: "/api/reports/export",
+  AUDIT_LOGS: "/api/v1/audit-logs",
+  REPORTS_EXPORT: "/api/v1/reports/export",
 
   // Settings
-  SETTINGS: "/api/settings",
+  SETTINGS: "/api/v1/settings",
 
   // Supervisors
-  SUPERVISORS: "/api/supervisors",
+  SUPERVISORS: "/api/v1/supervisors",
+
+  // Application actions
+  APPLICATION_SUBMIT: "/api/v1/applications/:id/submit",
+  APPLICATIONS_PENDING: "/api/v1/applications/pending",
+
+  // Company actions
+  COMPANIES_PENDING: "/api/v1/companies/pending",
+  COMPANY_DEACTIVATE: "/api/v1/companies/:id/deactivate",
+
+  // Attendance
+  ATTENDANCE_CHECKOUT: "/api/v1/attendance/:id/check-out",
+  ATTENDANCE_MISSED: "/api/v1/attendance/missed",
+  ATTENDANCE_BY_INTERNSHIP: "/api/v1/internships/:internshipId/attendance",
+
+  // Role dashboards
+  DASHBOARD_STUDENT: "/api/v1/dashboard/student",
+  DASHBOARD_ACADEMIC: "/api/v1/dashboard/academic-supervisor",
+  DASHBOARD_SUPERVISOR: "/api/v1/dashboard/industry-supervisor",
+  DASHBOARD_DLO: "/api/v1/dashboard/dlo",
+  DASHBOARD_CLO: "/api/v1/dashboard/clo",
+
+  // Departments
+  DEPARTMENTS: "/api/v1/departments",
+
+  // Analytics
+  ANALYTICS_OVERVIEW: "/api/v1/analytics/overview",
+  ANALYTICS_DEPARTMENT: "/api/v1/analytics/department/:id",
+  ANALYTICS_TERM: "/api/v1/analytics/term/:id",
 } as const;

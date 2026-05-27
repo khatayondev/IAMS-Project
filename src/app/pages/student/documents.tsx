@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAppContext } from "../../lib/context";
-import { getLatestApplicationForStudent } from "../../lib/store";
+import { apiClient } from "../../lib/api-client";
 import {
   Upload, FileText, Download, CheckCircle2, Clock, X, Eye,
   File, AlertTriangle, Link2, Send
@@ -14,8 +14,17 @@ interface UploadedDoc {
 }
 
 export function DocumentsPage() {
-  const { user, store } = useAppContext();
-  const myApp = getLatestApplicationForStudent(user?.studentId || "");
+  const { user } = useAppContext();
+  const [myApp, setMyApp] = useState<any | null>(null);
+
+  useEffect(() => {
+    apiClient.getApplications().then((res) => {
+      if (res.success && res.data.length > 0) {
+        const sorted = [...res.data].sort((a, b) => (b.created_at ?? "") > (a.created_at ?? "") ? 1 : -1);
+        setMyApp(sorted[0]);
+      }
+    });
+  }, []);
 
   // Mock uploaded files state
   const [uploadedDocs, setUploadedDocs] = useState<Record<string, UploadedDoc>>({});

@@ -4,6 +4,8 @@ import { AuthGuard } from "./components/auth-guard";
 
 // Auth
 import { LoginPage } from "./pages/auth/login";
+import { MagicLinkPage } from "./pages/auth/magic-link";
+import { GoogleCallbackPage } from "./pages/auth/google-callback";
 
 // CLO Pages
 import { CLODashboard } from "./pages/clo/dashboard";
@@ -110,6 +112,8 @@ function HODGuard({ children }: { children: React.ReactNode }) {
 export const router = createBrowserRouter([
   // Auth routes
   { path: "/login", element: <LoginPage /> },
+  { path: "/auth/magic-link", element: <MagicLinkPage /> },
+  { path: "/auth/google/callback", element: <GoogleCallbackPage /> },
 
   // Root redirect
   { path: "/", element: <Navigate to="/login" replace /> },

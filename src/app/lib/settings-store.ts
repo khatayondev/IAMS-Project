@@ -18,7 +18,7 @@ let settings: SystemSettings = {
   autoFlagEnabled: true,
   allowSelfPlacement: true,
   maxSupervisorLoad: 8,
-  darkMode: localStorage.getItem("darkMode") === "true",
+  darkMode: false,
 };
 
 export function getSettings(): SystemSettings {
@@ -28,7 +28,6 @@ export function getSettings(): SystemSettings {
 export function updateSettings(updates: Partial<SystemSettings>) {
   settings = { ...settings, ...updates };
   if ("darkMode" in updates) {
-    localStorage.setItem("darkMode", String(settings.darkMode));
     applyDarkMode(settings.darkMode);
   }
   notify();

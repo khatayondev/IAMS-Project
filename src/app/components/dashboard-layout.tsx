@@ -9,7 +9,6 @@ import { useAppContext } from "../lib/context";
 import { useState, useEffect, useSyncExternalStore, useRef } from "react";
 import type { ExtendedRole } from "../services/auth-service";
 import { getSettings, updateSettings, subscribeSettings } from "../lib/settings-store";
-import { getNotifications } from "../services/notification-service";
 import { getOverdueWeeklyRubrics } from "../services/grading-service";
 import { CheckInModal } from "./check-in-modal";
 import { hasCheckedInToday, subscribeAttendance } from "../services/attendance-service";
@@ -162,8 +161,7 @@ export function DashboardLayout() {
   if (!user) return null;
 
   const nav = getNavForRole(user.role);
-  const roleNotifications = getNotifications(user.role, user.department);
-  const unread = roleNotifications.filter((n) => !n.read).length;
+  const unread = store.notifications.filter((n) => !n.read).length;
 
   // Per-role nav badges. Recomputed on every store change because `store` is reactive.
   const navBadges: Record<NonNullable<NavItem["badgeKey"]>, number> = {

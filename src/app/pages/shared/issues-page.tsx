@@ -1,15 +1,39 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "../../lib/context";
-import {
-  getIssues, createIssue, addIssueNote, updateIssueStatus, escalateIssue,
-  subscribeIssues, type Issue, type IssueType, type IssueStatus,
-} from "../../services/issue-service";
+import { apiClient } from "../../lib/api-client";
 import {
   AlertTriangle, Plus, MessageSquare, ArrowUpRight, CheckCircle2, Clock, X,
-  Search, Filter, BarChart3
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { ExtendedRole } from "../../services/auth-service";
+
+type IssueType = "academic" | "company" | "logbook" | "supervisor" | "other";
+type IssueStatus = "Open" | "In Progress" | "Escalated" | "Resolved";
+
+interface IssueNote {
+  id: string;
+  author: string;
+  authorRole: string;
+  content: string;
+  timestamp: string;
+}
+
+interface Issue {
+  id: string;
+  type: IssueType;
+  title: string;
+  description: string;
+  status: IssueStatus;
+  priority: "Low" | "Medium" | "High";
+  raisedBy: string;
+  raisedByRole: string;
+  department: string;
+  assignedTo: string;
+  notes: IssueNote[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface Props {
   viewRole: ExtendedRole;
@@ -17,6 +41,7 @@ interface Props {
 
 export function IssuesPage({ viewRole }: Props) {
   const { user } = useAppContext();
+  const [issues, setIssues] = useState<Issue[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [typeFilter, setTypeFilter] = useState<string>("All");
   const [priorityFilter, setPriorityFilter] = useState<string>("All");
@@ -25,84 +50,113 @@ export function IssuesPage({ viewRole }: Props) {
   const [showCreate, setShowCreate] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [createForm, setCreateForm] = useState({ type: "academic" as IssueType, title: "", description: "", priority: "Medium" });
-  const [, setTick] = useState(0);
-
-  useEffect(() => {
-    return subscribeIssues(() => setTick((t) => t + 1));
-  }, []);
 
   const department = (viewRole === "dlo" || viewRole === "hod" || viewRole === "academic") ? user?.department : undefined;
-  const allIssues = getIssues({ department: viewRole === "clo" ? undefined : department });
-  const issues = viewRole === "student"
-    ? allIssues.filter((i) => i.raisedBy === user?.name)
-    : allIssues;
 
-  const filtered = issues.filter((i) => {
+  const fetchIssues = useCallback(async () => {
+    const filters: Record<string, unknown> = {};
+    if (department) filters.department = department;
+    const res = await apiClient.getIssues(filters);
+    if (res.success) setIssues(res.data);
+  }, [department]);
+
+  useEffect(() => {
+    fetchIssues();
+  }, [fetchIssues]);
+
+  const roleLabel = viewRole === "clo" ? "CLO" : viewRole === "dlo" ? "DLO" : viewRole === "student" ? "Student" : viewRole === "academic" ? "Academic Supervisor" : viewRole === "supervisor" ? "Industry Supervisor" : "HOD";
+
+  const visibleIssues = viewRole === "student"
+    ? issues.filter((i) => i.raisedBy === user?.name)
+    : issues;
+
+  const filtered = visibleIssues.filter((i) => {
     const matchStatus = statusFilter === "All" || i.status === statusFilter;
     const matchType = typeFilter === "All" || i.type === typeFilter;
     const matchPriority = priorityFilter === "All" || i.priority === priorityFilter;
     const matchSearch = search === "" ||
       i.title.toLowerCase().includes(search.toLowerCase()) ||
-      i.raisedBy.toLowerCase().includes(search.toLowerCase()) ||
+      i.raisedBy?.toLowerCase().includes(search.toLowerCase()) ||
       i.description.toLowerCase().includes(search.toLowerCase());
     return matchStatus && matchType && matchPriority && matchSearch;
   });
 
-  const roleLabel = viewRole === "clo" ? "CLO" : viewRole === "dlo" ? "DLO" : viewRole === "student" ? "Student" : viewRole === "academic" ? "Academic Supervisor" : viewRole === "supervisor" ? "Industry Supervisor" : "HOD";
+  const openCount = visibleIssues.filter((i) => i.status === "Open").length;
+  const inProgressCount = visibleIssues.filter((i) => i.status === "In Progress").length;
+  const escalatedCount = visibleIssues.filter((i) => i.status === "Escalated").length;
+  const resolvedCount = visibleIssues.filter((i) => i.status === "Resolved").length;
 
-  // Stats
-  const openCount = issues.filter((i) => i.status === "Open").length;
-  const inProgressCount = issues.filter((i) => i.status === "In Progress").length;
-  const escalatedCount = issues.filter((i) => i.status === "Escalated").length;
-  const resolvedCount = issues.filter((i) => i.status === "Resolved").length;
-
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!createForm.title.trim() || !createForm.description.trim()) {
       toast.error("Title and description are required.");
       return;
     }
-    const result = createIssue(
-      createForm.type,
-      createForm.title,
-      createForm.description,
-      user?.name || "",
-      roleLabel,
-      user?.department || "Unknown",
-      user?.studentId
-    );
-    if (result.success) {
-      toast.success(result.message);
+    const res = await apiClient.createIssue({
+      type: createForm.type,
+      title: createForm.title,
+      description: createForm.description,
+      priority: createForm.priority,
+    } as any);
+    if (res.success) {
+      toast.success("Issue reported successfully.");
       setShowCreate(false);
       setCreateForm({ type: "academic", title: "", description: "", priority: "Medium" });
+      fetchIssues();
+    } else {
+      toast.error(res.message ?? "Failed to create issue.");
     }
   };
 
-  const handleAddNote = () => {
+  const handleAddNote = async () => {
     if (!noteText.trim() || !selectedIssue) return;
-    addIssueNote(selectedIssue.id, user?.name || "", roleLabel, noteText);
-    toast.success("Note added.");
-    setNoteText("");
-    const updated = getIssues().find((i) => i.id === selectedIssue.id);
-    if (updated) setSelectedIssue(updated);
+    const res = await apiClient.addIssueNote(selectedIssue.id, noteText);
+    if (res.success) {
+      toast.success("Note added.");
+      setNoteText("");
+      await fetchIssues();
+      setSelectedIssue((prev) => {
+        const updated = issues.find((i) => i.id === prev?.id);
+        return updated ?? prev;
+      });
+    } else {
+      toast.error(res.message ?? "Failed to add note.");
+    }
   };
 
-  const handleResolve = (issueId: string) => {
-    updateIssueStatus(issueId, "Resolved", "Resolved by " + (user?.name || ""));
-    toast.success("Issue resolved.");
-    setSelectedIssue(null);
+  const handleResolve = async (issueId: string) => {
+    const res = await apiClient.updateIssueStatus(issueId, "Resolved");
+    if (res.success) {
+      toast.success("Issue resolved.");
+      setSelectedIssue(null);
+      fetchIssues();
+    } else {
+      toast.error(res.message ?? "Failed to resolve issue.");
+    }
   };
 
-  const handleEscalate = (issueId: string) => {
-    escalateIssue(issueId, user?.name || "");
-    toast.success("Issue escalated to CLO.");
-    setSelectedIssue(null);
+  const handleEscalate = async (issueId: string) => {
+    const res = await apiClient.escalateIssue(issueId);
+    if (res.success) {
+      toast.success("Issue escalated to CLO.");
+      setSelectedIssue(null);
+      fetchIssues();
+    } else {
+      toast.error(res.message ?? "Failed to escalate issue.");
+    }
   };
 
-  const handleMarkInProgress = (issueId: string) => {
-    updateIssueStatus(issueId, "In Progress", "Being reviewed by " + (user?.name || ""));
-    toast.success("Issue marked as in progress.");
-    const updated = getIssues().find((i) => i.id === issueId);
-    if (updated) setSelectedIssue(updated);
+  const handleMarkInProgress = async (issueId: string) => {
+    const res = await apiClient.updateIssueStatus(issueId, "In Progress");
+    if (res.success) {
+      toast.success("Issue marked as in progress.");
+      await fetchIssues();
+      setSelectedIssue((prev) => {
+        const updated = issues.find((i) => i.id === issueId);
+        return updated ?? prev;
+      });
+    } else {
+      toast.error(res.message ?? "Failed to update issue.");
+    }
   };
 
   const statusColors: Record<IssueStatus, string> = {
@@ -124,7 +178,7 @@ export function IssuesPage({ viewRole }: Props) {
         <div>
           <h1>Issues & Escalations</h1>
           <p className="text-muted-foreground" style={{ fontSize: "0.85rem" }}>
-            {viewRole === "student" ? "Report and track issues" : "Manage and resolve reported issues"} · {issues.length} total
+            {viewRole === "student" ? "Report and track issues" : "Manage and resolve reported issues"} · {visibleIssues.length} total
           </p>
         </div>
         {(viewRole === "student" || viewRole === "dlo" || viewRole === "clo") && (
@@ -255,11 +309,11 @@ export function IssuesPage({ viewRole }: Props) {
 
               {/* Activity Log */}
               <div className="border-t border-border pt-4 space-y-3">
-                <h4>Activity Log ({selectedIssue.notes.length})</h4>
-                {selectedIssue.notes.length === 0 && (
+                <h4>Activity Log ({selectedIssue.notes?.length ?? 0})</h4>
+                {(!selectedIssue.notes || selectedIssue.notes.length === 0) && (
                   <p className="text-muted-foreground" style={{ fontSize: "0.8rem" }}>No notes yet.</p>
                 )}
-                {selectedIssue.notes.map((note) => (
+                {selectedIssue.notes?.map((note) => (
                   <div key={note.id} className="bg-secondary/50 rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-1">
                       <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary" style={{ fontSize: "0.5rem" }}>
@@ -425,7 +479,7 @@ export function IssuesPage({ viewRole }: Props) {
               <div className="flex gap-3 mt-2 text-muted-foreground" style={{ fontSize: "0.7rem" }}>
                 <span>By: {issue.raisedBy}</span>
                 <span>{issue.department}</span>
-                {issue.notes.length > 0 && <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" />{issue.notes.length}</span>}
+                {issue.notes?.length > 0 && <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" />{issue.notes.length}</span>}
               </div>
             </button>
           ))}

@@ -1,5 +1,8 @@
+import { useState, useEffect } from "react";
 import { useAppContext } from "../../lib/context";
 import { StatCard } from "../../components/stat-card";
+import { apiClient } from "../../lib/api-client";
+import type { ApplicationResponse } from "../../types/api";
 import { getStudentLogbook, checkInactiveStudents } from "../../services/logbook-service";
 import { getAttendanceRecords } from "../../services/attendance-service";
 import {
@@ -10,16 +13,23 @@ import {
 import { useNavigate } from "react-router";
 
 export function AcademicDashboard() {
-  const { user, store } = useAppContext();
+  const { user } = useAppContext();
   const navigate = useNavigate();
 
-  // Academic supervisors see students assigned to them
-  const assignedStudents = store.applications.filter(
+  const [applications, setApplications] = useState<ApplicationResponse[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiClient.getApplications().then((res) => {
+      if (!cancelled && res.success) setApplications(res.data);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const assignedStudents = applications.filter(
     (a) => a.supervisorAssigned === user?.name && (a.status === "Active" || a.status === "Completed")
   );
-
-  // Also show all dept students as fallback for demo
-  const deptStudents = store.applications.filter(
+  const deptStudents = applications.filter(
     (a) => a.department === user?.department && (a.status === "Active" || a.status === "Completed")
   );
   const students = assignedStudents.length > 0 ? assignedStudents : deptStudents;

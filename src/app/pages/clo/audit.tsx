@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { useAppContext } from "../../lib/context";
+import { useEffect, useState } from "react";
 import { Shield, Search, Filter, Download, ChevronLeft, ChevronRight, Calendar, User, Eye } from "lucide-react";
 import { exportToCSV } from "../../lib/csv-export";
 import { toast } from "sonner";
+import { apiClient } from "../../lib/api-client";
 
 const actionColors: Record<string, string> = {
   "Created Term": "bg-blue-100 text-blue-700",
@@ -19,8 +19,27 @@ const actionColors: Record<string, string> = {
 
 const PAGE_SIZE = 10;
 
+type AuditLogItem = {
+  id: string;
+  timestamp: string;
+  user: string;
+  action: string;
+  target: string;
+  details: string;
+};
+
+function normalizeAuditLogs(logs: any[]): AuditLogItem[] {
+  return logs.map((log, index) => ({
+    id: String(log.id ?? log.audit_id ?? `audit-${index}`),
+    timestamp: log.timestamp ?? log.created_at ?? log.createdAt ?? new Date().toISOString(),
+    user: log.user?.name ?? log.user_name ?? log.actor ?? log.performed_by ?? "System",
+    action: log.action ?? log.event ?? log.verb ?? "Updated",
+    target: log.target ?? log.auditable_type ?? log.resource ?? "Record",
+    details: log.details ?? log.description ?? log.message ?? "No additional details provided.",
+  }));
+}
+
 export function AuditLogsPage() {
-  const { store } = useAppContext();
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("All");
   const [userFilter, setUserFilter] = useState("All");
@@ -28,11 +47,40 @@ export function AuditLogsPage() {
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(0);
   const [selectedLog, setSelectedLog] = useState<string | null>(null);
+  const [logs, setLogs] = useState<AuditLogItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const uniqueActions = [...new Set(store.auditLogs.map((l) => l.action))];
-  const uniqueUsers = [...new Set(store.auditLogs.map((l) => l.user))];
+  useEffect(() => {
+    let active = true;
 
-  const filtered = store.auditLogs.filter((log) => {
+    async function loadLogs() {
+      setLoading(true);
+      const response = await apiClient.getAuditLogs();
+      if (!active) return;
+
+      if (response.success && response.data.length > 0) {
+        setLogs(normalizeAuditLogs(response.data));
+      } else {
+        setLogs([]);
+      }
+      setLoading(false);
+    }
+
+    loadLogs().catch(() => {
+      if (!active) return;
+      setLogs([]);
+      setLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const uniqueActions = [...new Set(logs.map((l) => l.action))];
+  const uniqueUsers = [...new Set(logs.map((l) => l.user))];
+
+  const filtered = logs.filter((log) => {
     const matchSearch =
       search === "" ||
       log.user.toLowerCase().includes(search.toLowerCase()) ||
@@ -58,7 +106,7 @@ export function AuditLogsPage() {
         <div>
           <h1>Audit Logs</h1>
           <p className="text-muted-foreground" style={{ fontSize: "0.85rem" }}>
-            All system actions are logged for accountability · {filtered.length} records
+            {loading ? "Loading audit logs from the API..." : `All system actions are logged for accountability · ${filtered.length} records`}
           </p>
         </div>
         <button
@@ -201,7 +249,7 @@ export function AuditLogsPage() {
 
         {/* Detail panel */}
         {selectedLog && (() => {
-          const log = store.auditLogs.find((l) => l.id === selectedLog);
+          const log = logs.find((l) => l.id === selectedLog);
           if (!log) return null;
           return (
             <div className="border-t border-border bg-muted/20 p-4">

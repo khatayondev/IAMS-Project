@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useAppContext } from "../../lib/context";
 import { MapPin, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { sendNotification, sendAnnouncement } from "../../services/notification-service";
 import { submitSiteVisitation } from "../../services/grading-service";
 import { VisitationCriterionKey, VisitationCriterionRating } from "../../types/grading";
 
@@ -44,40 +43,9 @@ export function AcademicVisitsPage() {
   const [showCompleteForm, setShowCompleteForm] = useState<string | null>(null);
   const [rescheduleVisitId, setRescheduleVisitId] = useState<string | null>(null);
 
-  const notifyParties = (
-    kind: "scheduled" | "rescheduled" | "cancelled",
-    visit: SiteVisit,
-    extra?: string
-  ) => {
-    const academicName = user?.name || "Academic Supervisor";
-    const when = `${visit.date} at ${visit.time}`;
-    const titleByKind = {
-      scheduled: "Upcoming Site Visit",
-      rescheduled: "Site Visit Rescheduled",
-      cancelled: "Site Visit Cancelled",
-    } as const;
-    const studentMsg = {
-      scheduled: `${academicName} has scheduled a site visit to ${visit.companyName} on ${when}. Please be present at your workstation.`,
-      rescheduled: `${academicName} rescheduled your site visit to ${when}.${extra ? ` Reason: ${extra}` : ""}`,
-      cancelled: `${academicName} cancelled the site visit previously set for ${when}.${extra ? ` Reason: ${extra}` : ""}`,
-    }[kind];
-    const supervisorMsg = {
-      scheduled: `${academicName} will visit ${visit.companyName} on ${when} to meet with ${visit.studentName}. Contact: ${visit.contactPerson || "—"}.`,
-      rescheduled: `The site visit for ${visit.studentName} at ${visit.companyName} has been rescheduled to ${when}.${extra ? ` Reason: ${extra}` : ""}`,
-      cancelled: `The site visit for ${visit.studentName} at ${visit.companyName} on ${when} has been cancelled.${extra ? ` Reason: ${extra}` : ""}`,
-    }[kind];
-
-    // In-app notifications
-    sendNotification("system", titleByKind[kind], studentMsg);
-    sendNotification("system", titleByKind[kind], supervisorMsg);
-
-    // Mocked email via the announcement log
-    sendAnnouncement(
-      titleByKind[kind],
-      `${studentMsg}\n\n${supervisorMsg}`,
-      academicName,
-      [`Student: ${visit.studentName}`, `Industry Supervisor: ${visit.contactPerson || visit.companyName}`]
-    );
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const notifyParties = (_kind: "scheduled" | "rescheduled" | "cancelled", _visit: SiteVisit, _extra?: string) => {
+    // Notification dispatch will be implemented via API
   };
 
   // Students for scheduling

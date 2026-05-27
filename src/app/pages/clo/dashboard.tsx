@@ -1,9 +1,12 @@
+import { useEffect, useState } from "react";
 import { StatCard } from "../../components/stat-card";
 import { StatusBadge } from "../../components/status-badge";
 import { useAppContext } from "../../lib/context";
 import { departments } from "../../lib/mock-data";
 import { checkInactiveStudents } from "../../services/logbook-service";
 import { exportToCSV } from "../../lib/csv-export";
+import { apiClient } from "../../lib/api-client";
+import type { ApplicationResponse, CompanyResponse, TermResponse } from "../../types/api";
 import {
   Building2, FileText, GraduationCap, Clock, AlertTriangle, TrendingUp,
   ArrowRight, CheckCircle2, UserPlus, Zap, Download
@@ -25,12 +28,59 @@ const weeklyTrend = [
   { week: "W3 Apr", applications: 3, placements: 2 },
 ];
 
+interface CloDashboardSnapshot {
+  applications: ApplicationResponse[];
+  companies: CompanyResponse[];
+  terms: TermResponse[];
+}
+
+function normalizeStatus(status?: string): string {
+  return (status ?? "").trim().toLowerCase();
+}
+
+function isActiveTerm(status?: string): boolean {
+  const value = normalizeStatus(status);
+  return value === "active" || value === "upcoming" || value === "current";
+}
+
 export function CLODashboard() {
   const { store } = useAppContext();
   const navigate = useNavigate();
-  const { applications, companies, notifications, terms } = store;
+  const [remoteData, setRemoteData] = useState<CloDashboardSnapshot | null>(null);
 
-  const activeTerm = terms.find((t) => t.status === "Active");
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDashboardData = async () => {
+      const [applicationsResult, companiesResult, termsResult] = await Promise.all([
+        apiClient.getApplications(),
+        apiClient.getCompanies(),
+        apiClient.getTerms(),
+      ]);
+
+      if (cancelled) return;
+
+      if (applicationsResult.success && companiesResult.success && termsResult.success) {
+        setRemoteData({
+          applications: applicationsResult.data,
+          companies: companiesResult.data,
+          terms: termsResult.data,
+        });
+      }
+    };
+
+    void loadDashboardData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const applications = remoteData?.applications ?? store.applications;
+  const companies = remoteData?.companies ?? store.companies;
+  const terms = remoteData?.terms ?? store.terms;
+
+  const activeTerm = terms.find((t) => isActiveTerm(t.status));
   const pendingApps = applications.filter((a) => a.status === "Pending").length;
   const activeStudents = applications.filter((a) => a.status === "Active").length;
   const pendingCompanies = companies.filter((c) => c.status === "Pending").length;
@@ -329,7 +379,7 @@ export function CLODashboard() {
           </button>
         </div>
         <div className="divide-y divide-border">
-          {notifications.slice(0, 4).map((n) => (
+          {store.notifications.slice(0, 4).map((n) => (
             <div key={n.id} className={`px-4 py-3 flex items-start gap-3 ${!n.read ? "bg-secondary/30" : ""}`}>
               <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!n.read ? "bg-primary" : "bg-transparent"}`} />
               <div className="flex-1">

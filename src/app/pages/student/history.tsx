@@ -1,18 +1,31 @@
-import { useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useAppContext } from "../../lib/context";
-import { getLatestApplicationForStudent, getStudentApplicationHistory } from "../../lib/store";
+import { apiClient } from "../../lib/api-client";
 import { Card } from "../../components/ui/card";
-import { Award, FileText, Clock, BadgeCheck } from "lucide-react";
+import { Award, BadgeCheck } from "lucide-react";
 
 export function StudentHistoryPage() {
-  const { user, store } = useAppContext();
-  const history = useMemo(
-    () => getStudentApplicationHistory(user?.studentId || ""),
-    [store.applications, user?.studentId]
-  );
-  const latest = useMemo(() => getLatestApplicationForStudent(user?.studentId || ""), [store.applications, user?.studentId]);
+  const { user } = useAppContext();
+  const [history, setHistory] = useState<any[]>([]);
+
+  useEffect(() => {
+    apiClient.getApplications().then((res) => {
+      if (res.success) {
+        const sorted = [...res.data].sort((a, b) =>
+          (a.created_at ?? "") < (b.created_at ?? "") ? -1 : 1
+        );
+        setHistory(sorted);
+      }
+    });
+  }, []);
 
   if (!user) return null;
+
+  const latest = history.length > 0 ? history[history.length - 1] : null;
+
+  const companyName = (app: any) => app?.company?.name ?? app?.companyName ?? "—";
+  const dateApplied = (app: any) => app?.created_at ?? app?.dateApplied ?? "—";
+  const supervisor = (app: any) => app?.academic_supervisor?.name ?? app?.supervisorAssigned ?? null;
 
   return (
     <div className="space-y-6">
@@ -29,8 +42,8 @@ export function StudentHistoryPage() {
                 <BadgeCheck className="w-5 h-5 text-primary" />
                 <h3 className="text-lg font-semibold">Current / Latest Period</h3>
               </div>
-              <p className="text-sm"><strong>{latest.companyName}</strong> · {latest.department} · {latest.level}</p>
-              <p className="text-sm text-muted-foreground mt-1">Status: {latest.status} · Applied: {latest.dateApplied}</p>
+              <p className="text-sm"><strong>{companyName(latest)}</strong> · {latest.student?.department ?? latest.department ?? "—"}</p>
+              <p className="text-sm text-muted-foreground mt-1">Status: {latest.status} · Applied: {dateApplied(latest)}</p>
             </div>
             <div className="px-3 py-1.5 rounded-full bg-background border text-xs font-medium">
               {latest.status}
@@ -40,23 +53,23 @@ export function StudentHistoryPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {history.slice().reverse().map((app, index) => (
+        {[...history].reverse().map((app, index) => (
           <Card key={app.id} className="p-4">
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-lg font-semibold">{app.companyName}</h3>
+                  <h3 className="text-lg font-semibold">{companyName(app)}</h3>
                   {index === 0 && (
                     <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
                       Most Recent
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground">{app.department} · {app.level}</p>
+                <p className="text-sm text-muted-foreground">{app.student?.department ?? app.department ?? "—"}</p>
                 <p className="text-sm mt-2">Status: <strong>{app.status}</strong></p>
-                <p className="text-xs text-muted-foreground">Applied: {app.dateApplied}</p>
-                {app.supervisorAssigned && (
-                  <p className="text-xs text-muted-foreground mt-1">Supervisor: {app.supervisorAssigned}</p>
+                <p className="text-xs text-muted-foreground">Applied: {dateApplied(app)}</p>
+                {supervisor(app) && (
+                  <p className="text-xs text-muted-foreground mt-1">Supervisor: {supervisor(app)}</p>
                 )}
               </div>
               <div className="text-right">

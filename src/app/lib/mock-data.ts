@@ -1,4 +1,6 @@
-// Mock data for the Industrial Attachment Management System
+// Type definitions and static reference data for the IAMS application.
+// Empty collection exports are kept only to avoid import errors in pages
+// pending API migration — they will be removed as each page is updated.
 
 import type {
   DepartmentGradingConfig,
@@ -7,13 +9,8 @@ import type {
   ReportScore,
   PresentationScore,
   CompiledGrade,
-  CriterionRating,
   WeeklyRubricEntry,
 } from "../types/grading";
-import {
-  DEFAULT_STRUCTURE_WEIGHTS,
-  DEFAULT_SECTION_WEIGHTS,
-} from "./constants";
 
 export type UserRole = "clo" | "dlo" | "academic" | "hod";
 
@@ -37,7 +34,6 @@ export interface Term {
   internshipEnd: string;
   eligibleLevels: string[];
   departments: string[];
-  // Empty array means "all programs across the selected departments".
   programs: string[];
 }
 
@@ -52,8 +48,6 @@ export interface Company {
   addedBy: string;
   dateAdded: string;
   rejectionReason?: string;
-  // Legacy fields kept optional for back-compat with older views.
-  // New flows source address/phone from Branch records.
   address?: string;
   contactPhone?: string;
   department?: string;
@@ -119,14 +113,7 @@ export interface AuditLog {
   details: string;
 }
 
-// Current user state
-export const currentUser: User = {
-  id: "u1",
-  name: "Dr. Kwame Asante",
-  email: "k.asante@htu.edu.gh",
-  role: "clo",
-  avatar: "",
-};
+// ── Static reference data ──
 
 export const ghanaRegions = [
   "Ahafo Region",
@@ -156,8 +143,6 @@ export const departments = [
   "Accounting & Finance",
 ];
 
-// Programs grouped by department. In production these would be fetched from
-// the student records API rather than hard-coded.
 export const programsByDepartment: Record<string, string[]> = {
   "Computer Science": [
     "BSc Computer Science",
@@ -195,67 +180,18 @@ export const programsByDepartment: Record<string, string[]> = {
   ],
 };
 
-// Flat list of all programs across departments (convenience for selectors).
 export const programs: string[] = Object.values(programsByDepartment).flat();
 
-export const terms: Term[] = [];
-
-export const companies: Company[] = [];
-
-// One "Main Branch" auto-seeded per company so existing applications can link.
-// Additional branches added below for a couple companies to exercise the multi-branch UX.
-export const branches: Branch[] = [];
-
-export const applications: Application[] = [];
+// ── Empty stubs kept for pages pending API migration ──
+// Remove each export once its consuming page is updated to use apiClient.
 
 export const supervisors: Supervisor[] = [];
-
-export const notifications: Notification[] = [];
-
-export const auditLogs: AuditLog[] = [];
-
-export const staffList = [];
-
-// ── Grading: per-department configurations seeded for active term (t1) ──
-// Mix of statuses so HOD has something pending, others already locked.
-const TERM_ID = "t1";
-const seedTimestamp = "2026-03-01T09:00:00";
-
-function ratings(values: number[]): Record<string, CriterionRating> {
-  // 20 criteria — A1-A4 (4), B1-B8 (8), C1-C5 (5), D1-D3 (3).
-  // Older 18-value seed arrays are auto-padded for B7/B8 with a default 3.
-  const keys = [
-    "A1", "A2", "A3", "A4",
-    "B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8",
-    "C1", "C2", "C3", "C4", "C5",
-    "D1", "D2", "D3",
-  ];
-  const out: Record<string, CriterionRating> = {} as any;
-  // If the caller passed the legacy 18-length array (pre-B7/B8), splice in defaults.
-  let v = values;
-  if (values.length === 18) {
-    v = [
-      ...values.slice(0, 10),  // A1-A4 + B1-B6
-      3, 3,                     // B7, B8 (default Average)
-      ...values.slice(10),      // C1-C5 + D1-D3
-    ];
-  }
-  keys.forEach((k, i) => { out[k] = (v[i] ?? 3) as CriterionRating; });
-  return out;
-}
-
+export const staffList: any[] = [];
 export const departmentGradingConfigs: DepartmentGradingConfig[] = [];
-
 export const industrialAssessments: IndustrialSupervisorAssessment[] = [];
-
 export const siteVisitations: SiteVisitationScore[] = [];
-
 export const reportScores: ReportScore[] = [];
-
 export const presentationScores: PresentationScore[] = [];
-
 export const compiledGrades: CompiledGrade[] = [];
-
 export const weeklyRubrics: WeeklyRubricEntry[] = [];
-
 export const studentActivity: { studentName: string; lastLogDate: string; daysSinceLog: number; status: "green" | "yellow" | "red" }[] = [];

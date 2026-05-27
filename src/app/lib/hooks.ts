@@ -61,25 +61,10 @@ export function useDebounce<T>(value: T, delayMs = 300): T {
   return debounced;
 }
 
-// ── useLocalStorage: Persist state in localStorage ──
+// ── useLocalStorage: In-memory state helper ──
 
 export function useLocalStorage<T>(key: string, defaultValue: T): [T, (value: T | ((prev: T) => T)) => void] {
-  const [value, setValue] = useState<T>(() => {
-    try {
-      const stored = localStorage.getItem(key);
-      return stored ? JSON.parse(stored) : defaultValue;
-    } catch {
-      return defaultValue;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch {
-      // Storage full or unavailable
-    }
-  }, [key, value]);
+  const [value, setValue] = useState<T>(defaultValue);
 
   return [value, setValue];
 }

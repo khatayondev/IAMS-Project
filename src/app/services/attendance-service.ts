@@ -16,33 +16,12 @@ export interface AttendanceRecord {
   verifiedAt?: string;
 }
 
-const ATTENDANCE_STORAGE_KEY = "iams_attendance_records_v3";
-
-function getInitialRecords(): AttendanceRecord[] {
-  if (typeof window !== "undefined") {
-    try {
-      const saved = localStorage.getItem(ATTENDANCE_STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error("Failed to load local attendance records:", e);
-    }
-  }
-  return []; // Start fully clean for real testing!
-}
-
 // Mock attendance data
-let records: AttendanceRecord[] = getInitialRecords();
+let records: AttendanceRecord[] = [];
 
 type Listener = () => void;
 const listeners = new Set<Listener>();
 function notify() {
-  if (typeof window !== "undefined") {
-    try {
-      localStorage.setItem(ATTENDANCE_STORAGE_KEY, JSON.stringify(records));
-    } catch (e) {
-      console.error("Failed to save local attendance records:", e);
-    }
-  }
   listeners.forEach((l) => l());
 }
 export function subscribeAttendance(listener: Listener) {

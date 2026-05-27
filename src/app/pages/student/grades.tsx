@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useAppContext } from "../../lib/context";
-import { getLatestApplicationForStudent } from "../../lib/store";
+import { apiClient } from "../../lib/api-client";
 import { Award, Clock, AlertCircle, Users, BookMarked, ClipboardCheck } from "lucide-react";
 import { Card } from "../../components/ui/card";
 import { GradeBreakdownCard } from "../../components/grading/grade-breakdown-card";
@@ -13,9 +13,17 @@ import {
 } from "../../services/grading-service";
 
 export function StudentGradesPage() {
-  const { user, store } = useAppContext();
-  const _ = store.compiledGrades.length;
-  const myApp = useMemo(() => getLatestApplicationForStudent(user?.studentId || ""), [store.applications, user?.studentId]);
+  const { user } = useAppContext();
+  const [myApp, setMyApp] = useState<any | null>(null);
+
+  useEffect(() => {
+    apiClient.getApplications().then((res) => {
+      if (res.success && res.data.length > 0) {
+        const sorted = [...res.data].sort((a, b) => (b.created_at ?? "") > (a.created_at ?? "") ? 1 : -1);
+        setMyApp(sorted[0]);
+      }
+    });
+  }, []);
 
   if (!myApp) {
     return (

@@ -1,6 +1,5 @@
-import { useState } from "react";
-import { useAppContext } from "../../../lib/context";
-import { readNotification, markAllRead } from "../../../services/notification-service";
+import { useState, useEffect, useCallback } from "react";
+import { apiClient } from "../../../lib/api-client";
 import {
   Bell, CheckCheck, Mail, Search, Archive, FileText,
   Building2, GraduationCap, AlertTriangle, Settings2
@@ -8,12 +7,21 @@ import {
 import { toast } from "sonner";
 
 export function NotificationsPanel() {
-  const { store } = useAppContext();
+  const [allNotifications, setAllNotifications] = useState<any[]>([]);
   const [filter, setFilter] = useState<string>("All");
   const [search, setSearch] = useState("");
   const [archivedIds, setArchivedIds] = useState<Set<string>>(new Set());
 
-  const notifications = store.notifications.filter((n) => !archivedIds.has(n.id));
+  const fetchNotifications = useCallback(async () => {
+    const res = await apiClient.getNotifications();
+    if (res.success) setAllNotifications(res.data);
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  const notifications = allNotifications.filter((n) => !archivedIds.has(n.id));
   const searched = search
     ? notifications.filter((n) =>
         n.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -26,13 +34,15 @@ export function NotificationsPanel() {
       ? searched.filter((n) => !n.read)
       : searched.filter((n) => n.type === filter);
 
-  const handleMarkRead = (id: string) => {
-    readNotification(id);
+  const handleMarkRead = async (id: string) => {
+    await apiClient.markNotificationRead(id);
+    fetchNotifications();
   };
 
-  const handleMarkAllRead = () => {
-    markAllRead();
+  const handleMarkAllRead = async () => {
+    await apiClient.markAllNotificationsRead();
     toast.success("All notifications marked as read.");
+    fetchNotifications();
   };
 
   const handleArchive = (id: string) => {

@@ -1,6 +1,9 @@
+import { useState, useEffect } from "react";
 import { useAppContext } from "../../lib/context";
 import { StatusBadge } from "../../components/status-badge";
 import { StatCard } from "../../components/stat-card";
+import { apiClient } from "../../lib/api-client";
+import type { ApplicationResponse } from "../../types/api";
 import { getStudentLogbook } from "../../services/logbook-service";
 import { getAttendanceRecords } from "../../services/attendance-service";
 import { getOverdueWeeklyRubrics } from "../../services/grading-service";
@@ -11,17 +14,20 @@ import {
 import { useNavigate } from "react-router";
 
 export function SupervisorDashboard() {
-  const { user, store } = useAppContext();
+  const { user } = useAppContext();
   const navigate = useNavigate();
 
-  // Students assigned to this supervisor's company (Ghana Telecom Ltd for demo)
-  const assignedStudents = store.applications.filter(
-    (a) => a.status === "Active" && a.companyName === "Ghana Telecom Ltd"
-  );
+  const [assignedStudents, setAssignedStudents] = useState<ApplicationResponse[]>([]);
 
-  // Overdue weekly rubrics — touch the slice so the banner refreshes after submissions.
-  const _wrCount = store.weeklyRubrics.length;
-  const overdueRubrics = getOverdueWeeklyRubrics({ companyName: "Ghana Telecom Ltd" });
+  useEffect(() => {
+    let cancelled = false;
+    apiClient.getApplications({ status: "Active" }).then((res) => {
+      if (!cancelled && res.success) setAssignedStudents(res.data);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const overdueRubrics = getOverdueWeeklyRubrics({});
 
   // Aggregate metrics
   const totalStudents = assignedStudents.length;

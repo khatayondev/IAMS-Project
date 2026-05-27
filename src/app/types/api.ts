@@ -71,9 +71,13 @@ export interface AuthResponse {
 // ── Applications ──
 
 export interface CreateApplicationRequest {
-  termId: string;
-  companyId: string;
-  coverLetter?: string;
+  company_id: number;
+  academic_term_id: number;
+  application_type: "individual" | "group";
+  group_leader_id?: number | null;
+  cover_letter?: string | null;
+  proposed_start_date?: string | null;
+  proposed_end_date?: string | null;
 }
 
 export interface ApproveApplicationRequest {
@@ -97,38 +101,53 @@ export interface AssignSupervisorRequest {
 }
 
 export interface ApplicationFilters extends PaginationParams {
+  // API status values: draft | submitted | under_review | approved | rejected
   status?: string;
-  department?: string;
-  search?: string;
-  termId?: string;
+  academic_term_id?: number;
+  per_page?: number;
 }
 
 export interface ApplicationResponse {
   id: string;
+  // The real API returns nested objects — field names below may differ per endpoint.
+  // Use optional chaining: app.student?.name ?? app.studentName
   studentName: string;
   studentId: string;
   department: string;
   level: string;
   companyId: string;
   companyName: string;
-  companyStatus: "Approved" | "Pending";
-  status: "Pending" | "Approved" | "Rejected" | "Company Accepted" | "Active" | "Completed";
+  companyStatus: string;
+  // API status values: draft | submitted | under_review | approved | rejected
+  status: string;
   dateApplied: string;
   supervisorAssigned?: string;
   grade?: string;
-  gradeStatus?: "Pending" | "Submitted" | "Approved";
+  gradeStatus?: string;
+  // Nested relations returned by some endpoints
+  student?: { name?: string; student_id?: string; department?: string };
+  company?: { name?: string; id?: number };
+  academic_supervisor?: { name?: string; id?: number };
+  created_at?: string;
 }
 
 // ── Companies ──
 
 export interface CreateCompanyRequest {
   name: string;
+  email: string;
+  phone: string;
   address: string;
-  contactPerson: string;
-  contactEmail: string;
-  contactPhone: string;
-  industry: string;
-  department: string;
+  city: string;
+  region: string;
+  country: string;
+  description?: string | null;
+  industry?: string | null;
+  website?: string | null;
+  contact_person_name?: string | null;
+  contact_person_email?: string | null;
+  contact_person_phone?: string | null;
+  max_interns?: number | null;
 }
 
 export interface ApproveCompanyRequest {
@@ -146,25 +165,40 @@ export interface OverrideCompanyRequest {
   reason?: string;
 }
 
-export interface CompanyFilters extends PaginationParams {
-  status?: string;
-  department?: string;
+export interface CompanyFilters {
+  // Use approval_status to filter by pending/approved/rejected
+  approval_status?: "pending" | "approved" | "rejected";
+  // Use status to filter by active/inactive
+  status?: "active" | "inactive";
   search?: string;
+  per_page?: number;
 }
 
 export interface CompanyResponse {
   id: string;
   name: string;
   address: string;
-  contactPerson: string;
-  contactEmail: string;
-  contactPhone: string;
-  industry: string;
-  status: "Approved" | "Pending" | "Rejected";
-  addedBy: string;
-  department: string;
-  dateAdded: string;
+  city?: string;
+  region?: string;
+  country?: string;
+  email?: string;
+  phone?: string;
+  contact_person_name?: string;
+  contact_person_email?: string;
+  contact_person_phone?: string;
+  industry?: string;
+  // approval_status: pending | approved | rejected
+  // status: active | inactive
+  status: string;
+  approval_status?: string;
+  addedBy?: string;
+  department?: string;
+  dateAdded?: string;
   rejectionReason?: string;
+  rejection_reason?: string;
+  max_interns?: number;
+  website?: string;
+  description?: string;
 }
 
 // ── Terms ──
@@ -241,39 +275,46 @@ export interface LogbookEntryResponse {
 // ── Attendance ──
 
 export interface CheckInRequest {
-  studentId: string;
-  studentName: string;
-  department: string;
-  checkInType: "gps" | "manual";
-  location: string;
-  coordinates?: { lat: number; lng: number };
+  internship_id: number;
+  check_in_time?: string | null;
+  gps_check_in_lat?: number | null;
+  gps_check_in_lng?: number | null;
+  // status: present | late | half_day (defaults to "present")
+  status?: "present" | "late" | "half_day";
+  notes?: string | null;
 }
 
 export interface VerifyCheckInRequest {
-  approved: boolean;
-  verifiedBy: string;
+  // status: present | absent | late | half_day | excused
+  status: "present" | "absent" | "late" | "half_day" | "excused";
+  notes?: string | null;
 }
 
-export interface AttendanceFilters extends PaginationParams {
-  department?: string;
-  studentId?: string;
-  dateFrom?: string;
-  dateTo?: string;
-  verificationStatus?: string;
+export interface AttendanceFilters {
+  internship_id?: number;
+  // status: present | absent | late | half_day | excused
+  status?: string;
+  from_date?: string;
+  to_date?: string;
+  per_page?: number;
 }
 
 export interface AttendanceResponse {
   id: string;
-  studentId: string;
-  studentName: string;
-  department: string;
+  internship_id?: string | number;
   date: string;
-  checkInTime: string;
-  checkInType: "gps" | "manual";
-  location: string;
-  verificationStatus: "Verified" | "Pending Verification" | "Rejected";
-  verifiedBy?: string;
-  verifiedAt?: string;
+  check_in_time?: string;
+  check_out_time?: string;
+  gps_check_in_lat?: number;
+  gps_check_in_lng?: number;
+  gps_check_out_lat?: number;
+  gps_check_out_lng?: number;
+  // status: present | absent | late | half_day | excused
+  status: string;
+  notes?: string;
+  verified_by?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // ── Grades ──

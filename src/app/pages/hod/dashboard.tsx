@@ -1,5 +1,8 @@
+import { useState, useEffect } from "react";
 import { useAppContext } from "../../lib/context";
 import { StatCard } from "../../components/stat-card";
+import { apiClient } from "../../lib/api-client";
+import type { ApplicationResponse, CompanyResponse } from "../../types/api";
 import { getDepartmentAverageGrade } from "../../services/grade-service";
 import { getConfigForEditing } from "../../services/grading-service";
 import { Settings, AlertCircle } from "lucide-react";
@@ -13,12 +16,24 @@ import { useNavigate } from "react-router";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 export function HODDashboard() {
-  const { user, store } = useAppContext();
+  const { user } = useAppContext();
   const navigate = useNavigate();
   const dept = user?.department || "";
 
-  // Department-specific data from store
-  const deptApps = store.applications.filter((a) => a.department === dept);
+  const [applications, setApplications] = useState<ApplicationResponse[]>([]);
+  const [allCompanies, setAllCompanies] = useState<CompanyResponse[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([apiClient.getApplications(), apiClient.getCompanies()]).then(([appsRes, cosRes]) => {
+      if (cancelled) return;
+      if (appsRes.success) setApplications(appsRes.data);
+      if (cosRes.success) setAllCompanies(cosRes.data);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const deptApps = applications.filter((a) => a.department === dept);
   const activeApps = deptApps.filter((a) => a.status === "Active");
   const completedApps = deptApps.filter((a) => a.status === "Completed");
   const pendingApps = deptApps.filter((a) => a.status === "Pending");
@@ -26,7 +41,7 @@ export function HODDashboard() {
 
   // Companies
   const deptCompanyIds = [...new Set(deptApps.map((a) => a.companyId))];
-  const deptCompanies = store.companies.filter((c) => deptCompanyIds.includes(c.id));
+  const deptCompanies = allCompanies.filter((c) => deptCompanyIds.includes(c.id));
 
   // Grades
   const gradedApps = deptApps.filter((a) => a.grade);
