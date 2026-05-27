@@ -164,7 +164,7 @@ export function AttendancePage({ viewRole }: Props) {
       )}
 
       {/* Filters */}
-      <div className="flex gap-3 flex-wrap items-end">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label className="text-muted-foreground block mb-1" style={{ fontSize: "0.75rem" }}>Search Student</label>
           <div className="relative">
@@ -174,18 +174,18 @@ export function AttendancePage({ viewRole }: Props) {
               value={studentFilter}
               onChange={(e) => setStudentFilter(e.target.value)}
               placeholder="Name or ID..."
-              className="pl-9 pr-3 py-2 border border-border rounded-lg bg-background"
-              style={{ fontSize: "0.85rem", width: "200px" }}
+              className="w-full pl-9 pr-3 py-2 border border-border rounded-lg bg-background"
+              style={{ fontSize: "0.85rem" }}
             />
           </div>
         </div>
         <div>
           <label className="text-muted-foreground block mb-1" style={{ fontSize: "0.75rem" }}>From</label>
-          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="px-3 py-2 border border-border rounded-lg bg-background" style={{ fontSize: "0.85rem" }} />
+          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full px-3 py-2 border border-border rounded-lg bg-background" style={{ fontSize: "0.85rem" }} />
         </div>
         <div>
           <label className="text-muted-foreground block mb-1" style={{ fontSize: "0.75rem" }}>To</label>
-          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="px-3 py-2 border border-border rounded-lg bg-background" style={{ fontSize: "0.85rem" }} />
+          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full px-3 py-2 border border-border rounded-lg bg-background" style={{ fontSize: "0.85rem" }} />
         </div>
       </div>
 
@@ -372,8 +372,42 @@ export function AttendancePage({ viewRole }: Props) {
         </div>
       )}
 
-      {/* Records Table */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
+      {/* ── Mobile card list (hidden on desktop) ── */}
+      <div className="lg:hidden space-y-3">
+        {filtered.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground bg-card rounded-xl border border-border" style={{ fontSize: "0.85rem" }}>No attendance records found.</div>
+        ) : (
+          filtered.map((r) => (
+            <div
+              key={r.id}
+              className="bg-card border border-border rounded-xl p-4 space-y-3 cursor-pointer active:bg-muted/30 transition-colors"
+              onClick={() => setSelectedRecord(r)}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-medium truncate" style={{ fontSize: "0.9rem" }}>{r.studentName}</p>
+                  <p className="text-muted-foreground" style={{ fontSize: "0.75rem" }}>{r.studentId}</p>
+                </div>
+                <span className={`shrink-0 px-2 py-0.5 rounded text-xs ${statusColors[r.verificationStatus]}`}>{r.verificationStatus}</span>
+              </div>
+              <div className="flex flex-wrap gap-3 text-muted-foreground" style={{ fontSize: "0.8rem" }}>
+                <span>📅 {r.date}</span>
+                <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {r.checkInTime}{r.checkOutTime ? ` → ${r.checkOutTime}` : ""}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-muted-foreground truncate max-w-[70%]" style={{ fontSize: "0.78rem" }}>📍 {r.location}</p>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${r.checkInType === "gps" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>
+                  {r.checkInType === "gps" ? <Navigation className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
+                  {r.checkInType === "gps" ? "GPS" : "Manual"}
+                </span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* ── Desktop table (hidden on mobile) ── */}
+      <div className="hidden lg:block bg-card border border-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>

@@ -235,8 +235,60 @@ export function GradesPage({ viewRole }: Props) {
       </div>
 
       {/* Table */}
-      <div className="grid grid-cols-1 gap-4">
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="space-y-4">
+        {/* ── Mobile card list (hidden on desktop) ── */}
+        <div className="lg:hidden space-y-3">
+          {filtered.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground bg-card rounded-xl border border-border" style={{ fontSize: "0.85rem" }}>No grades found for the current filter.</div>
+          ) : (
+            filtered.map((app) => {
+              const g = getCompiledGrade(app.id);
+              return (
+                <div
+                  key={app.id}
+                  className={`bg-card border rounded-xl p-4 space-y-3 cursor-pointer active:bg-muted/30 transition-colors ${selectedApp === app.id ? "border-primary" : "border-border"}`}
+                  onClick={() => setSelectedApp(app.id)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium truncate" style={{ fontSize: "0.9rem" }}>{app.studentName}</p>
+                      <p className="text-muted-foreground" style={{ fontSize: "0.75rem" }}>{app.studentId}</p>
+                    </div>
+                    <span className={`shrink-0 px-3 py-1 rounded-lg text-sm ${g?.finalPercent !== null && g?.finalPercent !== undefined ? "bg-blue-50 text-blue-700" : "bg-secondary text-muted-foreground"}`}>
+                      {g?.finalPercent !== null && g?.finalPercent !== undefined ? `${g.finalPercent.toFixed(1)}%` : "—"}
+                    </span>
+                  </div>
+                  <div className="space-y-1 text-muted-foreground" style={{ fontSize: "0.82rem" }}>
+                    <p className="truncate">🏢 {app.companyName}</p>
+                    {app.supervisorAssigned && <p className="truncate">👤 {app.supervisorAssigned}</p>}
+                    {viewRole === "clo" && <p>{app.department.split(" ")[0]}</p>}
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                    <StatusBadge status={app.gradeStatus || "Pending"} />
+                    {app.gradeStatus === "Submitted" && (
+                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => handleApprove(app.id)} className="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg flex items-center gap-1.5" style={{ fontSize: "0.8rem" }}>
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+                        </button>
+                        <button onClick={() => handleRevision(app.id)} className="px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg flex items-center gap-1.5" style={{ fontSize: "0.8rem" }}>
+                          <RotateCcw className="w-3.5 h-3.5" /> Revise
+                        </button>
+                      </div>
+                    )}
+                    {app.gradeStatus === "Approved" && (
+                      <span className="text-emerald-600 flex items-center gap-1" style={{ fontSize: "0.78rem" }}>
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Final
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* ── Desktop table (hidden on mobile) ── */}
+        <div className="hidden lg:block bg-card border border-border rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>

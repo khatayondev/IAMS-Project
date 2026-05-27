@@ -200,8 +200,64 @@ export function StudentsPage({ viewRole }: Props) {
       </div>
 
       {/* Table & Detail */}
-      <div className="grid grid-cols-1 gap-4">
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="space-y-4">
+        {/* ── Mobile card list (hidden on desktop) ── */}
+        <div className="lg:hidden space-y-3">
+          {filtered.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground bg-card rounded-xl border border-border" style={{ fontSize: "0.85rem" }}>No students match your filters.</div>
+          ) : (
+            filtered.map((app) => {
+              const act = getActivity(app.studentName);
+              const status = act?.status || "green";
+              const missed = getStudentMissedDays(app.studentId);
+              return (
+                <div
+                  key={app.id}
+                  className={`bg-card border rounded-xl p-4 space-y-3 cursor-pointer active:bg-muted/30 transition-colors ${selectedStudent === app.id ? "border-primary" : "border-border"}`}
+                  onClick={() => setSelectedStudent(app.id)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className={`w-3 h-3 rounded-full shrink-0 ${status === "green" ? "bg-emerald-500" : status === "yellow" ? "bg-amber-500" : "bg-red-500"}`} />
+                      <div className="min-w-0">
+                        <p className="font-medium truncate" style={{ fontSize: "0.9rem" }}>{app.studentName}</p>
+                        <p className="text-muted-foreground" style={{ fontSize: "0.75rem" }}>{app.studentId}</p>
+                      </div>
+                    </div>
+                    <StatusBadge status={app.status} />
+                  </div>
+                  <div className="space-y-1 text-muted-foreground" style={{ fontSize: "0.82rem" }}>
+                    <p className="truncate">🏢 {app.companyName}</p>
+                    {app.supervisorAssigned && <p className="truncate">👤 {app.supervisorAssigned}</p>}
+                    {viewRole === "clo" && <p>{app.department.split(" ")[0]}</p>}
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                    <div className="flex gap-3 text-muted-foreground" style={{ fontSize: "0.78rem" }}>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {act ? `${act.daysSinceLog}d ago` : "N/A"}
+                        {status === "red" && <AlertTriangle className="w-3 h-3 text-red-500" />}
+                      </span>
+                      {missed > 0 && (
+                        <span className="flex items-center gap-1 text-red-600 font-medium">
+                          <AlertTriangle className="w-3 h-3" /> {missed} missed
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                      <button onClick={() => toast.success(`Message sent to ${app.studentName}.`)} className="p-2 rounded-lg hover:bg-accent text-muted-foreground">
+                        <MessageSquare className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* ── Desktop table (hidden on mobile) ── */}
+        <div className="hidden lg:block bg-card border border-border rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>

@@ -261,8 +261,67 @@ export function UsersPage() {
         ))}
       </div>
 
-      {/* Table */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
+      {/* ── Mobile card list (hidden on desktop) ── */}
+      <div className="lg:hidden space-y-3">
+        {visibleUsers.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground bg-card rounded-xl border border-border" style={{ fontSize: "0.85rem" }}>No users match your filters.</div>
+        ) : (
+          visibleUsers.map((s) => (
+            <div
+              key={s.id}
+              className={`bg-card border rounded-xl p-4 space-y-3 transition-colors ${selectedUsers.has(s.id) ? "border-primary bg-primary/5" : "border-border"}`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0" onClick={() => toggleSelect(s.id)}>
+                  <input type="checkbox" checked={selectedUsers.has(s.id)} onChange={() => toggleSelect(s.id)} className="rounded shrink-0" />
+                  <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground shrink-0" style={{ fontSize: "0.7rem" }}>
+                    {s.name.split(" ").map((w) => w[0]).join("")}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium truncate" style={{ fontSize: "0.9rem" }}>{s.name}</p>
+                    <p className="text-muted-foreground truncate" style={{ fontSize: "0.75rem" }}>{s.email}</p>
+                  </div>
+                </div>
+                <div className="relative shrink-0">
+                  <button onClick={() => setActionMenu(actionMenu === s.id ? null : s.id)} className="p-2 rounded-lg hover:bg-accent text-muted-foreground">
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                  {actionMenu === s.id && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setActionMenu(null)} />
+                      <div className="absolute right-0 top-9 w-44 bg-card border border-border rounded-lg shadow-xl z-50 overflow-hidden">
+                        {s.role !== "DLO" && (
+                          <button onClick={() => { toast.success(`${s.name} assigned as DLO.`); setActionMenu(null); }} className="w-full text-left px-3 py-2.5 hover:bg-accent flex items-center gap-2" style={{ fontSize: "0.85rem" }}>
+                            <Shield className="w-3.5 h-3.5" /> Assign DLO
+                          </button>
+                        )}
+                        <button onClick={() => { toast.success(`Role changed for ${s.name}.`); setActionMenu(null); }} className="w-full text-left px-3 py-2.5 hover:bg-accent flex items-center gap-2" style={{ fontSize: "0.85rem" }}>
+                          <Users className="w-3.5 h-3.5" /> Change Role
+                        </button>
+                        <button onClick={() => { toast.success("Invitation resent."); setActionMenu(null); }} className="w-full text-left px-3 py-2.5 hover:bg-accent flex items-center gap-2" style={{ fontSize: "0.85rem" }}>
+                          <Mail className="w-3.5 h-3.5" /> Resend Invite
+                        </button>
+                        <button onClick={() => { toast.success(`${s.name} deactivated.`); setActionMenu(null); }} className="w-full text-left px-3 py-2.5 hover:bg-accent text-red-600 flex items-center gap-2" style={{ fontSize: "0.85rem" }}>
+                          <XCircle className="w-3.5 h-3.5" /> Deactivate
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full ${roleBadge(s.role || "Staff")}`} style={{ fontSize: "0.75rem" }}>
+                  <Shield className="w-3 h-3" /> {s.role}
+                </span>
+                <span className="text-muted-foreground" style={{ fontSize: "0.78rem" }}>{s.department}</span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* ── Desktop table (hidden on mobile) ── */}
+      <div className="hidden lg:block bg-card border border-border rounded-xl overflow-hidden">
         <table className="w-full">
           <thead>
             <tr className="border-b border-border bg-muted/30">

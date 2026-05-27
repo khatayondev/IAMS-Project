@@ -169,8 +169,83 @@ export function ApplicationsPage({ viewRole }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        <div className="bg-card rounded-2xl overflow-hidden">
+      <div className="space-y-4">
+        {/* ── Mobile card list (hidden on desktop) ── */}
+        <div className="lg:hidden space-y-3">
+          {loading && (
+            <div className="p-8 text-center text-muted-foreground bg-card rounded-2xl border border-border" style={{ fontSize: "0.85rem" }}>Loading applications…</div>
+          )}
+          {!loading && filtered.length === 0 && (
+            <div className="p-8 text-center text-muted-foreground bg-card rounded-2xl border border-border" style={{ fontSize: "0.85rem" }}>No applications found.</div>
+          )}
+          {!loading && filtered.map((app) => {
+            const appId = String(app.id);
+            const studentName = app.student?.name ?? app.studentName ?? "—";
+            const studentNum = app.student?.student_id ?? app.studentId ?? "—";
+            const companyName = app.company?.name ?? app.companyName ?? "—";
+            return (
+              <div
+                key={appId}
+                className={`bg-card border rounded-xl p-4 space-y-3 cursor-pointer active:bg-muted/30 transition-colors ${selectedApp === appId ? "border-primary" : "border-border"}`}
+                onClick={() => setSelectedApp(appId)}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate" style={{ fontSize: "0.9rem" }}>{studentName}</p>
+                    <p className="text-muted-foreground" style={{ fontSize: "0.75rem" }}>{studentNum}</p>
+                  </div>
+                  <StatusBadge status={app.status} />
+                </div>
+                <p className="text-muted-foreground truncate" style={{ fontSize: "0.82rem" }}>🏢 {companyName}</p>
+                {viewRole === "clo" && (
+                  <p className="text-muted-foreground" style={{ fontSize: "0.78rem" }}>{app.student?.department ?? app.department ?? ""}</p>
+                )}
+                {(app.status === "submitted" || app.status === "approved") && (
+                  <div className="flex gap-2 pt-2 border-t border-border" onClick={(e) => e.stopPropagation()}>
+                    {app.status === "submitted" && (
+                      <>
+                        <button onClick={() => handleApprove(appId)} className="flex-1 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg flex items-center justify-center gap-1.5" style={{ fontSize: "0.82rem" }}>
+                          <CheckCircle2 className="w-4 h-4" /> Approve
+                        </button>
+                        <button onClick={() => handleReject(appId)} className="flex-1 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg flex items-center justify-center gap-1.5" style={{ fontSize: "0.82rem" }}>
+                          <XCircle className="w-4 h-4" /> Reject
+                        </button>
+                      </>
+                    )}
+                    {app.status === "approved" && (
+                      <div className="relative w-full">
+                        <button
+                          onClick={() => setShowAssign(showAssign === appId ? null : appId)}
+                          className="w-full py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg flex items-center justify-center gap-1.5"
+                          style={{ fontSize: "0.82rem" }}
+                        >
+                          <UserPlus className="w-4 h-4" /> Assign Supervisor
+                        </button>
+                        {showAssign === appId && (
+                          <>
+                            <div className="fixed inset-0 z-40" onClick={() => setShowAssign(null)} />
+                            <div className="absolute left-0 top-full mt-1 w-full bg-card border border-border rounded-lg shadow-xl z-50 p-2">
+                              <p className="text-muted-foreground px-2 py-1" style={{ fontSize: "0.75rem" }}>Select Supervisor</p>
+                              {academicSupervisors.length === 0 && <p className="px-2 py-1.5 text-muted-foreground" style={{ fontSize: "0.8rem" }}>No supervisors available</p>}
+                              {academicSupervisors.map((sup) => (
+                                <button key={sup.id} onClick={() => handleAssignSupervisor(appId, sup.id)} className="w-full text-left px-2 py-2 rounded hover:bg-accent" style={{ fontSize: "0.82rem" }}>
+                                  {sup.name}
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ── Desktop table (hidden on mobile) ── */}
+        <div className="hidden lg:block bg-card rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
             {loading ? (
               <div className="p-8 text-center text-muted-foreground" style={{ fontSize: "0.85rem" }}>Loading applications…</div>
