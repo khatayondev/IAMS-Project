@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { GraduationCap, AlertCircle, Loader2, ClipboardList, Users, BarChart3 } from "lucide-react";
-import { apiClient, getApiUrl } from "../../lib/api-client";
+import { getApiUrl } from "../../lib/api-client";
 import { API_ENDPOINTS } from "../../lib/constants";
 
 const BG_IMAGE =
@@ -10,18 +10,10 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = () => {
     setError("");
     setLoading(true);
-    try {
-      const res = await apiClient.getGoogleAuthUrl();
-      const returnedUrl = typeof res.data === "string" ? res.data : (res.data as { url?: string } | null)?.url;
-      window.location.href = returnedUrl || getApiUrl(API_ENDPOINTS.AUTH_GOOGLE);
-    } catch {
-      window.location.href = getApiUrl(API_ENDPOINTS.AUTH_GOOGLE);
-    } finally {
-      setLoading(false);
-    }
+    window.location.href = getApiUrl(API_ENDPOINTS.AUTH_GOOGLE);
   };
 
   return (
