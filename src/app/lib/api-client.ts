@@ -23,11 +23,19 @@ import type {
 
 import { API_ENDPOINTS } from "./constants";
 
-// ── Auth token — held in memory for the current session only ──
-let authToken: string | null = null;
+// ── Auth token — persisted in localStorage, restored on load ──
+const TOKEN_KEY = "iams_token";
+
+let authToken: string | null = (() => {
+  try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }
+})();
 
 export function setApiAuthToken(token: string | null): void {
   authToken = token;
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch {}
 }
 
 export function getApiAuthToken(): string | null {
@@ -36,6 +44,7 @@ export function getApiAuthToken(): string | null {
 
 export function clearApiAuthToken(): void {
   authToken = null;
+  try { localStorage.removeItem(TOKEN_KEY); } catch {}
 }
 
 // ── URL helpers ──
