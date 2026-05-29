@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { GraduationCap, AlertCircle, Loader2, ClipboardList, Users, BarChart3 } from "lucide-react";
-import { apiClient } from "../../lib/api-client";
+import { apiClient, getApiUrl } from "../../lib/api-client";
+import { API_ENDPOINTS } from "../../lib/constants";
 
 const BG_IMAGE =
   "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80";
@@ -14,14 +15,10 @@ export function LoginPage() {
     setLoading(true);
     try {
       const res = await apiClient.getGoogleAuthUrl();
-      const url = (res.data as any)?.url as string | undefined;
-      if (!res.success || !url) {
-        setError(res.message ?? "Could not start Google sign-in. Please try again.");
-        return;
-      }
-      window.location.href = url;
+      const returnedUrl = typeof res.data === "string" ? res.data : (res.data as { url?: string } | null)?.url;
+      window.location.href = returnedUrl || getApiUrl(API_ENDPOINTS.AUTH_GOOGLE);
     } catch {
-      setError("Could not reach the server. Please try again.");
+      window.location.href = getApiUrl(API_ENDPOINTS.AUTH_GOOGLE);
     } finally {
       setLoading(false);
     }

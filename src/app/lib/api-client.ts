@@ -49,7 +49,7 @@ export function clearApiAuthToken(): void {
 
 // ── URL helpers ──
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, "") ?? "";
+const API_BASE_URL = (import.meta as ImportMeta & { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL?.trim().replace(/\/+$/, "") ?? "";
 
 function buildQueryString(params?: Record<string, unknown>): string {
   if (!params) return "";
@@ -80,6 +80,10 @@ function replacePathParams(path: string, params: Record<string, string>): string
 function buildApiUrl(path: string, query?: Record<string, unknown>): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return `${API_BASE_URL}${normalizedPath}${buildQueryString(query)}`;
+}
+
+export function getApiUrl(path: string, query?: Record<string, unknown>): string {
+  return buildApiUrl(path, query);
 }
 
 function extractCollection<T>(response: ApiResponse<unknown>, collectionKey: string): T[] {
