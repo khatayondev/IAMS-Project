@@ -240,6 +240,9 @@ export const API_ENDPOINTS = {
   // CLO users
   USERS: "/api/v1/users",
   DLOS: "/api/v1/users/dlos",
+  USERS_ACTIVATE: "/api/v1/users/:id/activate",
+  USERS_DEACTIVATE: "/api/v1/users/:id/deactivate",
+  USERS_IMPORTABLE: "/api/v1/users/staff/importable",
 
   // Logbook
   LOGBOOK_ENTRIES: "/api/v1/logbooks",

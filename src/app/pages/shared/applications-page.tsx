@@ -35,7 +35,7 @@ export function ApplicationsPage({ viewRole }: Props) {
   }, [fetchApplications]);
 
   useEffect(() => {
-    apiClient.getUsers({ role: "academic" }).then((res) => {
+    apiClient.getUsers({ role: "academic_supervisor" }).then((res) => {
       if (res.success) setAcademicSupervisors(res.data);
     });
   }, []);

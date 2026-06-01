@@ -28,8 +28,10 @@ function normalizeRemoteUsers(users: any[]): StaffMember[] {
     const rawRole = String(user.role ?? user.user_role ?? user.type ?? "Staff").toLowerCase();
     const role = rawRole.includes("hod")
       ? "HOD"
-      : rawRole.includes("supervisor")
-        ? "Academic Supervisor"
+      : rawRole.includes("industry")
+        ? "Industry Supervisor"
+        : rawRole.includes("academic") || rawRole.includes("supervisor")
+          ? "Academic Supervisor"
         : rawRole.includes("dlo")
           ? "DLO"
           : "Staff";
