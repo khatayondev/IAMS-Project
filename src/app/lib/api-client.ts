@@ -102,6 +102,7 @@ function extractCollection<T>(response: ApiResponse<unknown>, collectionKey: str
   if (!payload || typeof payload !== "object") return [];
   const envelope = payload as Record<string, unknown>;
   const collection = envelope[collectionKey];
+  if (Array.isArray(collection)) return collection as T[];
   if (collection && typeof collection === "object" && Array.isArray((collection as { data?: unknown }).data)) {
     return (collection as { data: T[] }).data;
   }
@@ -469,6 +470,18 @@ export const apiClient = {
     };
   },
 
+  async getImportableStaff(filters?: Record<string, unknown>): Promise<ApiResponse<any[]>> {
+    const response = await requestApi<unknown>(API_ENDPOINTS.USERS_IMPORTABLE, {
+      method: "GET",
+      query: filters,
+    });
+    return {
+      success: response.success,
+      data: response.success ? extractCollection<any>(response, "staff") : [],
+      message: response.message,
+    };
+  },
+
   async createDLOAccount(data: {
     name: string;
     email: string;
@@ -480,6 +493,18 @@ export const apiClient = {
     return requestApi<any | null>(API_ENDPOINTS.DLOS, {
       method: "POST",
       body: JSON.stringify(data),
+    });
+  },
+
+  async activateUser(id: string): Promise<ApiResponse<any | null>> {
+    return requestApi<any | null>(replacePathParams(API_ENDPOINTS.USERS_ACTIVATE, { id }), {
+      method: "PATCH",
+    });
+  },
+
+  async deactivateUser(id: string): Promise<ApiResponse<any | null>> {
+    return requestApi<any | null>(replacePathParams(API_ENDPOINTS.USERS_DEACTIVATE, { id }), {
+      method: "PATCH",
     });
   },
 
