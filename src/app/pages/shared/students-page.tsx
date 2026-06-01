@@ -1,15 +1,15 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { StatusBadge } from "../../components/status-badge";
 import { useAppContext } from "../../lib/context";
 import { departments } from "../../lib/mock-data";
 import { checkInactiveStudents, flagInactiveStudent } from "../../services/logbook-service";
 import { getMissedCheckIns, getAttendanceRecords } from "../../services/attendance-service";
+import { apiClient } from "../../lib/api-client";
 import {
   getCompiledGrade, getReportScore, getPresentationScore, getIndustrialAssessment, getSiteVisitation,
-  submitReportScore, submitPresentationScore, approveCompiledGrade, requestGradeRevision, overrideSiteVisitation,
+  submitReportScore, submitPresentationScore, approveCompiledGrade, requestGradeRevision,
 } from "../../services/grading-service";
 import type { GradingActor } from "../../types/grading";
-import { VISITATION_CRITERIA, VisitationCriterionKey, VisitationCriterionRating } from "../../types/grading";
 import {
   Search, AlertTriangle, MessageSquare, Send, Download, X,
   Eye, BookMarked, MapPin, Clock, CheckCircle2, Navigation, FileText, ClipboardList, Award,
@@ -24,6 +24,24 @@ interface Props {
 
 type ActivityFilter = "All" | "Active" | "Warning" | "Flagged";
 
+// Normalize backend internship to the flat shape the UI expects
+function normalizeInternship(i: any) {
+  return {
+    id: String(i.id),
+    studentName: i.student?.user?.name ?? i.student_name ?? "—",
+    studentId:   i.student?.student_id ?? i.student_id ?? "—",
+    companyName: i.company?.name ?? i.company_name ?? "—",
+    department:  i.student?.department?.name ?? i.department ?? "—",
+    level:       i.student?.level ?? i.level ?? "—",
+    supervisorAssigned: i.academicSupervisor?.user?.name ?? i.supervisor_name ?? "",
+    status:      i.status ?? "active",
+    dateApplied: i.created_at ?? i.start_date ?? "—",
+    gradeStatus: i.finalGrade?.status ?? null,
+    grade:       i.finalGrade?.letter_grade ?? null,
+    academic_supervisor_id: i.academic_supervisor_id ?? null,
+  };
+}
+
 export function StudentsPage({ viewRole }: Props) {
   const { user, store } = useAppContext();
   const [search, setSearch] = useState("");
@@ -33,23 +51,31 @@ export function StudentsPage({ viewRole }: Props) {
   const [awaitingScores, setAwaitingScores] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState<"overview" | "scoring">("overview");
+  const [remoteStudents, setRemoteStudents] = useState<any[] | null>(null);
   const canScore = viewRole === "dlo" || viewRole === "clo";
 
   const department = (viewRole === "dlo" || viewRole === "hod" || viewRole === "academic") ? user?.department : undefined;
   const activityData = checkInactiveStudents();
 
-  const enrolledStudents = store.applications.filter((a) => ["Approved", "Company Accepted", "Active", "Completed"].includes(a.status));
+  // Fetch active/completed internships from the backend
+  const fetchStudents = useCallback(async () => {
+    const res = await apiClient.getInternships({ status: "active,completed,pending" });
+    if (res.success) setRemoteStudents(res.data.map(normalizeInternship));
+  }, []);
+
+  useEffect(() => { fetchStudents(); }, [fetchStudents]);
+
+  // Fall back to local store if remote fetch hasn't loaded yet
+  const enrolledStudents = remoteStudents ?? store.applications.filter((a) => ["Approved", "Company Accepted", "Active", "Completed", "active", "completed"].includes(a.status));
   const allMissedCheckins = getMissedCheckIns(department);
-  
-  const filtered = enrolledStudents.filter((a) => {
-    const matchSearch = a.studentName.toLowerCase().includes(search.toLowerCase()) ||
-      a.studentId.toLowerCase().includes(search.toLowerCase()) ||
-      a.companyName.toLowerCase().includes(search.toLowerCase());
+
+  const filtered = enrolledStudents.filter((a: any) => {
+    const matchSearch = (a.studentName ?? "").toLowerCase().includes(search.toLowerCase()) ||
+      (a.studentId ?? "").toLowerCase().includes(search.toLowerCase()) ||
+      (a.companyName ?? "").toLowerCase().includes(search.toLowerCase());
     
-    // We mock that all existing test applications belong to active term for UI purposes
-    const matchTerm = termFilter === "All" || termFilter === "Active Term"; 
-    
-    const matchDept = department ? a.department === department : (deptFilter === "All" || a.department === deptFilter);
+    const matchTerm = termFilter === "All" || termFilter === "Active Term";
+    const matchDept = department ? (a.department ?? "").includes(department) : (deptFilter === "All" || a.department === deptFilter);
     const act = getActivity(a.studentName);
     const matchActivity = activityFilter === "All" ||
       (activityFilter === "Active" && act?.status === "green") ||
@@ -57,9 +83,8 @@ export function StudentsPage({ viewRole }: Props) {
       (activityFilter === "Flagged" && act?.status === "red");
     let matchAwaiting = true;
     if (awaitingScores) {
-      const scoreEligible = a.status === "Active" || a.status === "Completed";
-      const cg = getCompiledGrade(a.id);
-      matchAwaiting = scoreEligible && (!cg || cg.status !== "Approved");
+      const scoreEligible = ["active", "completed", "Active", "Completed"].includes(a.status ?? "");
+      matchAwaiting = scoreEligible && !a.gradeStatus;
     }
     return matchSearch && matchTerm && matchDept && matchActivity && matchAwaiting;
   });
@@ -84,7 +109,7 @@ export function StudentsPage({ viewRole }: Props) {
     toast.success(`Reminders sent to ${inactive.length} inactive students.`);
   };
 
-  const detail = selectedStudent ? store.applications.find((a) => a.id === selectedStudent) : null;
+  const detail = selectedStudent ? enrolledStudents.find((a: any) => a.id === selectedStudent) : null;
   const detailActivity = detail ? getActivity(detail.studentName) : null;
 
   // Logbook entries for selected student
@@ -558,17 +583,12 @@ function ScoringPanel({ applicationId, viewRole, actorName, actorId }: ScoringPa
   const [presInput, setPresInput] = useState<string>(presentation ? String(presentation.score) : "");
   const [presComment, setPresComment] = useState<string>(presentation?.comments || "");
   const [revisionReason, setRevisionReason] = useState("");
-  
-  const [showVisitOverride, setShowVisitOverride] = useState(false);
-  const [overrideRatings, setOverrideRatings] = useState<Record<VisitationCriterionKey, VisitationCriterionRating> | null>(null);
-  const [overrideReason, setOverrideReason] = useState("");
 
   useEffect(() => {
     setReportInput(report ? String(report.score) : "");
     setReportComment(report?.comments || "");
     setPresInput(presentation ? String(presentation.score) : "");
     setPresComment(presentation?.comments || "");
-    setOverrideRatings(visit?.ratings ? { ...visit.ratings } : null);
   }, [applicationId, visit]);
 
   const actor: GradingActor = {

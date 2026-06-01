@@ -1,22 +1,15 @@
 import { toast } from "sonner";
 import type { ExtendedRole } from "../../services/auth-service";
 import { exportToCSV } from "../../lib/csv-export";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { StatusBadge } from "../../components/status-badge";
 import { useAppContext } from "../../lib/context";
 import { departments } from "../../lib/mock-data";
-import {
-  approveCompiledGrade,
-  requestGradeRevision,
-  getCompiledGrade,
-  hasActiveConfig,
-} from "../../services/grading-service";
+import { hasActiveConfig } from "../../services/grading-service";
 import { AlertTriangle } from "lucide-react";
-import { GradeBreakdownCard } from "../../components/grading/grade-breakdown-card";
-import { WeeklyRubricHistory } from "../../components/grading/weekly-rubric-history";
 import { CheckCircle2, RotateCcw, Search, Download, FileText, Clock, BarChart3, Eye, X } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import type { GradingActor } from "../../types/grading";
+import { apiClient } from "../../lib/api-client";
 
 interface Props {
   viewRole: ExtendedRole;
@@ -24,90 +17,108 @@ interface Props {
 
 type GradeTab = "all" | "submitted" | "approved" | "pending";
 
+// Map backend grade to normalized display shape
+function normalizeGrade(g: any) {
+  const studentName = g.internship?.student?.user?.name ?? g.student_name ?? "—";
+  const studentId   = g.internship?.student?.student_id ?? g.student_id ?? "—";
+  const companyName = g.internship?.company?.name ?? g.company_name ?? "—";
+  const dept        = g.internship?.student?.department?.name ?? g.department ?? "—";
+  const supervisor  = g.internship?.academicSupervisor?.user?.name ?? g.supervisor_name ?? "";
+  // Backend statuses: draft | calculated | approved | published
+  const backendStatus = g.status ?? "draft";
+  const gradeStatus =
+    backendStatus === "calculated" ? "Submitted" :
+    backendStatus === "approved"   ? "Approved"  :
+    backendStatus === "published"  ? "Published" : "Pending";
+  return {
+    id: String(g.id),
+    internshipId: String(g.internship_id ?? g.internship?.id ?? g.id),
+    studentName, studentId, companyName, department: dept, supervisorAssigned: supervisor,
+    gradeStatus, backendStatus,
+    finalPercent: g.total_score ?? null,
+    letterGrade: g.letter_grade ?? null,
+    gpa: g.gpa ?? null,
+  };
+}
+
 export function GradesPage({ viewRole }: Props) {
-  const { user, store } = useAppContext();
+  const { user } = useAppContext();
+  const [rawGrades, setRawGrades] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("All");
   const [activeTab, setActiveTab] = useState<GradeTab>("all");
-  const [selectedApp, setSelectedApp] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const department = viewRole === "dlo" ? user?.department : undefined;
-  // dependency reads to keep the page reactive when grades update
-  const _ = store.compiledGrades.length + store.applications.length;
 
-  const gradeApps = store.applications.filter((a) => {
-    const hasGradeInfo = a.status === "Completed" || a.gradeStatus || getCompiledGrade(a.id);
-    const matchDept = department ? a.department === department : (deptFilter === "All" || a.department === deptFilter);
-    return hasGradeInfo && matchDept;
-  });
+  const fetchGrades = useCallback(async () => {
+    setLoading(true);
+    const res = await apiClient.getGrades();
+    if (res.success) setRawGrades(res.data);
+    setLoading(false);
+  }, []);
 
-  const filtered = gradeApps.filter((a) => {
+  useEffect(() => { fetchGrades(); }, [fetchGrades]);
+
+  const gradeApps = rawGrades
+    .map(normalizeGrade)
+    .filter((g) => department ? g.department === department : (deptFilter === "All" || g.department === deptFilter));
+
+  const filtered = gradeApps.filter((g) => {
     const matchSearch = search === "" ||
-      a.studentName.toLowerCase().includes(search.toLowerCase()) ||
-      a.studentId.toLowerCase().includes(search.toLowerCase());
+      g.studentName.toLowerCase().includes(search.toLowerCase()) ||
+      g.studentId.toLowerCase().includes(search.toLowerCase());
     const matchTab = activeTab === "all" ||
-      (activeTab === "submitted" && a.gradeStatus === "Submitted") ||
-      (activeTab === "approved" && a.gradeStatus === "Approved") ||
-      (activeTab === "pending" && (a.gradeStatus === "Pending" || !a.gradeStatus));
+      (activeTab === "submitted" && g.gradeStatus === "Submitted") ||
+      (activeTab === "approved"  && (g.gradeStatus === "Approved" || g.gradeStatus === "Published")) ||
+      (activeTab === "pending"   && g.gradeStatus === "Pending");
     return matchSearch && matchTab;
   });
 
-  const submittedCount = gradeApps.filter((a) => a.gradeStatus === "Submitted").length;
-  const approvedCount = gradeApps.filter((a) => a.gradeStatus === "Approved").length;
-  const pendingCount = gradeApps.filter((a) => a.gradeStatus === "Pending" || !a.gradeStatus).length;
+  const submittedCount = gradeApps.filter((g) => g.gradeStatus === "Submitted").length;
+  const approvedCount  = gradeApps.filter((g) => g.gradeStatus === "Approved" || g.gradeStatus === "Published").length;
+  const pendingCount   = gradeApps.filter((g) => g.gradeStatus === "Pending").length;
 
-  // Score distribution buckets (percent only — no letter grades per Q7)
   const buckets = [
-    { label: "0–49", min: 0, max: 50 },
-    { label: "50–59", min: 50, max: 60 },
-    { label: "60–69", min: 60, max: 70 },
-    { label: "70–79", min: 70, max: 80 },
-    { label: "80–89", min: 80, max: 90 },
-    { label: "90–100", min: 90, max: 101 },
+    { label: "0–49", min: 0, max: 50 }, { label: "50–59", min: 50, max: 60 },
+    { label: "60–69", min: 60, max: 70 }, { label: "70–79", min: 70, max: 80 },
+    { label: "80–89", min: 80, max: 90 }, { label: "90–100", min: 90, max: 101 },
   ];
   const scoreDistribution = buckets
     .map((b) => ({
       bucket: b.label,
-      count: gradeApps.filter((a) => {
-        const g = getCompiledGrade(a.id);
-        const p = g?.finalPercent;
-        return p !== null && p !== undefined && p >= b.min && p < b.max;
-      }).length,
+      count: gradeApps.filter((g) => g.finalPercent !== null && g.finalPercent >= b.min && g.finalPercent < b.max).length,
     }))
     .filter((b) => b.count > 0);
 
-  const finalised = gradeApps
-    .map((a) => getCompiledGrade(a.id))
-    .filter((g): g is NonNullable<typeof g> => !!g && g.finalPercent !== null);
+  const finalised = gradeApps.filter((g) => g.finalPercent !== null);
   const avgPercent = finalised.length > 0
     ? (finalised.reduce((s, g) => s + (g.finalPercent || 0), 0) / finalised.length).toFixed(1)
     : "N/A";
 
-  const actor: GradingActor = {
-    id: user?.id ?? "u",
-    name: user?.name ?? "System",
-    role: (user?.role as any) ?? "dlo",
-    department,
+  const handleApprove = async (gradeId: string) => {
+    const res = await apiClient.approveGrade(gradeId);
+    if (res.success) { toast.success(res.message ?? "Grade approved."); fetchGrades(); }
+    else toast.error(res.message ?? "Failed to approve grade.");
   };
 
-  const handleApprove = (id: string) => {
-    const r = approveCompiledGrade(id, actor);
-    r.success ? toast.success(r.message) : toast.error(r.message);
+  const handlePublish = async (gradeId: string) => {
+    const res = await apiClient.publishGrade(gradeId);
+    if (res.success) { toast.success(res.message ?? "Grade published."); fetchGrades(); }
+    else toast.error(res.message ?? "Failed to publish grade.");
   };
 
-  const handleRevision = (id: string) => {
-    const r = requestGradeRevision(id, "Grade needs review", actor);
-    r.success ? toast.info(r.message) : toast.error(r.message);
+  const handleRevision = async (gradeId: string) => {
+    const res = await apiClient.requestGradeRevision(gradeId, "Grade needs review");
+    if (res.success) { toast.info(res.message ?? "Revision requested."); fetchGrades(); }
+    else toast.error(res.message ?? "Failed to request revision.");
   };
 
-  const detail = selectedApp ? store.applications.find((a) => a.id === selectedApp) : null;
-  const detailGrade = detail ? getCompiledGrade(detail.id) : null;
+  const detail = selectedId ? gradeApps.find((g) => g.id === selectedId) : null;
+  // detailGrade is the same as detail for the breakdown card (fields align)
+  const detailGrade = detail ? { finalPercent: detail.finalPercent, status: detail.gradeStatus } : null;
 
-  const tabCounts = {
-    all: gradeApps.length,
-    submitted: submittedCount,
-    approved: approvedCount,
-    pending: pendingCount,
-  };
+  const tabCounts = { all: gradeApps.length, submitted: submittedCount, approved: approvedCount, pending: pendingCount };
 
   return (
     <div className="space-y-6">
@@ -121,17 +132,15 @@ export function GradesPage({ viewRole }: Props) {
         <button
           onClick={() => {
             exportToCSV(
-              gradeApps.map(a => {
-                const g = getCompiledGrade(a.id);
-                return {
-                  Student: a.studentName,
-                  ID: a.studentId,
-                  Company: a.companyName,
-                  Department: a.department,
-                  "Final %": g?.finalPercent ?? "Pending",
-                  Status: a.gradeStatus || "Pending",
-                };
-              }),
+              gradeApps.map(g => ({
+                Student: g.studentName,
+                ID: g.studentId,
+                Company: g.companyName,
+                Department: g.department,
+                "Final %": g.finalPercent ?? "Pending",
+                "Letter Grade": g.letterGrade ?? "—",
+                Status: g.gradeStatus,
+              })),
               "grades_export"
             );
           }}
@@ -142,6 +151,7 @@ export function GradesPage({ viewRole }: Props) {
         </button>
       </div>
 
+      {loading && <div className="p-6 text-center text-muted-foreground" style={{ fontSize: "0.85rem" }}>Loading grades…</div>}
       {viewRole === "dlo" && department && !hasActiveConfig(department) && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
@@ -241,49 +251,46 @@ export function GradesPage({ viewRole }: Props) {
           {filtered.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground bg-card rounded-xl border border-border" style={{ fontSize: "0.85rem" }}>No grades found for the current filter.</div>
           ) : (
-            filtered.map((app) => {
-              const g = getCompiledGrade(app.id);
-              return (
-                <div
-                  key={app.id}
-                  className={`bg-card border rounded-xl p-4 space-y-3 cursor-pointer active:bg-muted/30 transition-colors ${selectedApp === app.id ? "border-primary" : "border-border"}`}
-                  onClick={() => setSelectedApp(app.id)}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-medium truncate" style={{ fontSize: "0.9rem" }}>{app.studentName}</p>
-                      <p className="text-muted-foreground" style={{ fontSize: "0.75rem" }}>{app.studentId}</p>
-                    </div>
-                    <span className={`shrink-0 px-3 py-1 rounded-lg text-sm ${g?.finalPercent !== null && g?.finalPercent !== undefined ? "bg-blue-50 text-blue-700" : "bg-secondary text-muted-foreground"}`}>
-                      {g?.finalPercent !== null && g?.finalPercent !== undefined ? `${g.finalPercent.toFixed(1)}%` : "—"}
-                    </span>
+            filtered.map((g) => (
+              <div
+                key={g.id}
+                className={`bg-card border rounded-xl p-4 space-y-3 cursor-pointer active:bg-muted/30 transition-colors ${selectedId === g.id ? "border-primary" : "border-border"}`}
+                onClick={() => setSelectedId(g.id)}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate" style={{ fontSize: "0.9rem" }}>{g.studentName}</p>
+                    <p className="text-muted-foreground" style={{ fontSize: "0.75rem" }}>{g.studentId}</p>
                   </div>
-                  <div className="space-y-1 text-muted-foreground" style={{ fontSize: "0.82rem" }}>
-                    <p className="truncate">🏢 {app.companyName}</p>
-                    {app.supervisorAssigned && <p className="truncate">👤 {app.supervisorAssigned}</p>}
-                    {viewRole === "clo" && <p>{app.department.split(" ")[0]}</p>}
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-border">
-                    <StatusBadge status={app.gradeStatus || "Pending"} />
-                    {app.gradeStatus === "Submitted" && (
-                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => handleApprove(app.id)} className="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg flex items-center gap-1.5" style={{ fontSize: "0.8rem" }}>
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Approve
-                        </button>
-                        <button onClick={() => handleRevision(app.id)} className="px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg flex items-center gap-1.5" style={{ fontSize: "0.8rem" }}>
-                          <RotateCcw className="w-3.5 h-3.5" /> Revise
-                        </button>
-                      </div>
-                    )}
-                    {app.gradeStatus === "Approved" && (
-                      <span className="text-emerald-600 flex items-center gap-1" style={{ fontSize: "0.78rem" }}>
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Final
-                      </span>
-                    )}
-                  </div>
+                  <span className={`shrink-0 px-3 py-1 rounded-lg text-sm ${g.finalPercent !== null ? "bg-blue-50 text-blue-700" : "bg-secondary text-muted-foreground"}`}>
+                    {g.finalPercent !== null ? `${Number(g.finalPercent).toFixed(1)}%` : "—"}
+                  </span>
                 </div>
-              );
-            })
+                <div className="space-y-1 text-muted-foreground" style={{ fontSize: "0.82rem" }}>
+                  <p className="truncate">🏢 {g.companyName}</p>
+                  {g.supervisorAssigned && <p className="truncate">👤 {g.supervisorAssigned}</p>}
+                  {viewRole === "clo" && <p>{g.department.split(" ")[0]}</p>}
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-border">
+                  <StatusBadge status={g.gradeStatus} />
+                  {g.gradeStatus === "Submitted" && (
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                      <button onClick={() => handleApprove(g.id)} className="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg flex items-center gap-1.5" style={{ fontSize: "0.8rem" }}>
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+                      </button>
+                      <button onClick={() => handleRevision(g.id)} className="px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg flex items-center gap-1.5" style={{ fontSize: "0.8rem" }}>
+                        <RotateCcw className="w-3.5 h-3.5" /> Revise
+                      </button>
+                    </div>
+                  )}
+                  {(g.gradeStatus === "Approved") && (
+                    <button onClick={(e) => { e.stopPropagation(); handlePublish(g.id); }} className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg flex items-center gap-1.5" style={{ fontSize: "0.8rem" }}>
+                      Publish
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
           )}
         </div>
 
@@ -303,53 +310,49 @@ export function GradesPage({ viewRole }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((app) => {
-                  const g = getCompiledGrade(app.id);
-                  return (
+                {filtered.map((g) => (
                     <tr
-                      key={app.id}
-                      className={`border-b border-border last:border-0 hover:bg-muted/20 cursor-pointer ${selectedApp === app.id ? "bg-primary/5" : ""}`}
-                      onClick={() => setSelectedApp(app.id)}
+                      key={g.id}
+                      className={`border-b border-border last:border-0 hover:bg-muted/20 cursor-pointer ${selectedId === g.id ? "bg-primary/5" : ""}`}
+                      onClick={() => setSelectedId(g.id)}
                     >
                       <td className="px-4 py-3">
                         <div>
-                          <p style={{ fontSize: "0.85rem" }}>{app.studentName}</p>
-                          <p style={{ fontSize: "0.7rem" }} className="text-muted-foreground">{app.studentId}</p>
+                          <p style={{ fontSize: "0.85rem" }}>{g.studentName}</p>
+                          <p style={{ fontSize: "0.7rem" }} className="text-muted-foreground">{g.studentId}</p>
                         </div>
                       </td>
-                      <td className="px-4 py-3" style={{ fontSize: "0.85rem" }}>{app.companyName}</td>
-                      {viewRole === "clo" && <td className="px-4 py-3" style={{ fontSize: "0.8rem" }}>{app.department.split(" ")[0]}</td>}
-                      <td className="px-4 py-3" style={{ fontSize: "0.85rem" }}>{app.supervisorAssigned || "-"}</td>
+                      <td className="px-4 py-3" style={{ fontSize: "0.85rem" }}>{g.companyName}</td>
+                      {viewRole === "clo" && <td className="px-4 py-3" style={{ fontSize: "0.8rem" }}>{g.department.split(" ")[0]}</td>}
+                      <td className="px-4 py-3" style={{ fontSize: "0.85rem" }}>{g.supervisorAssigned || "—"}</td>
                       <td className="px-4 py-3">
-                        <span className={`px-3 py-1 rounded-lg ${g?.finalPercent !== null && g?.finalPercent !== undefined ? "bg-blue-50 text-blue-700" : "bg-secondary text-muted-foreground"}`} style={{ fontSize: "0.85rem" }}>
-                          {g?.finalPercent !== null && g?.finalPercent !== undefined ? `${g.finalPercent.toFixed(1)}%` : "-"}
+                        <span className={`px-3 py-1 rounded-lg ${g.finalPercent !== null ? "bg-blue-50 text-blue-700" : "bg-secondary text-muted-foreground"}`} style={{ fontSize: "0.85rem" }}>
+                          {g.finalPercent !== null ? `${Number(g.finalPercent).toFixed(1)}%` : "—"}
+                          {g.letterGrade ? ` (${g.letterGrade})` : ""}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={app.gradeStatus || "Pending"} />
-                      </td>
+                      <td className="px-4 py-3"><StatusBadge status={g.gradeStatus} /></td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <div className="flex gap-1">
-                          {app.gradeStatus === "Submitted" && (
+                          {g.gradeStatus === "Submitted" && (
                             <>
-                              <button onClick={() => handleApprove(app.id)} className="p-1.5 rounded-md hover:bg-emerald-100 text-emerald-600" title="Approve">
+                              <button onClick={() => handleApprove(g.id)} className="p-1.5 rounded-md hover:bg-emerald-100 text-emerald-600" title="Approve">
                                 <CheckCircle2 className="w-4 h-4" />
                               </button>
-                              <button onClick={() => handleRevision(app.id)} className="p-1.5 rounded-md hover:bg-amber-100 text-amber-600" title="Request Revision">
+                              <button onClick={() => handleRevision(g.id)} className="p-1.5 rounded-md hover:bg-amber-100 text-amber-600" title="Request Revision">
                                 <RotateCcw className="w-4 h-4" />
                               </button>
                             </>
                           )}
-                          {app.gradeStatus === "Approved" && (
-                            <span className="text-emerald-600 flex items-center gap-1" style={{ fontSize: "0.75rem" }}>
-                              <CheckCircle2 className="w-3.5 h-3.5" /> Final
-                            </span>
+                          {g.gradeStatus === "Approved" && (
+                            <button onClick={() => handlePublish(g.id)} className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded-md hover:opacity-90">
+                              Publish
+                            </button>
                           )}
                         </div>
                       </td>
                     </tr>
-                  );
-                })}
+                ))}
                 {filtered.length === 0 && (
                   <tr>
                     <td colSpan={viewRole === "clo" ? 7 : 6} className="px-4 py-8 text-center text-muted-foreground" style={{ fontSize: "0.85rem" }}>
@@ -364,47 +367,61 @@ export function GradesPage({ viewRole }: Props) {
 
         {/* Detail Modal */}
         {detail && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedApp(null)}>
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedId(null)}>
             <div className="bg-card border border-border rounded-xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="p-5 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3>Grade Details</h3>
-                  <button onClick={() => setSelectedApp(null)} className="text-muted-foreground hover:text-foreground">
+                  <h3>Grade Details — {detail.studentName}</h3>
+                  <button onClick={() => setSelectedId(null)} className="text-muted-foreground hover:text-foreground">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
 
-                {detailGrade ? (
-                  <GradeBreakdownCard compiled={detailGrade} studentName={detail.studentName} />
-                ) : (
-                  <div className="text-center text-sm text-muted-foreground py-8">
-                    No components have been submitted yet for this student.
+                <div className="space-y-2">
+                  {[
+                    ["Student", detail.studentName], ["ID", detail.studentId],
+                    ["Company", detail.companyName], ["Department", detail.department],
+                    ["Supervisor", detail.supervisorAssigned || "Not assigned"],
+                    ["Final Score", detail.finalPercent !== null ? `${Number(detail.finalPercent).toFixed(1)}% ${detail.letterGrade ? `(${detail.letterGrade})` : ""}` : "Pending"],
+                    ["GPA", detail.gpa ?? "—"],
+                  ].map(([l, v]) => (
+                    <div key={String(l)}>
+                      <p className="text-muted-foreground" style={{ fontSize: "0.7rem" }}>{l}</p>
+                      <p style={{ fontSize: "0.85rem" }}>{v}</p>
+                    </div>
+                  ))}
+                  <div>
+                    <p className="text-muted-foreground" style={{ fontSize: "0.7rem" }}>Status</p>
+                    <StatusBadge status={detail.gradeStatus} />
                   </div>
-                )}
-
-                <div className="pt-3 border-t border-border">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-[#1a1a2e]">Weekly Progress Record</h4>
-                    <span className="text-xs text-gray-500">Industrial Supervisor — qualitative</span>
-                  </div>
-                  <WeeklyRubricHistory applicationId={detail.id} />
                 </div>
 
-                {detail.gradeStatus === "Submitted" && detailGrade?.finalPercent !== null && (
+                {detail.gradeStatus === "Submitted" && (
                   <div className="pt-3 border-t border-border space-y-2">
                     <button
-                      onClick={() => handleApprove(detail.id)}
+                      onClick={() => { handleApprove(detail.id); setSelectedId(null); }}
                       className="w-full py-2 bg-emerald-600 text-white rounded-lg hover:opacity-90 flex items-center justify-center gap-2"
                       style={{ fontSize: "0.85rem" }}
                     >
                       <CheckCircle2 className="w-4 h-4" /> Approve Final Grade
                     </button>
                     <button
-                      onClick={() => handleRevision(detail.id)}
+                      onClick={() => { handleRevision(detail.id); setSelectedId(null); }}
                       className="w-full py-2 border border-amber-500 text-amber-700 rounded-lg hover:bg-amber-50 flex items-center justify-center gap-2"
                       style={{ fontSize: "0.85rem" }}
                     >
                       <RotateCcw className="w-4 h-4" /> Request Revision
+                    </button>
+                  </div>
+                )}
+                {detail.gradeStatus === "Approved" && (
+                  <div className="pt-3 border-t border-border">
+                    <button
+                      onClick={() => { handlePublish(detail.id); setSelectedId(null); }}
+                      className="w-full py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 flex items-center justify-center gap-2"
+                      style={{ fontSize: "0.85rem" }}
+                    >
+                      Publish Grade to Student
                     </button>
                   </div>
                 )}

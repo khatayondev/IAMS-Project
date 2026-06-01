@@ -34,28 +34,33 @@ interface CloDashboardSnapshot {
   terms: TermResponse[];
 }
 
-function normalizeStatus(status?: string): string {
-  return (status ?? "").trim().toLowerCase();
-}
+// Helpers to safely read nested backend fields with flat-field fallbacks
+function getStudentName(app: any): string { return app.student?.user?.name ?? app.studentName ?? "—"; }
+function getStudentNum(app: any): string  { return app.student?.student_id ?? app.studentId ?? "—"; }
+function getCompanyName(app: any): string { return app.company?.name ?? app.companyName ?? "—"; }
+function getDept(app: any): string        { return app.student?.department?.name ?? app.department ?? "—"; }
+function getDateApplied(app: any): string { return app.created_at ?? app.submitted_at ?? app.dateApplied ?? "—"; }
 
 function isActiveTerm(status?: string): boolean {
-  const value = normalizeStatus(status);
-  return value === "active" || value === "upcoming" || value === "current";
+  const v = (status ?? "").toLowerCase();
+  return v === "active" || v === "upcoming";
 }
 
 export function CLODashboard() {
   const { store } = useAppContext();
   const navigate = useNavigate();
   const [remoteData, setRemoteData] = useState<CloDashboardSnapshot | null>(null);
+  const [dashboardCounts, setDashboardCounts] = useState<any>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadDashboardData = async () => {
-      const [applicationsResult, companiesResult, termsResult] = await Promise.all([
+      const [applicationsResult, companiesResult, termsResult, dashResult] = await Promise.all([
         apiClient.getApplications(),
         apiClient.getCompanies(),
         apiClient.getTerms(),
+        apiClient.getDashboard("clo"),
       ]);
 
       if (cancelled) return;
@@ -67,46 +72,46 @@ export function CLODashboard() {
           terms: termsResult.data,
         });
       }
+      if (dashResult.success) setDashboardCounts(dashResult.data);
     };
 
     void loadDashboardData();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   const applications = remoteData?.applications ?? store.applications;
   const companies = remoteData?.companies ?? store.companies;
   const terms = remoteData?.terms ?? store.terms;
 
-  const activeTerm = terms.find((t) => isActiveTerm(t.status));
-  const pendingApps = applications.filter((a) => a.status === "Pending").length;
-  const activeStudents = applications.filter((a) => a.status === "Active").length;
-  const pendingCompanies = companies.filter((c) => c.status === "Pending").length;
-  const completedStudents = applications.filter((a) => a.status === "Completed").length;
-  const approvedCompanies = companies.filter((c) => c.status === "Approved").length;
-  const needSupervisor = applications.filter((a) => a.status === "Company Accepted").length;
+  const activeTerm = dashboardCounts?.active_term ?? terms.find((t) => isActiveTerm(t.status));
+
+  // Use pre-computed backend counts when available; fall back to local computation
+  const activeStudents   = dashboardCounts?.internship_counts?.active   ?? applications.filter((a) => a.status === "active").length;
+  const completedStudents = dashboardCounts?.internship_counts?.completed ?? applications.filter((a) => a.status === "completed").length;
+  const pendingApps      = dashboardCounts?.system_counts?.pending_applications ?? applications.filter((a) => a.status === "submitted" || a.status === "under_review").length;
+  const approvedCompanies = dashboardCounts?.system_counts?.total_companies ?? companies.filter((c) => (c.approval_status ?? c.status) === "approved").length;
+  const pendingCompanies = companies.filter((c) => (c.approval_status ?? c.status) === "pending").length;
+  const needSupervisor   = applications.filter((a) => !a.academic_supervisor_id && a.status === "approved").length;
 
   const deptData = departments
     .map((d) => ({
       name: d,
-      active: applications.filter((a) => a.department === d && a.status === "Active").length,
-      pending: applications.filter((a) => a.department === d && a.status === "Pending").length,
-      completed: applications.filter((a) => a.department === d && a.status === "Completed").length,
+      active:    applications.filter((a) => getDept(a) === d && a.status === "active").length,
+      pending:   applications.filter((a) => getDept(a) === d && (a.status === "submitted" || a.status === "under_review")).length,
+      completed: applications.filter((a) => getDept(a) === d && a.status === "completed").length,
     }))
     .filter((d) => d.active + d.pending + d.completed > 0);
 
   const statusData = [
-    { name: "Active", value: activeStudents, color: "#3B82F6" },
-    { name: "Pending", value: pendingApps, color: "#F59E0B" },
+    { name: "Active",    value: activeStudents,    color: "#3B82F6" },
+    { name: "Pending",   value: pendingApps,       color: "#F59E0B" },
     { name: "Completed", value: completedStudents, color: "#8B5CF6" },
-    { name: "Accepted", value: applications.filter((a) => a.status === "Company Accepted").length, color: "#14B8A6" },
-    { name: "Approved", value: applications.filter((a) => a.status === "Approved").length, color: "#10B981" },
+    { name: "Approved",  value: applications.filter((a) => a.status === "approved").length, color: "#10B981" },
   ].filter((d) => d.value > 0);
 
-  const placementRate = applications.length > 0
-    ? Math.round(((activeStudents + completedStudents) / applications.length) * 100)
+  const placementRate = (activeStudents + completedStudents + pendingApps) > 0
+    ? Math.round(((activeStudents + completedStudents) / (activeStudents + completedStudents + pendingApps)) * 100)
     : 0;
 
   const activityData = checkInactiveStudents();
@@ -135,8 +140,8 @@ export function CLODashboard() {
             onClick={() => {
               exportToCSV(
                 applications.map(a => ({
-                  Student: a.studentName, ID: a.studentId, Company: a.companyName,
-                  Department: a.department, Status: a.status, Date: a.dateApplied
+                  Student: getStudentName(a), ID: getStudentNum(a), Company: getCompanyName(a),
+                  Department: getDept(a), Status: a.status, Date: getDateApplied(a),
                 })),
                 "clo_applications_export"
               );
@@ -326,14 +331,14 @@ export function CLODashboard() {
                   <tr key={app.id} className="border-b border-border last:border-0 hover:bg-muted/20">
                     <td className="px-4 py-3" style={{ fontSize: "0.85rem" }}>
                       <div>
-                        <p>{app.studentName}</p>
-                        <p className="text-muted-foreground" style={{ fontSize: "0.7rem" }}>{app.studentId}</p>
+                        <p>{getStudentName(app)}</p>
+                        <p className="text-muted-foreground" style={{ fontSize: "0.7rem" }}>{getStudentNum(app)}</p>
                       </div>
                     </td>
-                    <td className="px-4 py-3" style={{ fontSize: "0.85rem" }}>{app.companyName}</td>
-                    <td className="px-4 py-3" style={{ fontSize: "0.85rem" }}>{app.department}</td>
+                    <td className="px-4 py-3" style={{ fontSize: "0.85rem" }}>{getCompanyName(app)}</td>
+                    <td className="px-4 py-3" style={{ fontSize: "0.85rem" }}>{getDept(app)}</td>
                     <td className="px-4 py-3"><StatusBadge status={app.status} /></td>
-                    <td className="px-4 py-3 text-muted-foreground" style={{ fontSize: "0.8rem" }}>{app.dateApplied}</td>
+                    <td className="px-4 py-3 text-muted-foreground" style={{ fontSize: "0.8rem" }}>{getDateApplied(app)}</td>
                   </tr>
                 ))}
               </tbody>
