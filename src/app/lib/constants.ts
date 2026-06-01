@@ -46,21 +46,23 @@ export const COMPANY_ACTIVE_STATUS = {
   INACTIVE: "inactive",
 } as const;
 
-// ── Term Status ──
+// ── Term Status — real API values ──
 export const TERM_STATUS = {
-  UPCOMING: "Upcoming",
-  ACTIVE: "Active",
-  COMPLETED: "Completed",
-  ARCHIVED: "Archived",
+  DRAFT: "draft",
+  UPCOMING: "upcoming",
+  ACTIVE: "active",
+  COMPLETED: "completed",
+  ARCHIVED: "archived",
 } as const;
 
 export type TermStatus = (typeof TERM_STATUS)[keyof typeof TERM_STATUS];
 
-// ── Logbook Approval Status ──
+// ── Logbook Status — real API values ──
 export const LOGBOOK_STATUS = {
-  PENDING: "Pending",
-  APPROVED: "Approved",
-  REVISION_REQUESTED: "Revision Requested",
+  DRAFT: "draft",
+  SUBMITTED: "submitted",
+  APPROVED: "approved",
+  REJECTED: "rejected",
 } as const;
 
 export type LogbookApprovalStatus = (typeof LOGBOOK_STATUS)[keyof typeof LOGBOOK_STATUS];
@@ -133,41 +135,40 @@ export const DEPARTMENTS = [
   "Accounting & Finance",
 ] as const;
 
-// ── Industrial Supervisor Assessment Criteria (20 criteria, 4 sections) ──
+// ── Industrial Supervisor Assessment Criteria (18 criteria, 4 sections) ──
+// Keys are the exact backend field names sent to POST /api/v1/assessments/industrial
 import type { IndustrialCriterion, SectionWeights, StructureWeights, GradingStructure, WeeklyRubricCriterion, WeeklyRubric4PtRating, WeeklyRubric3PtRating } from "../types/grading";
 
 export const INDUSTRIAL_CRITERIA: IndustrialCriterion[] = [
-  // Section A — Specific Skills
-  { key: "A1", section: "A", label: "Technical Skills" },
-  { key: "A2", section: "A", label: "Analytical Skills" },
-  { key: "A3", section: "A", label: "Creative Skills" },
-  { key: "A4", section: "A", label: "Communication Skills" },
-  // Section B — General Employability Skills
-  { key: "B1", section: "B", label: "Ability to complete work on schedule" },
-  { key: "B2", section: "B", label: "Ability to follow instructions carefully" },
-  { key: "B3", section: "B", label: "Ability to take initiative" },
-  { key: "B4", section: "B", label: "Ability to work with little supervision" },
-  { key: "B5", section: "B", label: "Ability to work with other staff" },
-  { key: "B6", section: "B", label: "Adherence to organisation's rules and regulations" },
-  { key: "B7", section: "B", label: "Adherence to safety and environmental rules" },
-  { key: "B8", section: "B", label: "Resourcefulness" },
-  // Section C — Attitude to Work
-  { key: "C1", section: "C", label: "Attendance at work" },
-  { key: "C2", section: "C", label: "Punctuality" },
-  { key: "C3", section: "C", label: "Desire to work" },
-  { key: "C4", section: "C", label: "Willingness to accept new ideas and suggestions" },
-  { key: "C5", section: "C", label: "Loyalty to the organisation" },
-  // Section D — Human Relations
-  { key: "D1", section: "D", label: "Relationship with co-workers" },
-  { key: "D2", section: "D", label: "Relationship with superiors" },
-  { key: "D3", section: "D", label: "Emotional stability" },
+  // Section A — Technical Skills
+  { key: "tech_understanding_concepts", section: "A", label: "Understanding of Concepts" },
+  { key: "tech_application_knowledge",  section: "A", label: "Application of Knowledge" },
+  { key: "tech_problem_solving",        section: "A", label: "Problem Solving" },
+  { key: "tech_practical_skills",       section: "A", label: "Practical Skills" },
+  { key: "tech_innovation",             section: "A", label: "Innovation & Creativity" },
+  // Section B — Professional Skills
+  { key: "prof_communication",   section: "B", label: "Communication" },
+  { key: "prof_teamwork",        section: "B", label: "Teamwork" },
+  { key: "prof_initiative",      section: "B", label: "Initiative" },
+  { key: "prof_time_management", section: "B", label: "Time Management" },
+  { key: "prof_adaptability",    section: "B", label: "Adaptability" },
+  // Section C — Ethics & Conduct
+  { key: "eth_punctuality",     section: "C", label: "Punctuality" },
+  { key: "eth_reliability",     section: "C", label: "Reliability" },
+  { key: "eth_responsibility",  section: "C", label: "Responsibility" },
+  { key: "eth_professionalism", section: "C", label: "Professionalism" },
+  // Section D — Overall Performance
+  { key: "overall_quality",         section: "D", label: "Quality of Work" },
+  { key: "overall_quantity",        section: "D", label: "Quantity of Work" },
+  { key: "overall_improvement",     section: "D", label: "Improvement Over Time" },
+  { key: "overall_recommendation",  section: "D", label: "Overall Recommendation" },
 ];
 
 export const SECTION_LABELS: Record<"A" | "B" | "C" | "D", string> = {
-  A: "Specific Skills",
-  B: "General Employability Skills",
-  C: "Attitude to Work",
-  D: "Human Relations",
+  A: "Technical Skills",
+  B: "Professional Skills",
+  C: "Ethics & Conduct",
+  D: "Overall Performance",
 };
 
 // ── Weekly Assessment Rubric (NOT scored) ──
@@ -219,23 +220,37 @@ export const API_ENDPOINTS = {
 
   // Applications
   APPLICATIONS: "/api/v1/applications",
+  APPLICATIONS_PENDING: "/api/v1/applications/pending",
+  APPLICATION_SUBMIT: "/api/v1/applications/:id/submit",
   APPLICATION_APPROVE: "/api/v1/applications/:id/approve",
   APPLICATION_REJECT: "/api/v1/applications/:id/reject",
   APPLICATION_BULK_APPROVE: "/api/v1/applications/bulk-approve",
-  APPLICATION_ASSIGN_SUPERVISOR: "/api/v1/applications/:id/assign-supervisor",
+
+  // Internships
+  INTERNSHIPS: "/api/v1/internships",
+  INTERNSHIP_ACTIVE: "/api/v1/internships/active",
+  INTERNSHIP_OVERVIEW: "/api/v1/internships/:id/overview",
+  INTERNSHIP_LOGBOOKS: "/api/v1/internships/:internshipId/logbooks",
+  INTERNSHIP_ACTIVATE: "/api/v1/internships/:id/activate",
+  INTERNSHIP_COMPLETE: "/api/v1/internships/:id/complete",
+  INTERNSHIP_TERMINATE: "/api/v1/internships/:id/terminate",
+  INTERNSHIP_ASSIGN_SUPERVISOR: "/api/v1/internships/:id/assign-supervisor",
 
   // Companies
   COMPANIES: "/api/v1/companies",
+  COMPANIES_PENDING: "/api/v1/companies/pending",
   COMPANY_APPROVE: "/api/v1/companies/:id/approve",
   COMPANY_REJECT: "/api/v1/companies/:id/reject",
-  COMPANY_OVERRIDE: "/api/v1/companies/:id/override",
+  COMPANY_DEACTIVATE: "/api/v1/companies/:id/deactivate",
 
   // Terms
   TERMS: "/api/v1/terms",
+  TERM_ACTIVE: "/api/v1/terms/active",
+  TERM_PUBLISH: "/api/v1/terms/:id/publish",
+  TERM_ARCHIVE: "/api/v1/terms/:id/archive",
 
   // Students
   STUDENTS: "/api/v1/students",
-  STUDENT_INACTIVE: "/api/v1/students/inactive",
 
   // CLO users
   USERS: "/api/v1/users",
@@ -244,27 +259,69 @@ export const API_ENDPOINTS = {
   USERS_DEACTIVATE: "/api/v1/users/:id/deactivate",
   USERS_IMPORTABLE: "/api/v1/users/staff/importable",
 
+  // Departments
+  DEPARTMENTS: "/api/v1/departments",
+
   // Logbook
   LOGBOOK_ENTRIES: "/api/v1/logbooks",
+  LOGBOOK_SUBMIT: "/api/v1/logbooks/:id/submit",
   LOGBOOK_APPROVE: "/api/v1/logbooks/:id/approve",
   LOGBOOK_REVISION: "/api/v1/logbooks/:id/comment",
 
   // Attendance
   ATTENDANCE: "/api/v1/attendance",
+  ATTENDANCE_MISSED: "/api/v1/attendance/missed",
   ATTENDANCE_CHECKIN: "/api/v1/attendance/check-in",
+  ATTENDANCE_CHECKOUT: "/api/v1/attendance/:id/check-out",
   ATTENDANCE_VERIFY: "/api/v1/attendance/:id/verify",
+  ATTENDANCE_BY_INTERNSHIP: "/api/v1/internships/:internshipId/attendance",
 
-  // Grades
+  // Supervisor assignments
+  SUPERVISOR_ASSIGNMENTS_PENDING: "/api/v1/supervisor-assignments/pending",
+  SUPERVISOR_ASSIGNMENTS_AVAILABLE: "/api/v1/supervisor-assignments/available-supervisors",
+  SUPERVISOR_ASSIGNMENTS_AUTO: "/api/v1/supervisor-assignments/auto-assign",
+  SUPERVISOR_STUDENTS: "/api/v1/supervisor-assignments/supervisors/:supervisorId/students",
+
+  // Site visitations
+  SITE_VISITATIONS: "/api/v1/site-visitations",
+  SITE_VISITATION_COMPLETE: "/api/v1/site-visitations/:id/complete",
+  SITE_VISITATION_CANCEL: "/api/v1/site-visitations/:id/cancel",
+  SITE_VISITATION_SCORE: "/api/v1/site-visitations/:visitationId/score",
+  SITE_VISITATION_SCORE_SUBMIT: "/api/v1/assessments/site-visitation/:id/submit",
+  SITE_VISITATION_SCORE_APPROVE: "/api/v1/assessments/site-visitation/:id/approve",
+
+  // Industrial assessments
+  ASSESSMENTS_INDUSTRIAL: "/api/v1/assessments/industrial",
+  ASSESSMENT_INDUSTRIAL_SUBMIT: "/api/v1/assessments/industrial/:id/submit",
+  ASSESSMENT_INDUSTRIAL_APPROVE: "/api/v1/assessments/industrial/:id/approve",
+
+  // Report scores
+  ASSESSMENTS_REPORT: "/api/v1/assessments/report",
+  ASSESSMENT_REPORT_APPROVE: "/api/v1/assessments/report/:id/approve",
+
+  // Presentation scores
+  ASSESSMENTS_PRESENTATION: "/api/v1/assessments/presentation",
+  ASSESSMENT_PRESENTATION_GRADE: "/api/v1/assessments/presentation/:id/grade",
+  ASSESSMENT_PRESENTATION_APPROVE: "/api/v1/assessments/presentation/:id/approve",
+
+  // Grading configuration
+  GRADING_CONFIG: "/api/v1/grading-config",
+  GRADING_CONFIG_SET_DEFAULT: "/api/v1/grading-config/:id/set-default",
+
+  // Final grades
   GRADES: "/api/v1/grades",
+  GRADES_PENDING_APPROVAL: "/api/v1/grades/pending-approval",
+  GRADES_EXPORT: "/api/v1/grades/export",
+  GRADES_COMPILE: "/api/v1/grades/:internshipId/compile",
   GRADE_APPROVE: "/api/v1/grades/:id/approve",
-  GRADE_REVISION: "/api/v1/grades/:id/revision",
+  GRADES_PUBLISH: "/api/v1/grades/:id/publish",
 
   // Notifications
   NOTIFICATIONS: "/api/v1/notifications",
   NOTIFICATION_READ: "/api/v1/notifications/:id/read",
   NOTIFICATIONS_READ_ALL: "/api/v1/notifications/read-all",
 
-  // Messages
+  // Messages (not yet implemented in backend — calls will fail gracefully)
   THREADS: "/api/v1/messages/threads",
   THREAD_MESSAGES: "/api/v1/messages/threads/:id",
   THREAD_SEND: "/api/v1/messages/threads/:id/send",
@@ -276,28 +333,20 @@ export const API_ENDPOINTS = {
   ISSUE_STATUS: "/api/v1/issues/:id/status",
   ISSUE_ESCALATE: "/api/v1/issues/:id/escalate",
 
-  // Reports & Audit
-  AUDIT_LOGS: "/api/v1/audit-logs",
+  // Reports
+  REPORTS_PROGRESS: "/api/v1/reports/internship-progress",
+  REPORTS_PERFORMANCE: "/api/v1/reports/student-performance",
+  REPORTS_COMPANY: "/api/v1/reports/company-engagement",
+  REPORTS_DEPT: "/api/v1/reports/department-statistics",
   REPORTS_EXPORT: "/api/v1/reports/export",
+  REPORTS_CUSTOM: "/api/v1/reports/custom",
 
-  // Settings
+  // Audit & Settings
+  AUDIT_LOGS: "/api/v1/audit-logs",
   SETTINGS: "/api/v1/settings",
 
-  // Supervisors
-  SUPERVISORS: "/api/v1/supervisors",
-
-  // Application actions
-  APPLICATION_SUBMIT: "/api/v1/applications/:id/submit",
-  APPLICATIONS_PENDING: "/api/v1/applications/pending",
-
-  // Company actions
-  COMPANIES_PENDING: "/api/v1/companies/pending",
-  COMPANY_DEACTIVATE: "/api/v1/companies/:id/deactivate",
-
-  // Attendance
-  ATTENDANCE_CHECKOUT: "/api/v1/attendance/:id/check-out",
-  ATTENDANCE_MISSED: "/api/v1/attendance/missed",
-  ATTENDANCE_BY_INTERNSHIP: "/api/v1/internships/:internshipId/attendance",
+  // Academic supervisors shorthand (filtered user list)
+  ACADEMIC_SUPERVISORS: "/api/v1/users?role=academic_supervisor",
 
   // Role dashboards
   DASHBOARD_STUDENT: "/api/v1/dashboard/student",
@@ -305,9 +354,7 @@ export const API_ENDPOINTS = {
   DASHBOARD_SUPERVISOR: "/api/v1/dashboard/industry-supervisor",
   DASHBOARD_DLO: "/api/v1/dashboard/dlo",
   DASHBOARD_CLO: "/api/v1/dashboard/clo",
-
-  // Departments
-  DEPARTMENTS: "/api/v1/departments",
+  DASHBOARD_HOD: "/api/v1/dashboard/hod",
 
   // Analytics
   ANALYTICS_OVERVIEW: "/api/v1/analytics/overview",

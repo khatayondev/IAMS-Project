@@ -303,10 +303,10 @@ export const apiClient = {
     });
   },
 
-  async assignSupervisor(applicationId: string, supervisorId: number): Promise<ApiResponse<null>> {
+  async assignSupervisor(internshipId: string, supervisorId: number): Promise<ApiResponse<null>> {
     return requestApi<null>(
-      replacePathParams(API_ENDPOINTS.APPLICATION_ASSIGN_SUPERVISOR, { id: applicationId }),
-      { method: "POST", body: JSON.stringify({ supervisor_id: supervisorId }) }
+      replacePathParams(API_ENDPOINTS.INTERNSHIP_ASSIGN_SUPERVISOR, { id: internshipId }),
+      { method: "POST", body: JSON.stringify({ academic_supervisor_id: supervisorId }) }
     );
   },
 
@@ -435,6 +435,20 @@ export const apiClient = {
     return requestApi<TermResponse | null>(
       replacePathParams("/api/v1/terms/:id", { id }),
       { method: "PUT", body: JSON.stringify(data) }
+    );
+  },
+
+  async publishTerm(id: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(
+      replacePathParams(API_ENDPOINTS.TERM_PUBLISH, { id }),
+      { method: "PATCH" }
+    );
+  },
+
+  async archiveTerm(id: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(
+      replacePathParams(API_ENDPOINTS.TERM_ARCHIVE, { id }),
+      { method: "PATCH" }
     );
   },
 
@@ -622,11 +636,13 @@ export const apiClient = {
     );
   },
 
+  // Weekly rubric has no backend equivalent yet — calls will fail gracefully
   async submitWeeklyRubric(
     applicationId: string,
     weekNumber: number,
     ratings: Record<string, number>,
-    notes: string
+    notes: string,
+    _actor?: unknown
   ): Promise<ApiResponse<null>> {
     return requestApi<null>(
       replacePathParams("/api/v1/grades/:id/weekly-rubric", { id: applicationId }),
@@ -634,14 +650,31 @@ export const apiClient = {
     );
   },
 
+  // Creates a draft assessment then immediately submits it.
+  // ratings keys must be the 18 backend field names (tech_*, prof_*, eth_*, overall_*).
   async submitIndustrialAssessment(
-    applicationId: string,
+    internshipId: string,
     ratings: Record<string, number>,
-    comments: string
+    comments: string,
+    _actor?: unknown
   ): Promise<ApiResponse<null>> {
+    const payload: Record<string, unknown> = {
+      internship_id: Number(internshipId),
+      general_comments: comments,
+      ...ratings,
+    };
+    const createRes = await requestApi<any>(API_ENDPOINTS.ASSESSMENTS_INDUSTRIAL, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (!createRes.success) return createRes as ApiResponse<null>;
+
+    const assessmentId = createRes.data?.assessment?.id ?? createRes.data?.id;
+    if (!assessmentId) return createRes as ApiResponse<null>;
+
     return requestApi<null>(
-      replacePathParams("/api/v1/grades/:id/industrial-assessment", { id: applicationId }),
-      { method: "POST", body: JSON.stringify({ ratings, comments }) }
+      replacePathParams(API_ENDPOINTS.ASSESSMENT_INDUSTRIAL_SUBMIT, { id: String(assessmentId) }),
+      { method: "PATCH" }
     );
   },
 
@@ -770,12 +803,13 @@ export const apiClient = {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   async getDashboard(
-    role: "student" | "clo" | "dlo" | "industry-supervisor" | "academic-supervisor"
+    role: "student" | "clo" | "dlo" | "hod" | "industry-supervisor" | "academic-supervisor"
   ): Promise<ApiResponse<any>> {
     const endpointMap: Record<string, string> = {
       student: API_ENDPOINTS.DASHBOARD_STUDENT,
       clo: API_ENDPOINTS.DASHBOARD_CLO,
       dlo: API_ENDPOINTS.DASHBOARD_DLO,
+      hod: API_ENDPOINTS.DASHBOARD_HOD,
       "industry-supervisor": API_ENDPOINTS.DASHBOARD_SUPERVISOR,
       "academic-supervisor": API_ENDPOINTS.DASHBOARD_ACADEMIC,
     };
@@ -836,6 +870,315 @@ export const apiClient = {
       method: "PUT",
       body: JSON.stringify(data),
     });
+  },
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // INTERNSHIPS
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  async getInternships(filters?: Record<string, unknown>): Promise<ApiResponse<any[]>> {
+    const response = await requestApi<unknown>(API_ENDPOINTS.INTERNSHIPS, { method: "GET", query: filters });
+    return { success: response.success, data: response.success ? extractCollection<any>(response, "internships") : [], message: response.message };
+  },
+
+  async getActiveInternships(filters?: Record<string, unknown>): Promise<ApiResponse<any[]>> {
+    const response = await requestApi<unknown>(API_ENDPOINTS.INTERNSHIP_ACTIVE, { method: "GET", query: filters });
+    return { success: response.success, data: response.success ? extractCollection<any>(response, "internships") : [], message: response.message };
+  },
+
+  async getInternship(id: string): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams("/api/v1/internships/:id", { id }), { method: "GET" });
+  },
+
+  async getInternshipOverview(id: string): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams(API_ENDPOINTS.INTERNSHIP_OVERVIEW, { id }), { method: "GET" });
+  },
+
+  async activateInternship(id: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(replacePathParams(API_ENDPOINTS.INTERNSHIP_ACTIVATE, { id }), { method: "PATCH" });
+  },
+
+  async completeInternship(id: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(replacePathParams(API_ENDPOINTS.INTERNSHIP_COMPLETE, { id }), { method: "PATCH" });
+  },
+
+  async terminateInternship(id: string, reason?: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(replacePathParams(API_ENDPOINTS.INTERNSHIP_TERMINATE, { id }), { method: "PATCH", body: JSON.stringify({ reason }) });
+  },
+
+  async getInternshipLogbooks(internshipId: string, filters?: Record<string, unknown>): Promise<ApiResponse<any[]>> {
+    const response = await requestApi<unknown>(
+      replacePathParams(API_ENDPOINTS.INTERNSHIP_LOGBOOKS, { internshipId }),
+      { method: "GET", query: filters }
+    );
+    return { success: response.success, data: response.success ? extractCollection<any>(response, "logbooks") : [], message: response.message };
+  },
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STUDENTS
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  async getStudents(filters?: Record<string, unknown>): Promise<ApiResponse<any[]>> {
+    const response = await requestApi<unknown>(API_ENDPOINTS.STUDENTS, { method: "GET", query: filters });
+    return { success: response.success, data: response.success ? extractCollection<any>(response, "students") : [], message: response.message };
+  },
+
+  async getStudent(id: string): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams("/api/v1/students/:id", { id }), { method: "GET" });
+  },
+
+  async updateStudent(id: string, data: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams("/api/v1/students/:id", { id }), { method: "PUT", body: JSON.stringify(data) });
+  },
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // SUPERVISOR ASSIGNMENTS
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  async getSupervisorAssignmentsPending(filters?: Record<string, unknown>): Promise<ApiResponse<any[]>> {
+    const response = await requestApi<unknown>(API_ENDPOINTS.SUPERVISOR_ASSIGNMENTS_PENDING, { method: "GET", query: filters });
+    return { success: response.success, data: response.success ? extractCollection<any>(response, "internships") : [], message: response.message };
+  },
+
+  async getAvailableSupervisors(departmentId?: number): Promise<ApiResponse<any[]>> {
+    const response = await requestApi<unknown>(API_ENDPOINTS.SUPERVISOR_ASSIGNMENTS_AVAILABLE, {
+      method: "GET",
+      query: departmentId ? { department_id: departmentId } : undefined,
+    });
+    return { success: response.success, data: response.success ? extractCollection<any>(response, "supervisors") : [], message: response.message };
+  },
+
+  async getSupervisorStudents(supervisorId: string): Promise<ApiResponse<any>> {
+    return requestApi<any>(
+      replacePathParams(API_ENDPOINTS.SUPERVISOR_STUDENTS, { supervisorId }),
+      { method: "GET" }
+    );
+  },
+
+  async autoAssignSupervisors(data: { term_id: number; department_id?: number }): Promise<ApiResponse<any>> {
+    return requestApi<any>(API_ENDPOINTS.SUPERVISOR_ASSIGNMENTS_AUTO, { method: "POST", body: JSON.stringify(data) });
+  },
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // SITE VISITATIONS
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  async getSiteVisitations(filters?: Record<string, unknown>): Promise<ApiResponse<any[]>> {
+    const response = await requestApi<unknown>(API_ENDPOINTS.SITE_VISITATIONS, { method: "GET", query: filters });
+    return { success: response.success, data: response.success ? extractCollection<any>(response, "visitations") : [], message: response.message };
+  },
+
+  async createSiteVisitation(data: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(API_ENDPOINTS.SITE_VISITATIONS, { method: "POST", body: JSON.stringify(data) });
+  },
+
+  async updateSiteVisitation(id: string, data: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams("/api/v1/site-visitations/:id", { id }), { method: "PUT", body: JSON.stringify(data) });
+  },
+
+  async completeSiteVisitation(id: string, data?: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams(API_ENDPOINTS.SITE_VISITATION_COMPLETE, { id }), { method: "PATCH", body: JSON.stringify(data ?? {}) });
+  },
+
+  async cancelSiteVisitation(id: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(replacePathParams(API_ENDPOINTS.SITE_VISITATION_CANCEL, { id }), { method: "PATCH" });
+  },
+
+  async getSiteVisitationScore(visitationId: string): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams(API_ENDPOINTS.SITE_VISITATION_SCORE, { visitationId }), { method: "GET" });
+  },
+
+  async submitSiteVisitationScore(visitationId: string, data: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams(API_ENDPOINTS.SITE_VISITATION_SCORE, { visitationId }), { method: "POST", body: JSON.stringify(data) });
+  },
+
+  async submitSiteVisitationScoreForApproval(id: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(replacePathParams(API_ENDPOINTS.SITE_VISITATION_SCORE_SUBMIT, { id }), { method: "PATCH" });
+  },
+
+  async approveSiteVisitationScore(id: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(replacePathParams(API_ENDPOINTS.SITE_VISITATION_SCORE_APPROVE, { id }), { method: "PATCH" });
+  },
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // INDUSTRIAL ASSESSMENTS
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  async getIndustrialAssessments(filters?: Record<string, unknown>): Promise<ApiResponse<any[]>> {
+    const response = await requestApi<unknown>(API_ENDPOINTS.ASSESSMENTS_INDUSTRIAL, { method: "GET", query: filters });
+    return { success: response.success, data: response.success ? extractCollection<any>(response, "assessments") : [], message: response.message };
+  },
+
+  async getIndustrialAssessment(id: string): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams("/api/v1/assessments/industrial/:id", { id }), { method: "GET" });
+  },
+
+  async updateIndustrialAssessment(id: string, data: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams("/api/v1/assessments/industrial/:id", { id }), { method: "PUT", body: JSON.stringify(data) });
+  },
+
+  async approveIndustrialAssessment(id: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(replacePathParams(API_ENDPOINTS.ASSESSMENT_INDUSTRIAL_APPROVE, { id }), { method: "PATCH" });
+  },
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // REPORT SCORES
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  async getReportScore(internshipId: string): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams("/api/v1/assessments/report/:internshipId", { internshipId }), { method: "GET" });
+  },
+
+  async gradeReport(internshipId: string, data: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams("/api/v1/assessments/report/:internshipId", { internshipId }), { method: "POST", body: JSON.stringify(data) });
+  },
+
+  async updateReportScore(id: string, data: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams("/api/v1/assessments/report/:id", { id }), { method: "PUT", body: JSON.stringify(data) });
+  },
+
+  async approveReportScore(id: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(replacePathParams(API_ENDPOINTS.ASSESSMENT_REPORT_APPROVE, { id }), { method: "PATCH" });
+  },
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // PRESENTATION SCORES
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  async getPresentationScores(filters?: Record<string, unknown>): Promise<ApiResponse<any[]>> {
+    const response = await requestApi<unknown>(API_ENDPOINTS.ASSESSMENTS_PRESENTATION, { method: "GET", query: filters });
+    return { success: response.success, data: response.success ? extractCollection<any>(response, "presentations") : [], message: response.message };
+  },
+
+  async schedulePresentationScore(data: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(API_ENDPOINTS.ASSESSMENTS_PRESENTATION, { method: "POST", body: JSON.stringify(data) });
+  },
+
+  async getPresentationScore(internshipId: string): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams("/api/v1/assessments/presentation/:internshipId", { internshipId }), { method: "GET" });
+  },
+
+  async updatePresentationScore(id: string, data: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams("/api/v1/assessments/presentation/:id", { id }), { method: "PUT", body: JSON.stringify(data) });
+  },
+
+  async gradePresentationScore(id: string, data: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams(API_ENDPOINTS.ASSESSMENT_PRESENTATION_GRADE, { id }), { method: "PATCH", body: JSON.stringify(data) });
+  },
+
+  async approvePresentationScore(id: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(replacePathParams(API_ENDPOINTS.ASSESSMENT_PRESENTATION_APPROVE, { id }), { method: "PATCH" });
+  },
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // GRADING CONFIGURATION
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  async getGradingConfigs(filters?: Record<string, unknown>): Promise<ApiResponse<any[]>> {
+    const response = await requestApi<unknown>(API_ENDPOINTS.GRADING_CONFIG, { method: "GET", query: filters });
+    return { success: response.success, data: response.success ? extractCollection<any>(response, "configs") : [], message: response.message };
+  },
+
+  async getGradingConfig(id: string): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams("/api/v1/grading-config/:id", { id }), { method: "GET" });
+  },
+
+  async createGradingConfig(data: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(API_ENDPOINTS.GRADING_CONFIG, { method: "POST", body: JSON.stringify(data) });
+  },
+
+  async updateGradingConfig(id: string, data: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams("/api/v1/grading-config/:id", { id }), { method: "PUT", body: JSON.stringify(data) });
+  },
+
+  async setDefaultGradingConfig(id: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(replacePathParams(API_ENDPOINTS.GRADING_CONFIG_SET_DEFAULT, { id }), { method: "PATCH" });
+  },
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // FINAL GRADES (extended)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  async getGrades(filters?: Record<string, unknown>): Promise<ApiResponse<any[]>> {
+    const response = await requestApi<unknown>(API_ENDPOINTS.GRADES, { method: "GET", query: filters });
+    return { success: response.success, data: response.success ? extractCollection<any>(response, "grades") : [], message: response.message };
+  },
+
+  async getGrade(internshipId: string): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams("/api/v1/grades/:internshipId", { internshipId }), { method: "GET" });
+  },
+
+  async compileGrade(internshipId: string): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams(API_ENDPOINTS.GRADES_COMPILE, { internshipId }), { method: "POST" });
+  },
+
+  async updateGrade(id: string, data?: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams("/api/v1/grades/:id", { id }), { method: "PUT", body: JSON.stringify(data ?? {}) });
+  },
+
+  async publishGrade(id: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(replacePathParams(API_ENDPOINTS.GRADES_PUBLISH, { id }), { method: "PATCH" });
+  },
+
+  async getPendingGradeApprovals(filters?: Record<string, unknown>): Promise<ApiResponse<any[]>> {
+    const response = await requestApi<unknown>(API_ENDPOINTS.GRADES_PENDING_APPROVAL, { method: "GET", query: filters });
+    return { success: response.success, data: response.success ? extractCollection<any>(response, "grades") : [], message: response.message };
+  },
+
+  async exportGrades(data: { term_id: number; format?: "csv" | "json" }): Promise<ApiResponse<any>> {
+    return requestApi<any>(API_ENDPOINTS.GRADES_EXPORT, { method: "POST", body: JSON.stringify(data) });
+  },
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // REPORTS
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  async getInternshipProgress(filters?: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(API_ENDPOINTS.REPORTS_PROGRESS, { method: "GET", query: filters });
+  },
+
+  async getStudentPerformance(filters?: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(API_ENDPOINTS.REPORTS_PERFORMANCE, { method: "GET", query: filters });
+  },
+
+  async getCompanyEngagement(filters?: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(API_ENDPOINTS.REPORTS_COMPANY, { method: "GET", query: filters });
+  },
+
+  async getDepartmentStatistics(filters?: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(API_ENDPOINTS.REPORTS_DEPT, { method: "GET", query: filters });
+  },
+
+  async exportReport(data: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(API_ENDPOINTS.REPORTS_EXPORT, { method: "POST", body: JSON.stringify(data) });
+  },
+
+  async customReport(data: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(API_ENDPOINTS.REPORTS_CUSTOM, { method: "POST", body: JSON.stringify(data) });
+  },
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // LOGBOOK (extended)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  async submitLogbookEntry(id: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(replacePathParams(API_ENDPOINTS.LOGBOOK_SUBMIT, { id }), { method: "POST" });
+  },
+
+  async updateLogbookEntry(id: string, data: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return requestApi<any>(replacePathParams("/api/v1/logbooks/:id", { id }), { method: "PUT", body: JSON.stringify(data) });
+  },
+
+  async deleteLogbookEntry(id: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(replacePathParams("/api/v1/logbooks/:id", { id }), { method: "DELETE" });
+  },
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ACTIVE TERM
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  async getActiveTerm(): Promise<ApiResponse<any>> {
+    return requestApi<any>(API_ENDPOINTS.TERM_ACTIVE, { method: "GET" });
   },
 };
 
