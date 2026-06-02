@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { staffList, departments } from "../../lib/mock-data";
+import { departments } from "../../lib/mock-data";
 import { Search, UserPlus, Mail, Shield, X, Users, CheckCircle2, XCircle, MoreVertical, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "../../lib/api-client";
 
-type RoleFilter = "All" | "DLO" | "Academic Supervisor" | "HOD" | "Staff";
+type RoleFilter = "All" | "clo" | "dlo" | "academic supervisor" | "industry supervisor" | "student" | "hod";
 
 interface StaffMember {
   id: string;
@@ -16,32 +16,28 @@ interface StaffMember {
   status?: "Active" | "Inactive";
 }
 
-const enrichedStaff: StaffMember[] = staffList.map((s, i) => ({
-  ...s,
-  role: s.isLiaison ? "DLO" : i % 3 === 0 ? "Academic Supervisor" : i % 5 === 0 ? "HOD" : "Staff",
-  status: "Active" as const,
-}));
-
 function normalizeRemoteUsers(users: any[]): StaffMember[] {
   return users.map((user, index) => {
     const fullName = user.name ?? user.full_name ?? [user.first_name, user.last_name].filter(Boolean).join(" ") ?? `User ${index + 1}`;
-    const rawRole = String(user.role ?? user.user_role ?? user.type ?? "Staff").toLowerCase();
-    const role = rawRole.includes("hod")
-      ? "HOD"
-      : rawRole.includes("industry")
-        ? "Industry Supervisor"
-        : rawRole.includes("academic") || rawRole.includes("supervisor")
-          ? "Academic Supervisor"
-        : rawRole.includes("dlo")
-          ? "DLO"
-          : "Staff";
+    const rawRole = String(user.role ?? user.user_role ?? user.type ?? "student").toLowerCase().replace(/-/g, " ").trim();
+    const role = rawRole.includes("clo")
+      ? "clo"
+      : rawRole.includes("dlo")
+        ? "dlo"
+        : rawRole.includes("academic") || (rawRole.includes("supervisor") && !rawRole.includes("industry"))
+          ? "academic supervisor"
+        : rawRole.includes("industry") || rawRole.includes("industrial")
+          ? "industry supervisor"
+        : rawRole.includes("hod")
+          ? "hod"
+          : "student";
 
     return {
       id: String(user.id ?? user.user_id ?? `user-${index}`),
       name: fullName,
       email: user.email ?? user.email_address ?? "",
       department: user.department?.name ?? user.department_name ?? user.department ?? departments[index % departments.length],
-      isLiaison: role === "DLO",
+      isLiaison: role === "dlo",
       role,
       status: user.status === "invited" ? "Inactive" : "Active",
     };
@@ -55,8 +51,8 @@ export function UsersPage() {
   const [showInvite, setShowInvite] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [actionMenu, setActionMenu] = useState<string | null>(null);
-  const [inviteForm, setInviteForm] = useState({ name: "", email: "", department: departments[0], role: "DLO" });
-  const [users, setUsers] = useState<StaffMember[]>(enrichedStaff);
+  const [inviteForm, setInviteForm] = useState({ name: "", email: "", department: departments[0], role: "dlo" });
+  const [users, setUsers] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -70,14 +66,14 @@ export function UsersPage() {
       if (response.success && response.data.length > 0) {
         setUsers(normalizeRemoteUsers(response.data));
       } else {
-        setUsers(enrichedStaff);
+        setUsers([]);
       }
       setLoading(false);
     }
 
     loadUsers().catch(() => {
       if (!active) return;
-      setUsers(enrichedStaff);
+      setUsers([]);
       setLoading(false);
     });
 
@@ -115,7 +111,7 @@ export function UsersPage() {
       return;
     }
 
-    if (inviteForm.role === "DLO") {
+    if (inviteForm.role === "dlo") {
       const result = await apiClient.createDLOAccount({
         name: inviteForm.name,
         email: inviteForm.email,
@@ -131,25 +127,29 @@ export function UsersPage() {
 
     toast.success(`Invitation sent to ${inviteForm.name} (${inviteForm.email}) as ${inviteForm.role}.`);
     setShowInvite(false);
-    setInviteForm({ name: "", email: "", department: departments[0], role: "DLO" });
+    setInviteForm({ name: "", email: "", department: departments[0], role: "dlo" });
   };
 
   const roleBadge = (role: string) => {
     const colors: Record<string, string> = {
-      DLO: "bg-blue-100 text-blue-700",
-      "Academic Supervisor": "bg-violet-100 text-violet-700",
-      HOD: "bg-amber-100 text-amber-700",
-      Staff: "bg-gray-100 text-gray-600",
+      clo: "bg-blue-100 text-blue-700",
+      dlo: "bg-indigo-100 text-indigo-700",
+      "academic supervisor": "bg-violet-100 text-violet-700",
+      "industry supervisor": "bg-pink-100 text-pink-700",
+      student: "bg-emerald-100 text-emerald-700",
+      hod: "bg-amber-100 text-amber-700",
     };
     return colors[role] || "bg-gray-100 text-gray-600";
   };
 
   const roleCounts = {
     All: users.length,
-    DLO: users.filter((s) => s.role === "DLO").length,
-    "Academic Supervisor": users.filter((s) => s.role === "Academic Supervisor").length,
-    HOD: users.filter((s) => s.role === "HOD").length,
-    Staff: users.filter((s) => s.role === "Staff").length,
+    clo: users.filter((s) => s.role === "clo").length,
+    dlo: users.filter((s) => s.role === "dlo").length,
+    "academic supervisor": users.filter((s) => s.role === "academic supervisor").length,
+    "industry supervisor": users.filter((s) => s.role === "industry supervisor").length,
+    student: users.filter((s) => s.role === "student").length,
+    hod: users.filter((s) => s.role === "hod").length,
   };
 
   return (
@@ -172,7 +172,7 @@ export function UsersPage() {
 
       {/* Role Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1">
-        {(["All", "DLO", "Academic Supervisor", "HOD", "Staff"] as RoleFilter[]).map((role) => (
+        {(["All", "clo", "dlo", "academic supervisor", "industry supervisor", "student", "hod"] as RoleFilter[]).map((role) => (
           <button
             key={role}
             onClick={() => { setRoleFilter(role); setSelectedUsers(new Set()); }}
@@ -244,10 +244,10 @@ export function UsersPage() {
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: "Total Users", value: enrichedStaff.length, icon: Users, color: "text-blue-600 bg-blue-50" },
-          { label: "Active DLOs", value: roleCounts.DLO, icon: Shield, color: "text-violet-600 bg-violet-50" },
-          { label: "Academic Supervisors", value: roleCounts["Academic Supervisor"], icon: Eye, color: "text-emerald-600 bg-emerald-50" },
-          { label: "Departments Covered", value: new Set(enrichedStaff.filter((s) => s.isLiaison).map((s) => s.department)).size, icon: CheckCircle2, color: "text-amber-600 bg-amber-50" },
+          { label: "Total Users", value: users.length, icon: Users, color: "text-blue-600 bg-blue-50" },
+          { label: "Active DLOs", value: roleCounts.dlo, icon: Shield, color: "text-violet-600 bg-violet-50" },
+          { label: "Academic Supervisors", value: roleCounts["academic supervisor"], icon: Eye, color: "text-emerald-600 bg-emerald-50" },
+          { label: "Departments Covered", value: new Set(users.filter((s) => s.role === "dlo").map((s) => s.department)).size, icon: CheckCircle2, color: "text-amber-600 bg-amber-50" },
         ].map((stat) => (
           <div key={stat.label} className="bg-card border border-border rounded-xl p-4">
             <div className="flex items-center gap-3">
@@ -292,7 +292,7 @@ export function UsersPage() {
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setActionMenu(null)} />
                       <div className="absolute right-0 top-9 w-44 bg-card border border-border rounded-lg shadow-xl z-50 overflow-hidden">
-                        {s.role !== "DLO" && (
+                        {s.role !== "dlo" && (
                           <button onClick={() => { toast.success(`${s.name} assigned as DLO.`); setActionMenu(null); }} className="w-full text-left px-3 py-2.5 hover:bg-accent flex items-center gap-2" style={{ fontSize: "0.85rem" }}>
                             <Shield className="w-3.5 h-3.5" /> Assign DLO
                           </button>
@@ -312,8 +312,8 @@ export function UsersPage() {
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full ${roleBadge(s.role || "Staff")}`} style={{ fontSize: "0.75rem" }}>
-                  <Shield className="w-3 h-3" /> {s.role}
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full ${roleBadge(s.role || "student")}`} style={{ fontSize: "0.75rem" }}>
+                  <Shield className="w-3 h-3" /> {s.role || "student"}
                 </span>
                 <span className="text-muted-foreground" style={{ fontSize: "0.78rem" }}>{s.department}</span>
               </div>
@@ -363,8 +363,8 @@ export function UsersPage() {
                 <td className="px-4 py-3 text-muted-foreground" style={{ fontSize: "0.85rem" }}>{s.email}</td>
                 <td className="px-4 py-3" style={{ fontSize: "0.85rem" }}>{s.department}</td>
                 <td className="px-4 py-3">
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full ${roleBadge(s.role || "Staff")}`} style={{ fontSize: "0.75rem" }}>
-                    <Shield className="w-3 h-3" /> {s.role}
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full ${roleBadge(s.role || "student")}`} style={{ fontSize: "0.75rem" }}>
+                    <Shield className="w-3 h-3" /> {s.role || "student"}
                   </span>
                 </td>
                 <td className="px-4 py-3">
@@ -384,7 +384,7 @@ export function UsersPage() {
                       <>
                         <div className="fixed inset-0 z-40" onClick={() => setActionMenu(null)} />
                         <div className="absolute right-0 top-8 w-44 bg-card border border-border rounded-lg shadow-xl z-50 overflow-hidden">
-                          {s.role !== "DLO" && (
+                          {s.role !== "dlo" && (
                             <button
                               onClick={() => { toast.success(`${s.name} assigned as DLO.`); setActionMenu(null); }}
                               className="w-full text-left px-3 py-2 hover:bg-accent flex items-center gap-2"
@@ -488,9 +488,12 @@ export function UsersPage() {
                     className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background"
                     style={{ fontSize: "0.85rem" }}
                   >
-                    <option>DLO</option>
-                    <option>Academic Supervisor</option>
-                    <option>HOD</option>
+                    <option value="clo">clo</option>
+                    <option value="dlo">dlo</option>
+                    <option value="academic supervisor">academic supervisor</option>
+                    <option value="industry supervisor">industry supervisor</option>
+                    <option value="student">student</option>
+                    <option value="hod">hod</option>
                   </select>
                 </div>
               </div>
