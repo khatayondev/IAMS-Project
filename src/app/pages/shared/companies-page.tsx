@@ -103,7 +103,6 @@ export function CompaniesPage({ viewRole }: Props) {
       region: companyForm.region,
       country: companyForm.country,
       contact_person_name: companyForm.contactPerson,
-      contact_person_email: companyForm.contactEmail,
       industry: companyForm.industry || undefined,
     };
     const r = await apiClient.createCompany(payload);
