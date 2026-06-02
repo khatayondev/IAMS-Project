@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { apiClient } from "../../lib/api-client";
-import { Award, Clock, AlertCircle, Users, BookMarked, ClipboardCheck, CheckCircle2 } from "lucide-react";
+import { Award, AlertCircle, Users, BookMarked, ClipboardCheck, CheckCircle2 } from "lucide-react";
 import { Card } from "../../components/ui/card";
+import { SkeletonFormCard, SkeletonStatCards } from "../../components/skeleton";
 
 export function StudentGradesPage() {
   const [internship, setInternship] = useState<any>(null);
@@ -25,10 +26,8 @@ export function StudentGradesPage() {
     return (
       <div className="space-y-6">
         <h1>My Score &amp; Evaluation</h1>
-        <Card className="p-12 text-center">
-          <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4 animate-spin" />
-          <p className="text-muted-foreground">Loading grade data…</p>
-        </Card>
+        <SkeletonStatCards count={4} />
+        <SkeletonFormCard rows={6} />
       </div>
     );
   }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { SkeletonList } from "../../components/skeleton";
 import { useAppContext } from "../../lib/context";
 import {
   Users, CheckCircle2, X, Eye, BarChart3, AlertTriangle, Loader2,
@@ -111,7 +112,7 @@ export function SupervisorsPage() {
         {/* Supervisor List */}
         <div className="lg:col-span-2 space-y-3">
           {loading ? (
-            <div className="bg-card border border-border rounded-xl p-8 text-center text-muted-foreground" style={{ fontSize: "0.85rem" }}>Loading supervisors…</div>
+            <SkeletonList rows={4} />
           ) : supervisors.length === 0 ? (
             <div className="bg-card border border-border rounded-xl p-8 text-center">
               <Users className="w-10 h-10 text-muted-foreground mx-auto mb-3" />

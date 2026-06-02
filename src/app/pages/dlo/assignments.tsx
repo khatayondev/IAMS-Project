@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { SkeletonTableRows } from "../../components/skeleton";
 import {
   Zap, RefreshCw, Search, X, Users, AlertTriangle, CheckCircle2, ChevronDown,
 } from "lucide-react";
@@ -140,7 +141,7 @@ export function DLOAssignmentsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={4} className="px-4 py-12 text-center text-muted-foreground" style={{ fontSize: "0.85rem" }}>Loading…</td></tr>
+                <SkeletonTableRows rows={5} cols={4} />
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={4} className="px-4 py-12 text-center text-muted-foreground" style={{ fontSize: "0.85rem" }}>
                   {pending.length === 0 ? "All internships have supervisors assigned." : "No students match your search."}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { SkeletonList } from "../../components/skeleton";
 import { StatusBadge } from "../../components/status-badge";
 import {
   CheckCircle2, X, GraduationCap, ChevronDown, ChevronUp, RotateCcw,
@@ -158,7 +159,7 @@ export function HODApprovalsPage() {
 
       {/* Grades List */}
       {loading ? (
-        <div className="bg-card border border-border rounded-xl p-12 text-center text-muted-foreground" style={{ fontSize: "0.85rem" }}>Loading grades…</div>
+        <SkeletonList rows={5} />
       ) : displayed.length === 0 ? (
         <div className="bg-card border border-border rounded-xl p-12 text-center">
           <GraduationCap className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
