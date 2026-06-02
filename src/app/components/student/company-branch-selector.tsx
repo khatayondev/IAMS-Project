@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { GitBranch, Search, Building2, Plus, AlertCircle, Info, User, Mail, Phone, MapPin } from "lucide-react";
 import { StatusBadge } from "../status-badge";
 import { ghanaRegions } from "../../lib/mock-data";
+import { apiClient } from "../../lib/api-client";
 
 type CompanyChoice = "none" | "existing" | "new";
 type BranchChoice = "none" | "existing" | "new";
@@ -42,8 +43,23 @@ export function CompanyBranchSelector({
   companies,
 }: CompanyBranchSelectorProps) {
   const [companySearch, setCompanySearch] = useState("");
+  const [branchesForSelected, setBranchesForSelected] = useState<any[]>([]);
+  const [branchesLoading, setBranchesLoading] = useState(false);
 
   const selectedCompany = companies.find((c: any) => String(c.id) === form.selectedCompanyId);
+
+  // Load branches when company selection changes
+  useEffect(() => {
+    if (!form.selectedCompanyId) {
+      setBranchesForSelected([]);
+      return;
+    }
+    setBranchesLoading(true);
+    apiClient.getCompanyBranches(form.selectedCompanyId).then((res) => {
+      if (res.success) setBranchesForSelected(res.data ?? []);
+      setBranchesLoading(false);
+    });
+  }, [form.selectedCompanyId]);
 
   const searchCompanies = (query: string, limit: number) => {
     if (!query.trim()) return [];
@@ -63,14 +79,18 @@ export function CompanyBranchSelector({
     () => (companySearch.trim() ? findCompanyByName(companySearch) : undefined),
     [companySearch, companies]
   );
-  // Backend API has no branch concept — branches list is always empty
-  const branchesForSelected: any[] = [];
   // Live duplicate check on new-company name
   const newCompanyDup = useMemo(
     () => (form.newCompanyName.trim() ? findCompanyByName(form.newCompanyName) : undefined),
     [form.newCompanyName, companies]
   );
-  const newBranchDup = undefined;
+  // Check if new branch name already exists
+  const newBranchDup = useMemo(
+    () => branchesForSelected.some(
+      (b) => b.name.toLowerCase() === form.newBranchName.trim().toLowerCase()
+    ),
+    [branchesForSelected, form.newBranchName]
+  );
   return (
     <div className="space-y-5">
       <div>

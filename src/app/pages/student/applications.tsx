@@ -219,15 +219,12 @@ export function StudentApplicationsPage() {
             branchName = form.newBranchName || company.name;
           } else {
             // Create new branch under existing company asynchronously
-            const branchRes = await apiClient.createBranch({
-              companyId: company.id,
+            const branchRes = await apiClient.createCompanyBranch(String(company.id), {
               name: form.newBranchName,
               region: form.newBranchRegion,
               location: form.newBranchLocation,
               address: form.newBranchAddress,
               telephone: form.newBranchTelephone,
-              addedBy: actor,
-              autoApprove: false,
             });
             if (!branchRes.success || !branchRes.data) {
               return { success: false, data: null, message: branchRes.message || "Failed to create branch." };

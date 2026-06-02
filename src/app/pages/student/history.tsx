@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useAppContext } from "../../lib/context";
 import { apiClient } from "../../lib/api-client";
+import { useNavigate } from "react-router";
 import { Card } from "../../components/ui/card";
 import { Award, BadgeCheck } from "lucide-react";
 
 export function StudentHistoryPage() {
   const { user } = useAppContext();
+  const navigate = useNavigate();
   const [history, setHistory] = useState<any[]>([]);
 
   useEffect(() => {
@@ -74,7 +76,8 @@ export function StudentHistoryPage() {
               </div>
               <div className="text-right">
                 <button
-                  className="px-3 py-2 bg-primary text-primary-foreground rounded-lg"
+                  onClick={() => navigate("/student/applications")}
+                  className="px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90"
                   type="button"
                 >
                   View Details

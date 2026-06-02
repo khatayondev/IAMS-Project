@@ -373,7 +373,7 @@ export const apiClient = {
     };
   },
 
-  // The real API has no branch concept — returns a synthetic branch record
+  // DEPRECATED: Use createCompanyBranch() instead. This returns a synthetic local ID.
   async createBranch(data: {
     companyId: string;
     name: string;
@@ -383,6 +383,7 @@ export const apiClient = {
     telephone?: string;
     [key: string]: unknown;
   }): Promise<ApiResponse<{ id: string; name: string } | null>> {
+    console.warn("createBranch() is deprecated — use createCompanyBranch(companyId, data) instead");
     return { success: true, data: { id: `local-branch-${Date.now()}`, name: data.name } };
   },
 
@@ -1104,7 +1105,7 @@ export const apiClient = {
     );
   },
 
-  async autoAssignSupervisors(data: { term_id: number; department_id?: number }): Promise<ApiResponse<any>> {
+  async autoAssignSupervisors(data: { term_id: number; department_id?: string | number }): Promise<ApiResponse<any>> {
     return requestApi<any>(API_ENDPOINTS.SUPERVISOR_ASSIGNMENTS_AUTO, { method: "POST", body: JSON.stringify(data) });
   },
 

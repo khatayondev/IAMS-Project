@@ -7,55 +7,54 @@ interface ApplicationTrackerProps {
   onViewWindows: () => void;
 }
 
-function getStatusHistory(app: {
-  dateApplied: string;
-  status: string;
-  companyStatus: string;
-  supervisorAssigned?: string;
-}) {
+function getStatusHistory(app: any) {
   const history: { status: string; timestamp: string; description: string; actor: string }[] = [];
+  const createdAt = app.created_at ?? app.dateApplied;
+  const supervisorName = app.academic_supervisor?.name ?? app.supervisorAssigned ?? "Academic Supervisor";
+  const companyStatus = app.company?.approval_status ?? app.companyStatus;
+
   history.push({
     status: "Submitted",
-    timestamp: `${app.dateApplied}T09:00:00`,
+    timestamp: createdAt ? `${createdAt.split("T")[0]}T09:00:00` : "—",
     description: "Application submitted by student",
     actor: "Student",
   });
-  if (app.companyStatus === "Approved") {
+  if (companyStatus === "Approved" || companyStatus === "approved") {
     history.push({
       status: "Company Verified",
-      timestamp: `${app.dateApplied}T14:30:00`,
+      timestamp: createdAt ? `${createdAt.split("T")[0]}T14:30:00` : "—",
       description: "Company verified and approved in the system",
       actor: "DLO",
     });
   }
-  if (["Approved", "Company Accepted", "Active", "Completed"].includes(app.status)) {
+  if (["Approved", "Company Accepted", "Active", "Completed", "approved"].includes(app.status)) {
     history.push({
       status: "Approved",
-      timestamp: `${app.dateApplied}T16:00:00`,
+      timestamp: createdAt ? `${createdAt.split("T")[0]}T16:00:00` : "—",
       description: "Application approved by DLO. Placement letter generated.",
-      actor: "Mrs. Esi Mensah (DLO)",
+      actor: "DLO",
     });
   }
   if (["Company Accepted", "Active", "Completed"].includes(app.status)) {
     history.push({
       status: "Company Accepted",
-      timestamp: "2026-03-08T10:15:00",
+      timestamp: "—",
       description: "Company signed acceptance form. Student confirmed placement.",
       actor: "Company / Student",
     });
   }
-  if (app.supervisorAssigned) {
+  if (supervisorName && supervisorName !== "Academic Supervisor") {
     history.push({
       status: "Supervisor Assigned",
-      timestamp: "2026-03-09T11:20:00",
-      description: `Academic supervisor ${app.supervisorAssigned} assigned by DLO.`,
-      actor: "Mrs. Esi Mensah (DLO)",
+      timestamp: "—",
+      description: `Academic supervisor ${supervisorName} assigned.`,
+      actor: "DLO",
     });
   }
   if (app.status === "Active" || app.status === "Completed") {
     history.push({
       status: "Active",
-      timestamp: "2026-06-01T08:00:00",
+      timestamp: "—",
       description: "Internship officially started.",
       actor: "System",
     });
@@ -63,7 +62,7 @@ function getStatusHistory(app: {
   if (app.status === "Completed") {
     history.push({
       status: "Completed",
-      timestamp: "2026-07-31T17:00:00",
+      timestamp: "—",
       description: "Internship completed. Final evaluation submitted.",
       actor: "System",
     });
@@ -123,7 +122,7 @@ export function ApplicationTracker({ myApp, terms, onViewWindows }: ApplicationT
             <div className="flex items-center gap-2 mt-1">
               <StatusBadge status={myApp.status} />
               <span className="text-muted-foreground" style={{ fontSize: "0.8rem" }}>
-                since {myApp.dateApplied}
+                since {myApp.created_at ? new Date(myApp.created_at).toLocaleDateString() : (myApp.dateApplied ?? "—")}
               </span>
             </div>
           </div>
@@ -145,11 +144,11 @@ export function ApplicationTracker({ myApp, terms, onViewWindows }: ApplicationT
         <div className="bg-card border border-border rounded-xl p-5 space-y-4">
           <h3>Application Info</h3>
           {[
-            ["Student Name", myApp.studentName],
-            ["Student ID", myApp.studentId],
-            ["Department", myApp.department],
-            ["Level", myApp.level],
-            ["Date Applied", myApp.dateApplied],
+            ["Student Name", myApp.student?.user?.name ?? myApp.studentName ?? "—"],
+            ["Student ID", myApp.student?.student_id ?? myApp.studentId ?? "—"],
+            ["Department", myApp.student?.department ?? myApp.department ?? "—"],
+            ["Level", myApp.student?.level ?? myApp.level ?? "—"],
+            ["Date Applied", myApp.created_at ? new Date(myApp.created_at).toLocaleDateString() : (myApp.dateApplied ?? "—")],
           ].map(([label, val]) => (
             <div key={label}>
               <p style={{ fontSize: "0.7rem" }} className="text-muted-foreground uppercase tracking-wider font-semibold">

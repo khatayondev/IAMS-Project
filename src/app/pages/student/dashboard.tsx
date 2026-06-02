@@ -24,7 +24,9 @@ export function StudentDashboard() {
 
   const companyName    = activeInternship?.company?.name ?? "N/A";
   const appStatus      = activeInternship?.status ?? "none";
-  const supervisorName = activeInternship?.academicSupervisor?.user?.name ?? null;
+  const supervisorName = activeInternship?.academic_supervisor?.user?.name
+    ?? activeInternship?.academicSupervisor?.user?.name
+    ?? null;
   const startDate      = activeInternship?.start_date ?? activeInternship?.created_at ?? "";
 
   const isDone = (statuses: string[]) => statuses.includes(appStatus);
