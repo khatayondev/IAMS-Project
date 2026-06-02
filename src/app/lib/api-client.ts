@@ -454,14 +454,16 @@ export const apiClient = {
   },
 
   async createTerm(data: CreateTermRequest): Promise<ApiResponse<TermResponse | null>> {
-    // Normalize camelCase → snake_case for the API
+    // Map UI types → real API type values
+    const typeMap: Record<string, string> = { Vacation: "short_term", Semestrial: "regular" };
     const payload: Record<string, unknown> = {
       name: data.name,
-      type: data.type,
-      application_start: data.applicationStart,
-      application_end: data.applicationEnd,
-      internship_start: data.internshipStart,
-      internship_end: data.internshipEnd,
+      type: typeMap[data.type] ?? data.type,
+      // Real API: single application_deadline (use closing date)
+      application_deadline: data.applicationEnd ?? data.applicationStart,
+      // Real API: start_date / end_date for internship period
+      start_date: data.internshipStart,
+      end_date: data.internshipEnd,
       eligible_levels: data.eligibleLevels,
       departments: data.departments,
     };
@@ -472,17 +474,20 @@ export const apiClient = {
   },
 
   async updateTerm(id: string, data: UpdateTermRequest): Promise<ApiResponse<TermResponse | null>> {
-    // Normalize camelCase → snake_case for the API
+    const typeMap: Record<string, string> = { Vacation: "short_term", Semestrial: "regular" };
     const payload: Record<string, unknown> = {};
     if (data.name !== undefined) payload.name = data.name;
-    if (data.type !== undefined) payload.type = data.type;
-    if (data.applicationStart !== undefined) payload.application_start = data.applicationStart;
-    if (data.applicationEnd !== undefined) payload.application_end = data.applicationEnd;
-    if (data.internshipStart !== undefined) payload.internship_start = data.internshipStart;
-    if (data.internshipEnd !== undefined) payload.internship_end = data.internshipEnd;
+    if (data.type !== undefined) payload.type = typeMap[data.type] ?? data.type;
+    // Real API: single application_deadline — use closing date if present
+    if (data.applicationEnd !== undefined || data.applicationStart !== undefined)
+      payload.application_deadline = data.applicationEnd ?? data.applicationStart;
+    // Real API: start_date / end_date for internship period
+    if (data.internshipStart !== undefined) payload.start_date = data.internshipStart;
+    if (data.internshipEnd !== undefined) payload.end_date = data.internshipEnd;
     if (data.eligibleLevels !== undefined) payload.eligible_levels = data.eligibleLevels;
     if (data.departments !== undefined) payload.departments = data.departments;
-    if (data.status !== undefined) payload.status = data.status;
+    // Real API status values are lowercase
+    if (data.status !== undefined) payload.status = data.status.toLowerCase();
     return requestApi<TermResponse | null>(
       replacePathParams(API_ENDPOINTS.TERM_BY_ID, { id }),
       { method: "PUT", body: JSON.stringify(payload) }

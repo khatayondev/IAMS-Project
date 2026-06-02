@@ -36,16 +36,42 @@ interface DeptOption {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
+function toDateStr(iso?: string | null): string {
+  if (!iso) return "";
+  return iso.slice(0, 10); // "2027-04-01T00:00:00.000000Z" → "2027-04-01"
+}
+
+const TERM_TYPE_MAP: Record<string, "Vacation" | "Semestrial"> = {
+  short_term: "Vacation",
+  regular: "Semestrial",
+  vacation: "Vacation",
+  semestrial: "Semestrial",
+};
+
+const TERM_STATUS_MAP: Record<string, TermShape["status"]> = {
+  upcoming: "Upcoming",
+  active: "Active",
+  completed: "Completed",
+  archived: "Archived",
+  draft: "Upcoming",
+};
+
 function normalizeTerm(t: any, index: number): TermShape {
+  const rawType = String(t.type ?? "regular").toLowerCase().replace(/[\s-]+/g, "_");
+  const rawStatus = String(t.status ?? "upcoming").toLowerCase();
+  // Real API: application_deadline (single date); legacy: application_start/end
+  const appDeadline = toDateStr(t.application_deadline ?? t.application_start ?? t.applicationStart);
   return {
     id: String(t.id ?? `term-${index}`),
     name: t.name ?? `Term ${index + 1}`,
-    type: t.type ?? "Semestrial",
-    status: t.status ?? "Upcoming",
-    applicationStart: t.application_start ?? t.applicationStart ?? "",
-    applicationEnd: t.application_end ?? t.applicationEnd ?? "",
-    internshipStart: t.internship_start ?? t.internshipStart ?? "",
-    internshipEnd: t.internship_end ?? t.internshipEnd ?? "",
+    type: TERM_TYPE_MAP[rawType] ?? "Semestrial",
+    status: TERM_STATUS_MAP[rawStatus] ?? (t.status as TermShape["status"]) ?? "Upcoming",
+    // Real API uses application_deadline for both; show the same date for open/close
+    applicationStart: appDeadline,
+    applicationEnd: toDateStr(t.application_end ?? t.applicationEnd) || appDeadline,
+    // Real API uses start_date/end_date for internship period
+    internshipStart: toDateStr(t.start_date ?? t.internship_start ?? t.internshipStart),
+    internshipEnd: toDateStr(t.end_date ?? t.internship_end ?? t.internshipEnd),
     eligibleLevels: t.eligible_levels ?? t.eligibleLevels ?? [],
     departments: (t.departments ?? []).map((d: any) =>
       typeof d === "string" ? d : d.name ?? String(d)
@@ -323,7 +349,7 @@ export function TermsPage() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
-                  ["Application", `${t.applicationStart || "—"} → ${t.applicationEnd || "—"}`],
+                  ["App Deadline", t.applicationEnd || t.applicationStart || "—"],
                   ["Internship", `${t.internshipStart || "—"} → ${t.internshipEnd || "—"}`],
                   ["Levels", t.eligibleLevels.join(", ") || "—"],
                   ["Departments", t.departments.length === deptOptions.length && deptOptions.length > 0
@@ -357,7 +383,7 @@ export function TermsPage() {
               <div className="space-y-1.5">
                 {([
                   ["Type", t.type],
-                  ["Application", t.applicationStart ? `${t.applicationStart} → ${t.applicationEnd}` : "—"],
+                  ["App Deadline", t.applicationEnd || t.applicationStart || "—"],
                   ["Internship", t.internshipStart ? `${t.internshipStart} → ${t.internshipEnd}` : "—"],
                   ["Levels", t.eligibleLevels.join(", ") || "—"],
                   ["Departments", t.departments.length === deptOptions.length && deptOptions.length > 0
@@ -464,16 +490,10 @@ export function TermsPage() {
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block mb-1 text-muted-foreground" style={{ fontSize: "0.75rem" }}>Application Opens</label>
-                  <input type="date" value={form.applicationStart}
-                    onChange={(e) => setForm({ ...form, applicationStart: e.target.value })}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background" style={{ fontSize: "0.85rem" }} />
-                </div>
-                <div>
-                  <label className="block mb-1 text-muted-foreground" style={{ fontSize: "0.75rem" }}>Application Closes</label>
+                <div className="col-span-2">
+                  <label className="block mb-1 text-muted-foreground" style={{ fontSize: "0.75rem" }}>Application Deadline</label>
                   <input type="date" value={form.applicationEnd}
-                    onChange={(e) => setForm({ ...form, applicationEnd: e.target.value })}
+                    onChange={(e) => setForm({ ...form, applicationEnd: e.target.value, applicationStart: e.target.value })}
                     className="w-full px-3 py-2 border border-border rounded-lg bg-background" style={{ fontSize: "0.85rem" }} />
                 </div>
                 <div>
@@ -688,7 +708,7 @@ export function TermsPage() {
               {[
                 ["Type", selectedTerm.type],
                 ["Eligible Levels", selectedTerm.eligibleLevels.join(", ") || "—"],
-                ["Application Period", `${selectedTerm.applicationStart || "—"} → ${selectedTerm.applicationEnd || "—"}`],
+                ["Application Deadline", selectedTerm.applicationEnd || selectedTerm.applicationStart || "—"],
                 ["Internship Period", `${selectedTerm.internshipStart || "—"} → ${selectedTerm.internshipEnd || "—"}`],
               ].map(([label, value]) => (
                 <div key={label} className="bg-muted/30 rounded-xl p-3">
