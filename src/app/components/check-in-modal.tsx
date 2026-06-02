@@ -26,6 +26,7 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId }: Check
   const [locationData, setLocationData] = useState<LocationData | null>(null);
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
+  const [checkInTime, setCheckInTime] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Reverse geocode coordinates to get address
@@ -74,10 +75,30 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId }: Check
     }
   };
 
+  const handleClose = () => {
+    setLocationDetails("");
+    setLat(null);
+    setLng(null);
+    setCheckInTime("");
+    setLocationData(null);
+    setCheckInType("gps");
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   const handleGetLocation = () => {
     setIsGettingLocation(true);
+    // Capture check-in time
+    const now = new Date();
+    const timeString = now.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
+    setCheckInTime(timeString);
+
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -141,7 +162,11 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId }: Check
 
     if (res.success) {
       toast.success("Checked in successfully!");
-      setLocationDetails(""); setLat(null); setLng(null);
+      setLocationDetails("");
+      setLat(null);
+      setLng(null);
+      setCheckInTime("");
+      setLocationData(null);
       onSuccess?.();
       onClose();
     } else {
@@ -150,12 +175,12 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId }: Check
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={handleClose}>
       <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h3>Daily Check-in</h3>
-            <button onClick={onClose} className="p-1 rounded-md hover:bg-accent"><X className="w-5 h-5" /></button>
+            <button onClick={handleClose} className="p-1 rounded-md hover:bg-accent"><X className="w-5 h-5" /></button>
           </div>
 
           <p className="text-muted-foreground" style={{ fontSize: "0.85rem" }}>
@@ -195,7 +220,7 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId }: Check
               {(locationDetails || isReverseGeocoding) && lat && lng && (
                 <div className="space-y-3">
                   {/* Location Success */}
-                  <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4 space-y-2">
+                  <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4 space-y-3">
                     <div className="flex items-start gap-2">
                       {isReverseGeocoding ? (
                         <Loader2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5 animate-spin" />
@@ -211,6 +236,19 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId }: Check
                         </p>
                       </div>
                     </div>
+
+                    {/* Check-in Time Display */}
+                    {checkInTime && !isReverseGeocoding && (
+                      <div className="flex items-center gap-3 pt-2 border-t border-emerald-200 dark:border-emerald-800">
+                        <Clock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        <div>
+                          <p className="text-emerald-700 dark:text-emerald-300 text-xs font-medium">Check-in Time</p>
+                          <p className="text-emerald-600 dark:text-emerald-400 font-semibold" style={{ fontSize: "0.95rem" }}>
+                            {checkInTime}
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Location Details */}
                     {locationData && !isReverseGeocoding && (
@@ -315,7 +353,7 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId }: Check
           )}
 
           <div className="flex gap-2 pt-2">
-            <button onClick={onClose} className="flex-1 py-2 border border-border rounded-lg hover:bg-accent font-medium" style={{ fontSize: "0.85rem" }}>
+            <button onClick={handleClose} className="flex-1 py-2 border border-border rounded-lg hover:bg-accent font-medium" style={{ fontSize: "0.85rem" }}>
               Cancel
             </button>
             <button
