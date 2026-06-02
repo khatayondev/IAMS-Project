@@ -303,6 +303,7 @@ export function LogbookPage() {
         onClose={() => setCheckInModalOpen(false)}
         onSuccess={onCheckInSuccess}
         internshipId={internshipId ?? undefined}
+        internshipStatus={internshipStatus ?? undefined}
       />
     </div>
   );
