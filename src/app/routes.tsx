@@ -80,6 +80,7 @@ function AcademicCommunications() { return <CommunicationsPage viewRole="academi
 
 function StudentIssues() { return <IssuesPage viewRole="student" />; }
 function StudentCommunications() { return <CommunicationsPage viewRole="student" />; }
+function StudentSettings() { return <SettingsPage />; }
 
 function SupervisorAttendance() { return <AttendancePage viewRole="supervisor" />; }
 function SupervisorCommunications() { return <CommunicationsPage viewRole="supervisor" />; }
@@ -189,6 +190,7 @@ export const router = createBrowserRouter([
       { path: "history", element: <StudentHistoryPage /> },
       { path: "issues", Component: StudentIssues },
       { path: "communications", Component: StudentCommunications },
+      { path: "settings", Component: StudentSettings },
     ],
   },
 

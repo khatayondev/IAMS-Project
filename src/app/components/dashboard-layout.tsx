@@ -58,10 +58,11 @@ const studentNav: NavItem[] = [
   { to: "/student/applications", icon: FileText, label: "Applications" },
   { to: "/student/logbook", icon: BookMarked, label: "Daily Logbook" },
   { to: "/student/documents", icon: Upload, label: "Documents" },
-  { to: "/student/evaluation", icon: ClipboardCheck, label: "My Score & Evaluation" },
+  { to: "/student/grades", icon: Award, label: "My Score & Evaluation" },
   { to: "/student/history", icon: Award, label: "Internship History" },
   { to: "/student/issues", icon: AlertTriangle, label: "Report Issue" },
   { to: "/student/communications", icon: MessageSquarePlus, label: "Communications" },
+  { to: "/student/settings", icon: Settings, label: "Settings" },
 ];
 
 const supervisorNav: NavItem[] = [
