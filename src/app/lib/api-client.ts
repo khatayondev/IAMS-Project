@@ -524,6 +524,46 @@ export const apiClient = {
     };
   },
 
+  async getDepartment(id: string): Promise<ApiResponse<any | null>> {
+    const response = await requestApi<unknown>(
+      replacePathParams(API_ENDPOINTS.DEPARTMENT_BY_ID, { id }),
+      { method: "GET" }
+    );
+    if (!response.success) return { success: false, data: null, message: response.message };
+    const payload = response.data;
+    const dept =
+      payload && typeof payload === "object" && "department" in (payload as object)
+        ? (payload as { department: any }).department
+        : (payload as any);
+    return { success: true, data: dept, message: response.message };
+  },
+
+  async createDepartment(data: {
+    name: string;
+    code: string;
+    description?: string;
+    contact_email?: string;
+    contact_phone?: string;
+  }): Promise<ApiResponse<any | null>> {
+    return requestApi<any | null>(API_ENDPOINTS.DEPARTMENTS, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateDepartment(id: string, data: {
+    name?: string;
+    code?: string;
+    description?: string;
+    contact_email?: string;
+    contact_phone?: string;
+  }): Promise<ApiResponse<any | null>> {
+    return requestApi<any | null>(
+      replacePathParams(API_ENDPOINTS.DEPARTMENT_BY_ID, { id }),
+      { method: "PUT", body: JSON.stringify(data) }
+    );
+  },
+
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // USERS
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━

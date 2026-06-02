@@ -263,6 +263,7 @@ export const API_ENDPOINTS = {
 
   // Departments
   DEPARTMENTS: "/api/v1/departments",
+  DEPARTMENT_BY_ID: "/api/v1/departments/:id",
 
   // Logbook
   LOGBOOK_ENTRIES: "/api/v1/logbooks",

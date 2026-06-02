@@ -3,8 +3,8 @@ import { departments as staticDepts, programsByDepartment } from "../../lib/mock
 import { apiClient } from "../../lib/api-client";
 import { toast } from "sonner";
 import {
-  Building2, Plus, Edit2, Trash2, GraduationCap, BookOpen,
-  Search, X, ChevronDown, ChevronRight, BookMarked, Layers
+  Building2, Plus, Edit2, GraduationCap, BookOpen,
+  Search, X, ChevronDown, ChevronRight, BookMarked, Layers, User
 } from "lucide-react";
 
 interface Program {
@@ -16,11 +16,12 @@ interface Department {
   id: string;
   name: string;
   code: string;
-  faculty?: string;
+  description?: string;
+  contactEmail?: string;
+  contactPhone?: string;
   programs: Program[];
-  studentCount?: number;
-  dloName?: string;
-  hodName?: string;
+  headName?: string;
+  headRole?: string;
 }
 
 function detectProgramType(name: string): Program["type"] {
@@ -38,17 +39,21 @@ function normalizeDept(d: any, index: number): Department {
     ? d.programs.map((p: any) => (typeof p === "string" ? p : p.name))
     : staticPrograms;
   const programs: Program[] = rawPrograms.map((p) => ({ name: p, type: detectProgramType(p) }));
-  const codeDefault = (d.name as string)
-    ?.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 5) ?? `D${index + 1}`;
+
+  const headUser = d.department_head?.user ?? null;
+  const headRole = headUser?.role ?? undefined;
+  const headName = headUser?.name ?? undefined;
+
   return {
     id: String(d.id ?? `dept-${index}`),
     name: d.name ?? `Department ${index + 1}`,
-    code: d.code ?? codeDefault,
-    faculty: d.faculty ?? d.faculty_name ?? undefined,
+    code: d.code ?? (d.name as string)?.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 5) ?? `D${index + 1}`,
+    description: d.description ?? undefined,
+    contactEmail: d.contact_email ?? undefined,
+    contactPhone: d.contact_phone ?? undefined,
     programs,
-    studentCount: d.student_count ?? d.students_count ?? undefined,
-    dloName: d.dlo?.name ?? d.dlo_name ?? undefined,
-    hodName: d.hod?.name ?? d.hod_name ?? undefined,
+    headName,
+    headRole,
   };
 }
 
@@ -63,29 +68,18 @@ function buildStaticDepts(): Department[] {
   });
 }
 
-const FACULTY_OPTIONS = [
-  "Faculty of Engineering",
-  "Faculty of Applied Sciences",
-  "Faculty of Business Studies",
-  "Faculty of Built Environment",
-  "School of Engineering Technology",
-  "Faculty of Computing & Information Technology",
-];
+const emptyForm = {
+  name: "", code: "", description: "", contactEmail: "", contactPhone: "",
+};
 
 export function DepartmentsPage() {
   const [depts, setDepts] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [expandedDept, setExpandedDept] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState<Department | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<Department | null>(null);
-
-  const emptyForm = {
-    name: "", code: "", faculty: "",
-    hndPrograms: [] as string[], btechPrograms: [] as string[],
-    newHnd: "", newBtech: "",
-  };
   const [form, setForm] = useState(emptyForm);
 
   useEffect(() => {
@@ -128,62 +122,51 @@ export function DepartmentsPage() {
     setForm({
       name: dept.name,
       code: dept.code,
-      faculty: dept.faculty ?? "",
-      hndPrograms: dept.programs.filter((p) => p.type === "HND").map((p) => p.name),
-      btechPrograms: dept.programs.filter((p) => p.type === "BTech").map((p) => p.name),
-      newHnd: "",
-      newBtech: "",
+      description: dept.description ?? "",
+      contactEmail: dept.contactEmail ?? "",
+      contactPhone: dept.contactPhone ?? "",
     });
     setShowModal(true);
   };
 
-  const addHnd = () => {
-    if (!form.newHnd.trim()) return;
-    const prog = /^HND\b/i.test(form.newHnd.trim()) ? form.newHnd.trim() : `HND ${form.newHnd.trim()}`;
-    if (!form.hndPrograms.includes(prog))
-      setForm({ ...form, hndPrograms: [...form.hndPrograms, prog], newHnd: "" });
-    else setForm({ ...form, newHnd: "" });
-  };
-
-  const addBtech = () => {
-    if (!form.newBtech.trim()) return;
-    const prog = /^BTech\b/i.test(form.newBtech.trim()) ? form.newBtech.trim() : `BTech ${form.newBtech.trim()}`;
-    if (!form.btechPrograms.includes(prog))
-      setForm({ ...form, btechPrograms: [...form.btechPrograms, prog], newBtech: "" });
-    else setForm({ ...form, newBtech: "" });
-  };
-
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim()) { toast.error("Department name is required."); return; }
-    const allPrograms: Program[] = [
-      ...form.hndPrograms.map((p) => ({ name: p, type: "HND" as const })),
-      ...form.btechPrograms.map((p) => ({ name: p, type: "BTech" as const })),
-    ];
-    const codeVal = form.code.trim() || form.name.split(" ").map((w) => w[0]).join("").toUpperCase();
+    if (!form.code.trim()) { toast.error("Short code is required."); return; }
+
+    setSaving(true);
+    const payload = {
+      name: form.name.trim(),
+      code: form.code.trim().toUpperCase(),
+      ...(form.description.trim() ? { description: form.description.trim() } : {}),
+      ...(form.contactEmail.trim() ? { contact_email: form.contactEmail.trim() } : {}),
+      ...(form.contactPhone.trim() ? { contact_phone: form.contactPhone.trim() } : {}),
+    };
+
     if (editTarget) {
-      setDepts((prev) => prev.map((d) =>
-        d.id === editTarget.id
-          ? { ...d, name: form.name.trim(), code: codeVal, faculty: form.faculty || undefined, programs: allPrograms }
-          : d
-      ));
-      toast.success(`${form.name} updated.`);
+      const res = await apiClient.updateDepartment(editTarget.id, payload);
+      if (res.success) {
+        setDepts((prev) => prev.map((d) =>
+          d.id === editTarget.id
+            ? { ...d, ...payload, contactEmail: payload.contact_email, contactPhone: payload.contact_phone }
+            : d
+        ));
+        toast.success(`${payload.name} updated.`);
+      } else {
+        toast.error(res.message ?? "Failed to update department.");
+      }
     } else {
-      setDepts((prev) => [...prev, {
-        id: `local-${Date.now()}`,
-        name: form.name.trim(), code: codeVal,
-        faculty: form.faculty || undefined, programs: allPrograms,
-      }]);
-      toast.success(`${form.name} added.`);
+      const res = await apiClient.createDepartment(payload);
+      if (res.success && res.data) {
+        setDepts((prev) => [...prev, normalizeDept(res.data, prev.length)]);
+        toast.success(`${payload.name} created.`);
+      } else {
+        toast.error(res.message ?? "Failed to create department.");
+      }
     }
+
+    setSaving(false);
     setShowModal(false);
     setEditTarget(null);
-    setForm(emptyForm);
-  };
-
-  const handleDelete = (dept: Department) => {
-    setDepts((prev) => prev.filter((d) => d.id !== dept.id));
-    toast.success(`${dept.name} removed.`);
-    setDeleteConfirm(null);
   };
 
   const totalPrograms = depts.reduce((acc, d) => acc + d.programs.length, 0);
@@ -267,62 +250,58 @@ export function DepartmentsPage() {
                   </div>
                   <div className="min-w-0">
                     <p style={{ fontWeight: 600, fontSize: "0.95rem" }}>{dept.name}</p>
-                    {dept.faculty && (
-                      <p className="text-muted-foreground truncate" style={{ fontSize: "0.75rem" }}>{dept.faculty}</p>
+                    {dept.description && (
+                      <p className="text-muted-foreground truncate" style={{ fontSize: "0.75rem" }}>{dept.description}</p>
                     )}
-                    {/* Programme type badges */}
+                    {/* Badges row */}
                     <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                       <span className="text-muted-foreground px-2 py-0.5 rounded-full bg-muted/50 font-mono" style={{ fontSize: "0.68rem" }}>
                         {dept.code}
                       </span>
                       {hndPrograms.length > 0 && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700" style={{ fontSize: "0.72rem" }}>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300" style={{ fontSize: "0.72rem" }}>
                           <GraduationCap className="w-3 h-3" /> {hndPrograms.length} HND
                         </span>
                       )}
                       {btechPrograms.length > 0 && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700" style={{ fontSize: "0.72rem" }}>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300" style={{ fontSize: "0.72rem" }}>
                           <BookMarked className="w-3 h-3" /> {btechPrograms.length} BTech
                         </span>
                       )}
                       {otherPrograms.length > 0 && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-600" style={{ fontSize: "0.72rem" }}>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-500/15 text-gray-600 dark:text-gray-300" style={{ fontSize: "0.72rem" }}>
                           <BookOpen className="w-3 h-3" /> {otherPrograms.length} Other
                         </span>
                       )}
                     </div>
                   </div>
                 </div>
-                {/* Actions */}
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => openEdit(dept)}
-                    className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-                    title="Edit department"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => setDeleteConfirm(dept)}
-                    className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-muted-foreground hover:text-red-600 transition-colors"
-                    title="Remove department"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                <button
+                  onClick={() => openEdit(dept)}
+                  className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                  title="Edit department"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
               </div>
 
-              {/* Meta row: DLO / HOD / Students */}
-              {(dept.dloName || dept.hodName || dept.studentCount !== undefined) && (
+              {/* Meta row: head / contact */}
+              {(dept.headName || dept.contactEmail || dept.contactPhone) && (
                 <div className="px-5 pb-3 flex items-center gap-4 flex-wrap">
-                  {dept.dloName && (
-                    <p className="text-muted-foreground" style={{ fontSize: "0.78rem" }}>DLO: <span className="text-foreground">{dept.dloName}</span></p>
+                  {dept.headName && (
+                    <p className="text-muted-foreground flex items-center gap-1" style={{ fontSize: "0.78rem" }}>
+                      <User className="w-3 h-3 shrink-0" />
+                      <span className="text-foreground">{dept.headName}</span>
+                      {dept.headRole && (
+                        <span className="uppercase font-mono" style={{ fontSize: "0.65rem" }}>({dept.headRole})</span>
+                      )}
+                    </p>
                   )}
-                  {dept.hodName && (
-                    <p className="text-muted-foreground" style={{ fontSize: "0.78rem" }}>HOD: <span className="text-foreground">{dept.hodName}</span></p>
+                  {dept.contactEmail && (
+                    <p className="text-muted-foreground" style={{ fontSize: "0.78rem" }}>{dept.contactEmail}</p>
                   )}
-                  {dept.studentCount !== undefined && (
-                    <p className="text-muted-foreground" style={{ fontSize: "0.78rem" }}>Students: <span className="text-foreground">{dept.studentCount}</span></p>
+                  {dept.contactPhone && (
+                    <p className="text-muted-foreground" style={{ fontSize: "0.78rem" }}>{dept.contactPhone}</p>
                   )}
                 </div>
               )}
@@ -399,7 +378,7 @@ export function DepartmentsPage() {
                     </div>
                   )}
                   {dept.programs.length === 0 && (
-                    <p className="text-muted-foreground" style={{ fontSize: "0.8rem" }}>No programmes added yet.</p>
+                    <p className="text-muted-foreground" style={{ fontSize: "0.8rem" }}>No programmes configured.</p>
                   )}
                 </div>
               )}
@@ -421,7 +400,7 @@ export function DepartmentsPage() {
       {showModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto" onClick={() => setShowModal(false)}>
           <div
-            className="bg-card border border-border rounded-2xl w-full max-w-lg my-8 p-6 space-y-4"
+            className="bg-card border border-border rounded-2xl w-full max-w-md my-8 p-6 space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
@@ -434,7 +413,7 @@ export function DepartmentsPage() {
             <div className="space-y-4">
               {/* Name */}
               <div>
-                <label className="block mb-1 text-foreground" style={{ fontSize: "0.8rem" }}>
+                <label className="block mb-1" style={{ fontSize: "0.8rem" }}>
                   Department Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -447,115 +426,58 @@ export function DepartmentsPage() {
                 />
               </div>
 
-              {/* Code & Faculty */}
+              {/* Code */}
+              <div>
+                <label className="block mb-1" style={{ fontSize: "0.8rem" }}>
+                  Short Code <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={form.code}
+                  onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase().slice(0, 8) })}
+                  placeholder="e.g., CS"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background font-mono"
+                  style={{ fontSize: "0.85rem" }}
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block mb-1 text-muted-foreground" style={{ fontSize: "0.8rem" }}>Description</label>
+                <textarea
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder="Optional — brief description of the department"
+                  rows={2}
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background resize-none"
+                  style={{ fontSize: "0.85rem" }}
+                />
+              </div>
+
+              {/* Contact Email & Phone */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block mb-1 text-foreground" style={{ fontSize: "0.8rem" }}>Short Code</label>
+                  <label className="block mb-1 text-muted-foreground" style={{ fontSize: "0.8rem" }}>Contact Email</label>
                   <input
-                    type="text"
-                    value={form.code}
-                    onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase().slice(0, 5) })}
-                    placeholder="e.g., CS"
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background font-mono"
-                    style={{ fontSize: "0.85rem" }}
+                    type="email"
+                    value={form.contactEmail}
+                    onChange={(e) => setForm({ ...form, contactEmail: e.target.value })}
+                    placeholder="dept@htu.edu.gh"
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                    style={{ fontSize: "0.82rem" }}
                   />
                 </div>
                 <div>
-                  <label className="block mb-1 text-foreground" style={{ fontSize: "0.8rem" }}>Faculty</label>
-                  <select
-                    value={form.faculty}
-                    onChange={(e) => setForm({ ...form, faculty: e.target.value })}
+                  <label className="block mb-1 text-muted-foreground" style={{ fontSize: "0.8rem" }}>Contact Phone</label>
+                  <input
+                    type="tel"
+                    value={form.contactPhone}
+                    onChange={(e) => setForm({ ...form, contactPhone: e.target.value })}
+                    placeholder="+233..."
                     className="w-full px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.85rem" }}
-                  >
-                    <option value="">— None —</option>
-                    {FACULTY_OPTIONS.map((f) => <option key={f}>{f}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {/* HND Programmes */}
-              <div>
-                <label className="block mb-1 text-foreground" style={{ fontSize: "0.8rem" }}>HND Programmes</label>
-                {form.hndPrograms.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    {form.hndPrograms.map((p) => (
-                      <span key={p} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700" style={{ fontSize: "0.78rem" }}>
-                        {p}
-                        <button
-                          onClick={() => setForm({ ...form, hndPrograms: form.hndPrograms.filter((x) => x !== p) })}
-                          className="ml-0.5 hover:text-red-500"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={form.newHnd}
-                    onChange={(e) => setForm({ ...form, newHnd: e.target.value })}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addHnd(); } }}
-                    placeholder="Programme name — press Enter or Add"
-                    className="flex-1 px-3 py-2 border border-border rounded-lg bg-background"
                     style={{ fontSize: "0.82rem" }}
                   />
-                  <button
-                    type="button"
-                    onClick={addHnd}
-                    className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:opacity-90 shrink-0"
-                    style={{ fontSize: "0.8rem" }}
-                  >
-                    Add
-                  </button>
                 </div>
-                <p className="text-muted-foreground mt-1" style={{ fontSize: "0.72rem" }}>
-                  "HND" prefix is added automatically if omitted.
-                </p>
-              </div>
-
-              {/* BTech Programmes */}
-              <div>
-                <label className="block mb-1 text-foreground" style={{ fontSize: "0.8rem" }}>BTech Programmes</label>
-                {form.btechPrograms.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    {form.btechPrograms.map((p) => (
-                      <span key={p} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700" style={{ fontSize: "0.78rem" }}>
-                        {p}
-                        <button
-                          onClick={() => setForm({ ...form, btechPrograms: form.btechPrograms.filter((x) => x !== p) })}
-                          className="ml-0.5 hover:text-red-500"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={form.newBtech}
-                    onChange={(e) => setForm({ ...form, newBtech: e.target.value })}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addBtech(); } }}
-                    placeholder="Programme name — press Enter or Add"
-                    className="flex-1 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.82rem" }}
-                  />
-                  <button
-                    type="button"
-                    onClick={addBtech}
-                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:opacity-90 shrink-0"
-                    style={{ fontSize: "0.8rem" }}
-                  >
-                    Add
-                  </button>
-                </div>
-                <p className="text-muted-foreground mt-1" style={{ fontSize: "0.72rem" }}>
-                  "BTech" prefix is added automatically if omitted.
-                </p>
               </div>
             </div>
 
@@ -569,42 +491,11 @@ export function DepartmentsPage() {
               </button>
               <button
                 onClick={handleSave}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90"
+                disabled={saving}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-60 transition-opacity"
                 style={{ fontSize: "0.85rem" }}
               >
-                {editTarget ? "Save Changes" : "Add Department"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete confirm dialog */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setDeleteConfirm(null)}>
-          <div
-            className="bg-card border border-border rounded-2xl w-full max-w-sm p-6 space-y-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2>Remove Department?</h2>
-            <p className="text-muted-foreground" style={{ fontSize: "0.85rem" }}>
-              Are you sure you want to remove <strong>{deleteConfirm.name}</strong>?
-              This will not affect existing students or records.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 border border-border rounded-lg hover:bg-accent"
-                style={{ fontSize: "0.85rem" }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDelete(deleteConfirm)}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:opacity-90"
-                style={{ fontSize: "0.85rem" }}
-              >
-                Remove
+                {saving ? "Saving…" : editTarget ? "Save Changes" : "Add Department"}
               </button>
             </div>
           </div>
