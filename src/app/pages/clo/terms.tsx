@@ -1,13 +1,11 @@
 import { useEffect, useState, useMemo } from "react";
 import { SkeletonStatCards, SkeletonCardGrid, SkeletonPageHeader } from "../../components/skeleton";
 import { StatusBadge } from "../../components/status-badge";
-import { ProgramPicker } from "../../components/program-picker";
-import { departments as staticDepts, programsByDepartment } from "../../lib/mock-data";
 import { apiClient } from "../../lib/api-client";
 import type { TermDashboardResponse } from "../../types/api";
 import {
   Plus, Calendar, Archive, Eye, X, Play, Edit2, CheckCircle2,
-  Clock, FileText, GraduationCap, BookMarked, Layers, TrendingUp
+  Clock, FileText, TrendingUp, GraduationCap, Layers
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,9 +28,6 @@ interface TermShape {
 interface DeptOption {
   name: string;
   code: string;
-  hndCount: number;
-  btechCount: number;
-  otherCount: number;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -82,20 +77,11 @@ function normalizeTerm(t: any, index: number): TermShape {
 }
 
 function buildDeptOptions(apiDepts: any[]): DeptOption[] {
-  const source = apiDepts.length > 0 ? apiDepts : staticDepts.map((name) => ({ name }));
-  return source.map((d: any) => {
+  if (apiDepts.length === 0) return [];
+  return apiDepts.map((d: any) => {
     const name: string = typeof d === "string" ? d : (d.name ?? "");
-    const programs: string[] = Array.isArray(d.programs)
-      ? d.programs.map((p: any) => (typeof p === "string" ? p : p.name))
-      : (programsByDepartment[name] ?? []);
-    const code = d.code ?? name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 5);
-    return {
-      name,
-      code,
-      hndCount: programs.filter((p) => /^HND\b/i.test(p)).length,
-      btechCount: programs.filter((p) => /^BTech\b/i.test(p)).length,
-      otherCount: programs.filter((p) => !/^(HND|BTech)\b/i.test(p)).length,
-    };
+    const code: string = d.code ?? name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 5);
+    return { name, code };
   });
 }
 
@@ -107,7 +93,6 @@ const emptyForm = {
   internshipStart: "", internshipEnd: "",
   levels: ["L300"] as string[],
   selectedDepts: [] as string[],
-  programs: [] as string[],
 };
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -183,7 +168,6 @@ export function TermsPage() {
       internshipStart: term.internshipStart, internshipEnd: term.internshipEnd,
       levels: term.eligibleLevels.length > 0 ? term.eligibleLevels : ["L300"],
       selectedDepts: term.departments,
-      programs: term.programs ?? [],
     });
     setShowModal(true);
   };
@@ -192,8 +176,7 @@ export function TermsPage() {
     const next = form.selectedDepts.includes(name)
       ? form.selectedDepts.filter((d) => d !== name)
       : [...form.selectedDepts, name];
-    const allowed = new Set(next.flatMap((d) => programsByDepartment[d] ?? []));
-    setForm({ ...form, selectedDepts: next, programs: form.programs.filter((p) => allowed.has(p)) });
+    setForm({ ...form, selectedDepts: next });
   };
 
   const toggleLevel = (level: string) => {
@@ -220,7 +203,7 @@ export function TermsPage() {
     if (editTarget) {
       await apiClient.updateTerm(editTarget.id, payload);
       setTerms((prev) => prev.map((t) =>
-        t.id === editTarget.id ? { ...t, ...payload, programs: form.programs } : t
+        t.id === editTarget.id ? { ...t, ...payload } : t
       ));
       toast.success("Term updated.");
     } else {
@@ -228,7 +211,7 @@ export function TermsPage() {
       const newTerm: TermShape =
         res.success && res.data
           ? normalizeTerm(res.data, terms.length)
-          : { id: `local-${Date.now()}`, status: "Upcoming", programs: form.programs, ...payload };
+          : { id: `local-${Date.now()}`, status: "Upcoming", ...payload };
       setTerms((prev) => [...prev, newTerm]);
       toast.success("Term created.");
     }
@@ -581,7 +564,7 @@ export function TermsPage() {
                     Select All
                   </button>
                   <button
-                    onClick={() => setForm({ ...form, selectedDepts: [], programs: [] })}
+                    onClick={() => setForm({ ...form, selectedDepts: [] })}
                     className="px-3 py-1.5 border border-border rounded-lg hover:bg-accent text-muted-foreground transition-colors"
                     style={{ fontSize: "0.78rem" }}
                   >
@@ -625,27 +608,7 @@ export function TermsPage() {
                               {dept.code}
                             </span>
                           </div>
-                          {/* Programme type badges */}
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {dept.hndCount > 0 && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300" style={{ fontSize: "0.68rem" }}>
-                                <GraduationCap className="w-2.5 h-2.5" /> {dept.hndCount} HND
-                              </span>
-                            )}
-                            {dept.btechCount > 0 && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300" style={{ fontSize: "0.68rem" }}>
-                                <BookMarked className="w-2.5 h-2.5" /> {dept.btechCount} BTech
-                              </span>
-                            )}
-                            {dept.otherCount > 0 && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-500/15 text-gray-600 dark:text-gray-300" style={{ fontSize: "0.68rem" }}>
-                                <Layers className="w-2.5 h-2.5" /> {dept.otherCount} Other
-                              </span>
-                            )}
-                            {dept.hndCount === 0 && dept.btechCount === 0 && dept.otherCount === 0 && (
-                              <span className="text-muted-foreground" style={{ fontSize: "0.68rem" }}>No programmes configured</span>
-                            )}
-                          </div>
+                          <span className="text-muted-foreground" style={{ fontSize: "0.68rem" }}>{dept.code}</span>
                         </div>
                       </div>
                     </button>
@@ -653,25 +616,6 @@ export function TermsPage() {
                 })}
               </div>
             </section>
-
-            {/* ── Restrict to Specific Programmes ──────────────────────────────────── */}
-            {form.selectedDepts.length > 0 && (
-              <section className="space-y-3 border-t border-border pt-5">
-                <div className="flex items-center justify-between">
-                  <p className="text-muted-foreground uppercase tracking-widest" style={{ fontSize: "0.62rem", fontWeight: 600 }}>
-                    Restrict to Specific Programmes
-                  </p>
-                  <span className="text-muted-foreground" style={{ fontSize: "0.72rem" }}>
-                    {form.programs.length === 0 ? "All programmes in selected depts" : `${form.programs.length} pinned`}
-                  </span>
-                </div>
-                <ProgramPicker
-                  selectedDepartments={form.selectedDepts}
-                  selectedPrograms={form.programs}
-                  onChange={(programs) => setForm({ ...form, programs })}
-                />
-              </section>
-            )}
 
             {/* ── Actions ─────────────────────────────────────────────────────────── */}
             <div className="flex gap-2 justify-end pt-2 border-t border-border">
@@ -747,9 +691,9 @@ export function TermsPage() {
                     >
                       <Layers className="w-3 h-3 text-muted-foreground" />
                       {d}
-                      {opt && (opt.hndCount > 0 || opt.btechCount > 0) && (
-                        <span className="text-muted-foreground" style={{ fontSize: "0.65rem" }}>
-                          ({[opt.hndCount > 0 && `${opt.hndCount}H`, opt.btechCount > 0 && `${opt.btechCount}B`].filter(Boolean).join("/")})
+                      {opt && (
+                        <span className="text-muted-foreground font-mono" style={{ fontSize: "0.65rem" }}>
+                          {opt.code}
                         </span>
                       )}
                     </span>
