@@ -9,6 +9,8 @@ export function LogbookPage() {
   const { user } = useAppContext();
 
   const [internshipId, setInternshipId] = useState<number | null>(null);
+  const [internshipStatus, setInternshipStatus] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string | null>(null);
   const [entries, setEntries] = useState<any[]>([]);
   const [checkedInToday, setCheckedInToday] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -29,29 +31,40 @@ export function LogbookPage() {
     if (!activeInternship?.id) return;
 
     const id = Number(activeInternship.id);
+    const status = activeInternship.status;
+    const company = activeInternship.company?.name;
+
     setInternshipId(id);
+    setInternshipStatus(status);
+    setCompanyName(company);
 
     // Fetch logbook entries
     const logsRes = await apiClient.getLogbookEntries({ internship_id: id, per_page: 50 });
     if (logsRes.success) setEntries(logsRes.data);
 
-    // Check today's attendance
-    const today = new Date().toISOString().split("T")[0];
-    const attRes = await apiClient.getInternshipAttendance(String(id), { from_date: today, to_date: today });
-    if (attRes.success) {
-      const records = Array.isArray(attRes.data) ? attRes.data : attRes.data?.attendance ?? [];
-      setCheckedInToday(records.some((r: any) => ["present", "late", "half_day"].includes(r.status)));
+    // Check today's attendance (only for active internships)
+    if (status === "active" || status === "approved") {
+      const today = new Date().toISOString().split("T")[0];
+      const attRes = await apiClient.getInternshipAttendance(String(id), { from_date: today, to_date: today });
+      if (attRes.success) {
+        const records = Array.isArray(attRes.data) ? attRes.data : attRes.data?.attendance ?? [];
+        setCheckedInToday(records.some((r: any) => ["present", "late", "half_day"].includes(r.status)));
+      }
     }
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const isLogbookActive = internshipStatus === "active" || internshipStatus === "approved";
+
   const handleNewEntry = () => {
+    if (!isLogbookActive) return; // Silent return, message shown in UI
     if (!checkedInToday) { setCheckInModalOpen(true); return; }
     setShowForm(true);
   };
 
   const handleSubmit = async () => {
+    if (!isLogbookActive) return;
     if (!checkedInToday) { setCheckInModalOpen(true); return; }
     if (!internshipId) return;
 
@@ -86,21 +99,52 @@ export function LogbookPage() {
         <div>
           <h1>Daily Logbook</h1>
           <p className="text-muted-foreground" style={{ fontSize: "0.85rem" }}>
-            Record your daily internship activities
+            {companyName ? `Record your daily activities at ${companyName}` : "Record your daily internship activities"}
           </p>
         </div>
         <button
           type="button"
           onClick={handleNewEntry}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 flex items-center gap-2 font-medium"
+          disabled={!isLogbookActive}
+          className={`px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-all ${
+            isLogbookActive
+              ? "bg-primary text-primary-foreground hover:opacity-90"
+              : "bg-muted text-muted-foreground cursor-not-allowed"
+          }`}
           style={{ fontSize: "0.85rem" }}
+          title={!isLogbookActive ? "Logbook entries can only be created during an active internship" : ""}
         >
           <Plus className="w-4 h-4" /> New Entry
         </button>
       </div>
 
+      {/* Internship Not Active Warning */}
+      {internshipId && !isLogbookActive && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h4 className="text-red-800 font-semibold" style={{ fontSize: "0.9rem" }}>
+              {internshipStatus === "completed" ? "Internship Period Completed" : "Internship Not Active"}
+            </h4>
+            <p className="text-red-700 mt-1" style={{ fontSize: "0.8rem" }}>
+              {internshipStatus === "completed"
+                ? "Your internship at " + companyName + " has been completed. You can no longer create new logbook entries. To view your archived logbook entries and other internship records, visit the Internship History page."
+                : "Logbook entries can only be created during an active and approved internship. Your current internship status is: " + internshipStatus}
+            </p>
+            {internshipStatus === "completed" && (
+              <a
+                href="/student/history"
+                className="mt-3 inline-flex px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-semibold"
+              >
+                View Internship History
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Check-in Warning */}
-      {!checkedInToday && internshipId && (
+      {!checkedInToday && internshipId && isLogbookActive && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="flex-1">
