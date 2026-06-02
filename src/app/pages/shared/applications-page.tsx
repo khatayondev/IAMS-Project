@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { SkeletonTableRows } from "../../components/skeleton";
 import { StatusBadge } from "../../components/status-badge";
 import { useAppContext } from "../../lib/context";
 import { apiClient } from "../../lib/api-client";
@@ -248,7 +249,7 @@ export function ApplicationsPage({ viewRole }: Props) {
         <div className="hidden lg:block bg-card rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
             {loading ? (
-              <div className="p-8 text-center text-muted-foreground" style={{ fontSize: "0.85rem" }}>Loading applications…</div>
+              <table className="w-full"><tbody><SkeletonTableRows rows={6} cols={6} /></tbody></table>
             ) : (
               <table className="w-full">
                 <thead>

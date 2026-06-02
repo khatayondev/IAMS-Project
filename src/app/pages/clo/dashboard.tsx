@@ -7,6 +7,7 @@ import {
   Building2, FileText, GraduationCap, Clock, AlertTriangle, TrendingUp,
   ArrowRight, UserPlus, Zap, Download, Calendar, CheckCircle2, XCircle
 } from "lucide-react";
+import { SkeletonStatCards, SkeletonDashboard } from "../../components/skeleton";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 import { useNavigate } from "react-router";
 
@@ -91,6 +92,8 @@ export function CLODashboard() {
   const deptData = Object.entries(deptMap)
     .map(([name, counts]) => ({ name, ...counts }))
     .filter((d) => d.active + d.pending + d.completed > 0);
+
+  if (loading) return <SkeletonDashboard statCount={5} />;
 
   return (
     <div className="space-y-6">

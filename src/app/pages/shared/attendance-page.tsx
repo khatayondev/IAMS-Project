@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { SkeletonTableRows } from "../../components/skeleton";
 import { apiClient } from "../../lib/api-client";
 import { CheckCircle2, XCircle, AlertTriangle, Clock, Search, X, Navigation } from "lucide-react";
 import { toast } from "sonner";
@@ -251,7 +252,7 @@ export function AttendancePage({ viewRole }: Props) {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground" style={{ fontSize: "0.85rem" }}>Loading…</td></tr>
+                <SkeletonTableRows rows={6} cols={6} />
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground" style={{ fontSize: "0.85rem" }}>No attendance records found.</td></tr>
               ) : (

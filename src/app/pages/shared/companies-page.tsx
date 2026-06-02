@@ -1,3 +1,4 @@
+import { SkeletonList } from "../../components/skeleton";
 import { exportToCSV } from "../../lib/csv-export";
 import type { ExtendedRole } from "../../services/auth-service";
 import { useAppContext } from "../../lib/context";
@@ -199,7 +200,7 @@ export function CompaniesPage({ viewRole }: Props) {
 
       <div className="space-y-3">
         {loading ? (
-          <div className="p-8 text-center text-muted-foreground" style={{ fontSize: "0.85rem" }}>Loading companies…</div>
+          <SkeletonList rows={6} />
         ) : filtered.length === 0 ? (
           <div className="bg-card border border-border rounded-xl p-12 text-center">
             <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />

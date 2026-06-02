@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { SkeletonList } from "../../components/skeleton";
 import { apiClient } from "../../lib/api-client";
 import {
   BookMarked, CheckCircle2, RotateCcw, Calendar, X, Clock, AlertTriangle,
@@ -165,7 +166,7 @@ export function SupervisorLogbooksPage() {
 
       {/* Entries List */}
       {loading ? (
-        <div className="bg-card border border-border rounded-xl p-12 text-center text-muted-foreground" style={{ fontSize: "0.85rem" }}>Loading logbook entries…</div>
+        <SkeletonList rows={5} />
       ) : filtered.length === 0 ? (
         <div className="bg-card border border-border rounded-xl p-12 text-center">
           <BookMarked className="w-12 h-12 text-muted-foreground mx-auto mb-4" />

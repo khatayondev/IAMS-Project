@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { SkeletonTableRows } from "../../components/skeleton";
 import { Shield, Search, Filter, Download, ChevronLeft, ChevronRight, Calendar, User, Eye } from "lucide-react";
 import { exportToCSV } from "../../lib/csv-export";
 import { toast } from "sonner";
@@ -201,7 +202,8 @@ export function AuditLogsPage() {
               </tr>
             </thead>
             <tbody>
-              {paged.map((log) => (
+              {loading && <SkeletonTableRows rows={8} cols={6} />}
+              {!loading && paged.map((log) => (
                 <tr key={log.id} className={`border-b border-border last:border-0 hover:bg-muted/20 ${selectedLog === log.id ? "bg-primary/5" : ""}`}>
                   <td className="px-4 py-3 text-muted-foreground whitespace-nowrap" style={{ fontSize: "0.8rem" }}>
                     <div>
@@ -236,7 +238,7 @@ export function AuditLogsPage() {
                   </td>
                 </tr>
               ))}
-              {paged.length === 0 && (
+              {!loading && paged.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground" style={{ fontSize: "0.85rem" }}>
                     No audit logs match your filters.

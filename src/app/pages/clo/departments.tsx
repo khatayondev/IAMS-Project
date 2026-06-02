@@ -6,6 +6,7 @@ import {
   Building2, Plus, Edit2, UserCheck, UserPlus,
   Search, X, Layers, User, ChevronDown
 } from "lucide-react";
+import { SkeletonStatCards, SkeletonCardGrid } from "../../components/skeleton";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -350,26 +351,28 @@ export function DepartmentsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { label: "Departments", value: depts.length, icon: Building2, color: "text-blue-600 bg-blue-50 dark:bg-blue-500/10" },
-          { label: "Active", value: activeCount, icon: Layers, color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10" },
-          { label: "HOD Assigned", value: hodCount, icon: UserCheck, color: "text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10" },
-          { label: "DLO Assigned", value: dloCount, icon: UserPlus, color: "text-violet-600 bg-violet-50 dark:bg-violet-500/10" },
-        ].map((stat) => (
-          <div key={stat.label} className="bg-card rounded-2xl p-4">
-            <div className="flex items-center gap-3">
-              <div className={`w-9 h-9 rounded-lg ${stat.color} flex items-center justify-center shrink-0`}>
-                <stat.icon className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-muted-foreground" style={{ fontSize: "0.75rem" }}>{stat.label}</p>
-                <p style={{ fontSize: "1.35rem", fontWeight: 600, lineHeight: 1 }}>{stat.value}</p>
+      {loading ? <SkeletonStatCards count={4} /> : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { label: "Departments", value: depts.length, icon: Building2, color: "text-blue-600 bg-blue-50 dark:bg-blue-500/10" },
+            { label: "Active", value: activeCount, icon: Layers, color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10" },
+            { label: "HOD Assigned", value: hodCount, icon: UserCheck, color: "text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10" },
+            { label: "DLO Assigned", value: dloCount, icon: UserPlus, color: "text-violet-600 bg-violet-50 dark:bg-violet-500/10" },
+          ].map((stat) => (
+            <div key={stat.label} className="bg-card rounded-2xl p-4">
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-lg ${stat.color} flex items-center justify-center shrink-0`}>
+                  <stat.icon className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-muted-foreground" style={{ fontSize: "0.75rem" }}>{stat.label}</p>
+                  <p style={{ fontSize: "1.35rem", fontWeight: 600, lineHeight: 1 }}>{stat.value}</p>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative max-w-sm">
@@ -385,7 +388,8 @@ export function DepartmentsPage() {
       </div>
 
       {/* Department cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {loading ? <SkeletonCardGrid cards={6} cols={2} /> : null}
+      {!loading && <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {filtered.map((dept) => (
           <div
             key={dept.id}
@@ -477,7 +481,7 @@ export function DepartmentsPage() {
           </div>
         ))}
 
-        {filtered.length === 0 && !loading && (
+        {filtered.length === 0 && (
           <div
             className="col-span-2 text-center py-12 text-muted-foreground bg-card rounded-2xl border border-border/50"
             style={{ fontSize: "0.85rem" }}
@@ -485,7 +489,7 @@ export function DepartmentsPage() {
             No departments match your search.
           </div>
         )}
-      </div>
+      </div>}
 
       {/* ── Assign Staff Modal ──────────────────────────────────────────────────── */}
       {assignTarget && (

@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { SkeletonStatCards, SkeletonCardGrid, SkeletonPageHeader } from "../../components/skeleton";
 import { StatusBadge } from "../../components/status-badge";
 import { ProgramPicker } from "../../components/program-picker";
 import { departments as staticDepts, programsByDepartment } from "../../lib/mock-data";
@@ -265,6 +266,16 @@ export function TermsPage() {
     const order: Record<string, number> = { Active: 0, Upcoming: 1, Completed: 2, Archived: 3 };
     return (order[a.status] ?? 99) - (order[b.status] ?? 99);
   }), [terms]);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <SkeletonPageHeader showAction />
+        <SkeletonStatCards count={4} />
+        <SkeletonCardGrid cards={6} cols={3} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

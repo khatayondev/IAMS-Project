@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Search, UserPlus, Mail, Shield, X, Users, CheckCircle2, XCircle, MoreVertical, AlertCircle, Edit2 } from "lucide-react";
+import { SkeletonStatCards, SkeletonTable, SkeletonTabs, SkeletonPageHeader } from "../../components/skeleton";
 import { toast } from "sonner";
 import { apiClient } from "../../lib/api-client";
 
@@ -307,6 +308,17 @@ export function UsersPage() {
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <SkeletonPageHeader showAction />
+        <SkeletonTabs count={7} />
+        <SkeletonStatCards count={4} />
+        <SkeletonTable rows={7} cols={7} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
 

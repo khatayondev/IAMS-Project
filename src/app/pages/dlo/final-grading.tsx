@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { SkeletonTable } from "../../components/skeleton";
 import { StatusBadge } from "../../components/status-badge";
 import { AlertTriangle, GraduationCap, RefreshCw, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
@@ -92,7 +93,7 @@ export function DLOFinalGradingPage() {
           </button>
         </div>
         {loading ? (
-          <div className="p-8 text-center text-muted-foreground" style={{ fontSize: "0.85rem" }}>Loading…</div>
+          <SkeletonTable rows={5} cols={5} showFilters={false} />
         ) : rows.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground" style={{ fontSize: "0.85rem" }}>No active or completed internships.</div>
         ) : (
