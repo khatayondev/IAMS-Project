@@ -41,6 +41,7 @@ import { DocumentsPage } from "./pages/student/documents";
 import { StudentApplicationsPage } from "./pages/student/applications";
 import { StudentGradesPage } from "./pages/student/grades";
 import { StudentHistoryPage } from "./pages/student/history";
+import { StudentProfileSetup } from "./pages/student/profile-setup";
 
 // Supervisor Pages
 import { SupervisorDashboard } from "./pages/supervisor/dashboard";
@@ -182,6 +183,7 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <StudentDashboard /> },
+      { path: "profile-setup", element: <StudentProfileSetup /> },
       { path: "applications", element: <StudentApplicationsPage /> },
       { path: "logbook", element: <LogbookPage /> },
       { path: "documents", element: <DocumentsPage /> },

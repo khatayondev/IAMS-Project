@@ -2,7 +2,7 @@ import { Outlet, NavLink, useNavigate } from "react-router";
 import {
   LayoutDashboard, FileText, Building2, Calendar, Users, Settings, Bell, LogOut,
   GraduationCap, ClipboardCheck, BarChart3, Menu, Shield, BookOpen, BookMarked,
-  Upload, MessageSquarePlus, AlertTriangle, MapPin, UserPlus, X,
+  Upload, MessageSquarePlus, AlertTriangle, MapPin, UserPlus, X, User,
   Moon, Sun, ChevronDown, HelpCircle, Search, CheckCircle2, Award, Layers
 } from "lucide-react";
 import { useAppContext } from "../lib/context";
@@ -55,6 +55,7 @@ const dloNav: NavItem[] = [
 
 const studentNav: NavItem[] = [
   { to: "/student", icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/student/profile-setup", icon: User, label: "My Profile" },
   { to: "/student/applications", icon: FileText, label: "Applications" },
   { to: "/student/logbook", icon: BookMarked, label: "Daily Logbook" },
   { to: "/student/documents", icon: Upload, label: "Documents" },
