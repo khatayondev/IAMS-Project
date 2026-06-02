@@ -77,7 +77,7 @@ export function ApplicationReview({
                 {selectedCompany?.name || "—"}
               </p>
               <p className="text-muted-foreground" style={{ fontSize: "0.75rem" }}>
-                {selectedCompany?.contactPerson} · {selectedCompany?.contactEmail}
+                {selectedCompany?.contact_person_name || selectedCompany?.contactPerson || "—"} · {selectedCompany?.contact_person_email || selectedCompany?.contactEmail || "—"}
               </p>
             </>
           ) : (

@@ -35,31 +35,19 @@ interface CompanyBranchSelectorProps {
   form: FormData;
   updateForm: (updates: Partial<FormData>) => void;
   companies: any[];
+  branches?: any[];
 }
 
 export function CompanyBranchSelector({
   form,
   updateForm,
   companies,
+  branches = [],
 }: CompanyBranchSelectorProps) {
   const [companySearch, setCompanySearch] = useState("");
-  const [branchesForSelected, setBranchesForSelected] = useState<any[]>([]);
-  const [branchesLoading, setBranchesLoading] = useState(false);
 
   const selectedCompany = companies.find((c: any) => String(c.id) === form.selectedCompanyId);
-
-  // Load branches when company selection changes
-  useEffect(() => {
-    if (!form.selectedCompanyId) {
-      setBranchesForSelected([]);
-      return;
-    }
-    setBranchesLoading(true);
-    apiClient.getCompanyBranches(form.selectedCompanyId).then((res) => {
-      if (res.success) setBranchesForSelected(res.data ?? []);
-      setBranchesLoading(false);
-    });
-  }, [form.selectedCompanyId]);
+  const branchesForSelected = branches;
 
   const searchCompanies = (query: string, limit: number) => {
     if (!query.trim()) return [];
@@ -122,39 +110,32 @@ export function CompanyBranchSelector({
               </p>
               {matches.length > 0 ? (
                 <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-1">
-                  {matches.map(({ company: c }) => {
-                    const branchCount = c.branchCount ?? 0;
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() =>
-                          updateForm({
-                            companyChoice: "existing",
-                            selectedCompanyId: c.id,
-                            branchChoice: "none",
-                          })
-                        }
-                        className="w-full text-left p-3.5 rounded-xl border border-border hover:border-primary hover:bg-primary/5 transition-all bg-card"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p style={{ fontSize: "0.9rem" }} className="font-medium text-foreground">
-                              {c.name}
-                            </p>
-                            <p className="text-muted-foreground mt-0.5" style={{ fontSize: "0.75rem" }}>
-                              {c.industry} · {c.contactPerson}
-                            </p>
-                            <p className="text-muted-foreground mt-0.5" style={{ fontSize: "0.7rem" }}>
-                              <GitBranch className="inline w-3 h-3 mr-1" />
-                              {branchCount} branch{branchCount === 1 ? "" : "es"}
-                            </p>
-                          </div>
-                          <StatusBadge status={c.status} />
+                  {matches.map(({ company: c }) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() =>
+                        updateForm({
+                          companyChoice: "existing",
+                          selectedCompanyId: String(c.id),
+                          branchChoice: "none",
+                        })
+                      }
+                      className="w-full text-left p-3.5 rounded-xl border border-border hover:border-primary hover:bg-primary/5 transition-all bg-card"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p style={{ fontSize: "0.9rem" }} className="font-medium text-foreground">
+                            {c.name}
+                          </p>
+                          <p className="text-muted-foreground mt-0.5" style={{ fontSize: "0.75rem" }}>
+                            {c.industry || "—"} · {c.contact_person_name || c.contactPerson || "—"}
+                          </p>
                         </div>
-                      </button>
-                    );
-                  })}
+                        <StatusBadge status={c.status} />
+                      </div>
+                    </button>
+                  ))}
                 </div>
               ) : (
                 <div className="bg-secondary/30 rounded-xl p-4 text-center">
@@ -207,7 +188,7 @@ export function CompanyBranchSelector({
                   {selectedCompany.name}
                 </p>
                 <p className="text-muted-foreground mt-0.5" style={{ fontSize: "0.75rem" }}>
-                  {selectedCompany.contactPerson} · {selectedCompany.contactEmail}
+                  {selectedCompany.contact_person_name || selectedCompany.contactPerson || "—"} · {selectedCompany.contact_person_email || selectedCompany.contactEmail || "—"}
                 </p>
                 <div className="mt-1">
                   <StatusBadge status={selectedCompany.status} />

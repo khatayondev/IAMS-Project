@@ -79,6 +79,7 @@ export function StudentApplicationsPage() {
   const [myApp, setMyApp] = useState<any | null>(null);
   const [terms, setTerms] = useState<any[]>([]);
   const [companies, setCompanies] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -102,6 +103,17 @@ export function StudentApplicationsPage() {
   const [form, setForm] = useState<FormData>({ ...defaultForm });
   const [eligibilityError, setEligibilityError] = useState<string | null>(null);
 
+  // Load branches when company selection changes
+  useEffect(() => {
+    if (form.selectedCompanyId && form.companyChoice === "existing") {
+      apiClient.getCompanyBranches(form.selectedCompanyId).then((res) => {
+        if (res.success) setBranches(res.data ?? []);
+      });
+    } else {
+      setBranches([]);
+    }
+  }, [form.selectedCompanyId, form.companyChoice]);
+
   const { execute: submitAction, loading: isSubmitting } = useToastAction();
 
   // STU-01: Open internship windows — backend status values are lowercase
@@ -111,7 +123,18 @@ export function StudentApplicationsPage() {
 
   const selectedTerm    = terms.find((t) => t.id === form.termId);
   const selectedCompany = companies.find((c) => String(c.id) === form.selectedCompanyId);
-  const selectedBranch  = form.selectedBranchId ? { id: form.selectedBranchId, name: form.newBranchName } : null;
+  const selectedBranch  = form.branchChoice === "existing" && form.selectedBranchId
+    ? branches.find((b) => String(b.id) === form.selectedBranchId)
+    : form.branchChoice === "new"
+    ? {
+        id: "new",
+        name: form.newBranchName,
+        region: form.newBranchRegion,
+        location: form.newBranchLocation,
+        address: form.newBranchAddress,
+        telephone: form.newBranchTelephone,
+      }
+    : null;
 
   const updateForm = (updates: Partial<FormData>) => setForm((prev) => ({ ...prev, ...updates }));
 
@@ -199,10 +222,6 @@ export function StudentApplicationsPage() {
     await submitAction(
       async () => {
         let companyId = "";
-        let companyName = "";
-        let branchId = "";
-        let branchName = "";
-        let companyStatus: "Approved" | "Pending" = "Approved";
         const actor = user?.name || "Student";
 
         if (form.companyChoice === "existing") {
@@ -211,12 +230,9 @@ export function StudentApplicationsPage() {
             return { success: false, data: null, message: "Selected company not found." };
           }
           companyId = String(company.id);
-          companyName = company.name;
-          companyStatus = (company.approval_status ?? company.status) === "approved" ? "Approved" : "Pending";
 
           if (form.branchChoice === "existing") {
-            branchId = form.selectedBranchId;
-            branchName = form.newBranchName || company.name;
+            // Branch selected, ready to submit
           } else {
             // Create new branch under existing company asynchronously
             const branchRes = await apiClient.createCompanyBranch(String(company.id), {
@@ -229,8 +245,6 @@ export function StudentApplicationsPage() {
             if (!branchRes.success || !branchRes.data) {
               return { success: false, data: null, message: branchRes.message || "Failed to create branch." };
             }
-            branchId = branchRes.data.id;
-            branchName = branchRes.data.name;
           }
         } else {
           // Create brand new company + branch atomically asynchronously
@@ -256,35 +270,18 @@ export function StudentApplicationsPage() {
             return { success: false, data: null, message: companyRes.message || "Failed to register company." };
           }
           companyId = companyRes.data.company.id;
-          companyName = companyRes.data.company.name;
-          branchId = companyRes.data.branch.id;
-          branchName = companyRes.data.branch.name;
-          companyStatus = "Pending";
         }
 
         // Now submit the application using the resolved ids
-        const newApp = {
-          termId: form.termId,
-          studentName: user?.name || "",
-          studentId: user?.studentId || "",
-          department: user?.department || "",
-          level: "L300",
-          companyId,
-          companyName,
-          branchId,
-          branchName,
-          companyStatus,
-          status: "Pending" as const,
-          phoneNumber: form.phoneNumber,
-          emergencyContact: form.emergencyContact,
-          emergencyPhone: form.emergencyPhone,
-          preferredStartDate: form.preferredStartDate,
-          additionalNotes: form.additionalNotes,
-          uploadCV: form.uploadCV,
-          uploadMotivation: form.uploadMotivation,
-        };
-
-        const submitRes = await apiClient.createApplication(newApp);
+        // Note: Student profile data (name, ID, dept, etc.) is auto-filled from user context on backend
+        // Phone, emergency contact, and dates can be sent via cover_letter or future fields
+        const submitRes = await apiClient.createApplication({
+          company_id: Number(companyId),
+          academic_term_id: Number(form.termId),
+          application_type: "individual",
+          cover_letter: form.additionalNotes || undefined,
+          proposed_start_date: form.preferredStartDate || undefined,
+        });
         if (submitRes.success) {
           setForm({ ...defaultForm });
           setView("tracker");
@@ -410,6 +407,7 @@ export function StudentApplicationsPage() {
                 form={form}
                 updateForm={updateForm}
                 companies={companies}
+                branches={branches}
               />
             )}
 

@@ -136,7 +136,21 @@ export function ApplicationTracker({ myApp, terms, onViewWindows }: ApplicationT
 
       {/* Pre-internship Journey Panel — only while internship hasn't started */}
       {!["Active", "Completed"].includes(myApp.status) && (
-        <ApplicationJourney app={myApp} term={matchedTerm} />
+        <ApplicationJourney
+          app={{
+            status: myApp.status,
+            companyStatus: myApp.company?.approval_status ?? myApp.companyStatus ?? "",
+            supervisorAssigned: myApp.academic_supervisor?.user?.name ?? myApp.supervisorAssigned ?? null,
+            dateApplied: myApp.created_at ? new Date(myApp.created_at).toLocaleDateString() : (myApp.dateApplied ?? "—"),
+            companyName: myApp.company?.name ?? myApp.companyName ?? "—",
+            branchName: myApp.branch?.name ?? myApp.branchName,
+          }}
+          term={matchedTerm ? {
+            name: matchedTerm.name,
+            internshipStart: matchedTerm.internshipStart ?? matchedTerm.start_date ?? matchedTerm.internship_start ?? "—",
+            internshipEnd: matchedTerm.internshipEnd ?? matchedTerm.end_date ?? matchedTerm.internship_end ?? "—",
+          } : undefined}
+        />
       )}
 
       {/* Application Details Grid */}
