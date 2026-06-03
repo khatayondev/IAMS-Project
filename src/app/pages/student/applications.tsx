@@ -168,15 +168,15 @@ export function StudentApplicationsPage() {
     if (!term) return false;
 
     const today = new Date().toISOString().split("T")[0];
-    if (term.applicationEnd && today > term.applicationEnd) {
-      setEligibilityError(`The application deadline has passed (${term.applicationEnd}).`);
-      return false;
-    }
-    if (term.applicationStart && today < term.applicationStart) {
-      setEligibilityError(`The application window has not opened yet. It opens on ${term.applicationStart}.`);
+    const appDeadline = term.applicationEnd; // Single deadline date
+
+    // Check if deadline has passed
+    if (appDeadline && today > appDeadline) {
+      setEligibilityError(`The application deadline has passed (${appDeadline}).`);
       return false;
     }
 
+    // Check if already has active application
     if (myApp && !["completed", "rejected"].includes(myApp.status ?? "")) {
       setEligibilityError(
         "You already have an active application. You cannot submit another one until your current application is resolved."
