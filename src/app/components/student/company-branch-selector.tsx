@@ -185,10 +185,10 @@ export function CompanyBranchSelector({
               <Building2 className="w-5 h-5 text-primary mt-0.5" />
               <div>
                 <p style={{ fontSize: "0.95rem" }} className="font-medium text-foreground">
-                  {selectedCompany.name}
+                  {typeof selectedCompany.name === "string" ? selectedCompany.name : "Company"}
                 </p>
                 <p className="text-muted-foreground mt-0.5" style={{ fontSize: "0.75rem" }}>
-                  {selectedCompany.contact_person_name || selectedCompany.contactPerson || "—"} · {selectedCompany.contact_person_email || selectedCompany.contactEmail || "—"}
+                  {typeof selectedCompany.contact_person_name === "string" ? selectedCompany.contact_person_name : (typeof selectedCompany.contactPerson === "string" ? selectedCompany.contactPerson : "—")} · {typeof selectedCompany.contact_person_email === "string" ? selectedCompany.contact_person_email : (typeof selectedCompany.contactEmail === "string" ? selectedCompany.contactEmail : "—")}
                 </p>
                 <div className="mt-1">
                   <StatusBadge status={selectedCompany.status} />
@@ -226,33 +226,42 @@ export function CompanyBranchSelector({
                   No branches recorded yet. Add the first one below.
                 </p>
               )}
-              {branchesForSelected.map((b) => (
-                <button
-                  key={b.id}
-                  type="button"
-                  onClick={() => updateForm({ branchChoice: "existing", selectedBranchId: b.id })}
-                  className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
-                    form.branchChoice === "existing" && form.selectedBranchId === b.id
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/30"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p style={{ fontSize: "0.85rem" }} className="font-medium">
-                        {b.name}
-                      </p>
-                      <p className="text-muted-foreground mt-0.5" style={{ fontSize: "0.75rem" }}>
-                        {b.location}, {b.region} · {b.telephone}
-                      </p>
-                      <p className="text-muted-foreground" style={{ fontSize: "0.7rem" }}>
-                        {b.address}
-                      </p>
+              {branchesForSelected.map((b) => {
+                const branchName = typeof b.name === "string" ? b.name : "Branch";
+                const location = typeof b.location === "string" ? b.location : "—";
+                const region = typeof b.region === "string" ? b.region : "—";
+                const telephone = typeof b.telephone === "string" ? b.telephone : "—";
+                const address = typeof b.address === "string" ? b.address : "—";
+                const branchId = typeof b.id === "string" ? b.id : String(b.id);
+
+                return (
+                  <button
+                    key={branchId}
+                    type="button"
+                    onClick={() => updateForm({ branchChoice: "existing", selectedBranchId: branchId })}
+                    className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
+                      form.branchChoice === "existing" && form.selectedBranchId === branchId
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/30"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p style={{ fontSize: "0.85rem" }} className="font-medium">
+                          {branchName}
+                        </p>
+                        <p className="text-muted-foreground mt-0.5" style={{ fontSize: "0.75rem" }}>
+                          {location}, {region} · {telephone}
+                        </p>
+                        <p className="text-muted-foreground" style={{ fontSize: "0.7rem" }}>
+                          {address}
+                        </p>
+                      </div>
+                      <StatusBadge status={b.status} />
                     </div>
-                    <StatusBadge status={b.status} />
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
 
               <button
                 type="button"
