@@ -129,6 +129,30 @@ export function StudentApplicationsPage() {
   const [form, setForm] = useState<FormData>({ ...defaultForm });
   const [eligibilityError, setEligibilityError] = useState<string | null>(null);
 
+  // Load saved form and step from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedForm = localStorage.getItem("application_form");
+      const savedStep = localStorage.getItem("application_step");
+
+      if (savedForm) {
+        setForm(JSON.parse(savedForm));
+      }
+      if (savedStep) {
+        setStep(parseInt(savedStep) as Step);
+        setView("apply");
+      }
+    } catch (error) {
+      console.error("Failed to load saved application:", error);
+    }
+  }, []);
+
+  // Save form and step to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("application_form", JSON.stringify(form));
+    localStorage.setItem("application_step", String(step));
+  }, [form, step]);
+
   // Load branches when company selection changes
   useEffect(() => {
     if (form.selectedCompanyId && form.companyChoice === "existing") {
@@ -313,6 +337,10 @@ export function StudentApplicationsPage() {
         });
         if (submitRes.success) {
           setForm({ ...defaultForm });
+          setStep(1);
+          // Clear saved form state after successful submission
+          localStorage.removeItem("application_form");
+          localStorage.removeItem("application_step");
           setView("tracker");
         }
         return submitRes;
