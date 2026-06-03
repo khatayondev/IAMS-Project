@@ -162,6 +162,7 @@ export function DashboardLayout() {
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+  const settings = useSyncExternalStore(subscribeSettings, getSettings);
 
   if (!user) return null;
 
@@ -195,7 +196,6 @@ export function DashboardLayout() {
     if (isMobile) setSidebarOpen(false);
   };
 
-  const settings = useSyncExternalStore(subscribeSettings, getSettings);
   const toggleTheme = () => {
     updateSettings({ darkMode: !settings.darkMode });
   };

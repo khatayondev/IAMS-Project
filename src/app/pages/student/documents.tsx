@@ -57,10 +57,10 @@ export function DocumentsPage() {
   const [supervisorPhone, setSupervisorPhone] = useState("");
   const [magicLinkSent, setMagicLinkSent] = useState(false);
 
-  const isApproved = myApp && ["approved", "active", "completed", "company accepted", "company_accepted"].includes(myApp.status.toLowerCase());
-  const isActive = myApp?.status.toLowerCase() === "active";
-  const isCompleted = myApp?.status.toLowerCase() === "completed";
-  const needsAcceptance = myApp?.status.toLowerCase() === "approved";
+  const isApproved = !!(myApp?.status && ["approved", "active", "completed", "company accepted", "company_accepted"].includes(myApp.status.toLowerCase()));
+  const isActive = myApp?.status?.toLowerCase() === "active";
+  const isCompleted = myApp?.status?.toLowerCase() === "completed";
+  const needsAcceptance = myApp?.status?.toLowerCase() === "approved";
 
   const handleDownloadPlacementLetter = () => {
     if (!myApp) return;
@@ -125,7 +125,7 @@ export function DocumentsPage() {
       id: "acceptance-form",
       name: "Company Acceptance Form",
       desc: "Form to be signed by the company confirming acceptance of the student",
-      status: (myApp?.status.toLowerCase() === "company accepted" || myApp?.status.toLowerCase() === "company_accepted" || isActive || isCompleted) 
+      status: (myApp?.status?.toLowerCase() === "company accepted" || myApp?.status?.toLowerCase() === "company_accepted" || isActive || isCompleted) 
         ? "Uploaded" 
         : needsAcceptance 
           ? "Action Required" 
@@ -134,7 +134,7 @@ export function DocumentsPage() {
             : "Pending",
       canDownload: !!isApproved,
       // Active "Upload" button when Acceptance form status is Action Required or Pending
-      canUpload: needsAcceptance || (myApp && myApp.status.toLowerCase() === "pending"),
+      canUpload: needsAcceptance || !!(myApp?.status && myApp.status.toLowerCase() === "pending"),
       icon: File,
     },
     {
