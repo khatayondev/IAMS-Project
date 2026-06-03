@@ -5,6 +5,7 @@ import { useAppContext } from "../../lib/context";
 import { apiClient } from "../../lib/api-client";
 import { CheckInModal } from "../check-in-modal";
 import { MobileNavDrawer } from "./mobile-nav-drawer";
+import { hasCheckedInToday, subscribeAttendance } from "../../services/attendance-service";
 
 export function StudentMobileShell() {
   const { user, store } = useAppContext();
@@ -12,26 +13,34 @@ export function StudentMobileShell() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [checkedInToday, setCheckedInToday] = useState(false);
   const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
+  const [activeInternship, setActiveInternship] = useState<any | null>(null);
+
+  // Load active internship info for check-in modal
+  useEffect(() => {
+    apiClient.getInternships().then((res) => {
+      if (res.success && res.data.length > 0) {
+        const active = res.data.find((i: any) => i.status === "active" || i.status === "approved");
+        setActiveInternship(active || res.data[0]);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     if (!user?.studentId) return;
-    const unsubscribe = store.subscribeAttendance((attendance) => {
-      const today = new Date().toISOString().split("T")[0];
-      const todayRecord = attendance.find(
-        (r: any) => r.internship_id === store.state.activeInternshipId &&
-          (r.check_in_time ?? r.created_at)?.startsWith(today)
-      );
-      setCheckedInToday(!!todayRecord);
-    });
+    const updateCheckInStatus = () => {
+      setCheckedInToday(hasCheckedInToday(user.studentId || ""));
+    };
+    updateCheckInStatus();
+    const unsubscribe = subscribeAttendance(updateCheckInStatus);
     return unsubscribe;
-  }, [user?.studentId, store]);
+  }, [user?.studentId]);
 
   const handleLogout = async () => {
     await apiClient.logout();
     navigate("/login");
   };
 
-  const notificationCount = (store.state.notifications ?? []).filter(
+  const notificationCount = (store.notifications ?? []).filter(
     (n: any) => !n.read
   ).length;
 
@@ -98,8 +107,10 @@ export function StudentMobileShell() {
           onClose={() => setIsCheckInModalOpen(false)}
           onSuccess={() => {
             setIsCheckInModalOpen(false);
-            store.fetchAttendance();
+            setCheckedInToday(hasCheckedInToday(user.studentId || ""));
           }}
+          internshipId={activeInternship?.id}
+          internshipStatus={activeInternship?.status}
         />
       )}
     </div>

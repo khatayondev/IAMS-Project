@@ -129,6 +129,8 @@ export function DashboardLayout() {
 
   // Subscribe to attendance changes for reactivity
   const [checkedInToday, setCheckedInToday] = useState(false);
+  const [activeInternship, setActiveInternship] = useState<any | null>(null);
+
   useEffect(() => {
     if (user?.role === "student" && user.studentId) {
       const updateCheckInStatus = () => {
@@ -136,6 +138,14 @@ export function DashboardLayout() {
       };
       updateCheckInStatus();
       const unsubscribe = subscribeAttendance(updateCheckInStatus);
+
+      apiClient.getInternships().then((res) => {
+        if (res.success && res.data.length > 0) {
+          const active = res.data.find((i: any) => i.status === "active" || i.status === "approved");
+          setActiveInternship(active || res.data[0]);
+        }
+      });
+
       return () => {
         unsubscribe();
       };
@@ -508,6 +518,8 @@ export function DashboardLayout() {
         <CheckInModal
           isOpen={checkInModalOpen}
           onClose={() => setCheckInModalOpen(false)}
+          internshipId={activeInternship?.id}
+          internshipStatus={activeInternship?.status}
         />
       )}
     </div>
