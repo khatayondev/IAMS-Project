@@ -129,13 +129,12 @@ export function TermWindowsList({
                   {(() => {
                     const intStart = term.internshipStart ??"—";
                     const intEnd = term.internshipEnd ?? "—";
-                    const levels = (term.eligibleLevels ?? []) as any[];
-                    const depts = (term.departments ?? []) as string[];
-                    const levelNames = levels.map((l: any) => {
-                      if (typeof l === "string") return l;
-                      if (typeof l === "object" && l !== null) return l.name || l.code || l.description || "";
-                      return "";
-                    }).filter(Boolean);
+                    const levelNames = (term.eligibleLevels ?? []).map((l: any) =>
+                      typeof l === "string" ? l : (l.name ?? l.code ?? String(l))
+                    );
+                    const depts = (term.departments ?? []).map((d: any) =>
+                      typeof d === "string" ? d : (d.name ?? String(d))
+                    );
                     return (
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                         <div className="flex items-start gap-2">

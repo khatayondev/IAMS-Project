@@ -46,14 +46,10 @@ export function TermSelector({
             // Normalize strings
             const termName = typeof term.name === "string" ? term.name : "Term";
             const termType = typeof term.type === "string" ? term.type : "Unknown";
-            const levels = Array.isArray(term.eligibleLevels) ? term.eligibleLevels : [];
-            const levelStr = levels.map((l: any) => {
-              if (typeof l === "string") return l;
-              if (typeof l === "object" && l !== null && (l.name || l.code || l.description)) {
-                return l.name || l.code || l.description;
-              }
-              return "";
-            }).filter(Boolean).join(", ");
+            const levelNames = (term.eligibleLevels ?? []).map((l: any) =>
+              typeof l === "string" ? l : (l.name ?? l.code ?? String(l))
+            );
+            const levelStr = levelNames.join(", ");
 
             const isOpen = appStart && appEnd && today >= appStart && today <= appEnd;
             const isSelected = selectedTermId === String(term.id);
