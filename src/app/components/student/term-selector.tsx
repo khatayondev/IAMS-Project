@@ -34,12 +34,15 @@ export function TermSelector({
         <div className="space-y-3">
           {availableTerms.map((term) => {
             const today = new Date().toISOString().split("T")[0];
-            const appStart = term.applicationStart ?? term.application_start ?? "";
-            const appEnd   = term.applicationEnd   ?? term.application_end   ?? term.application_deadline ?? "";
-            const intStart = term.internshipStart  ?? term.start_date        ?? term.internship_start ?? "—";
-            const intEnd   = term.internshipEnd    ?? term.end_date          ?? term.internship_end ?? "—";
-            const levels   = (term.eligibleLevels  ?? term.eligible_levels   ?? []) as string[];
-            const isOpen   = appStart && appEnd && today >= appStart && today <= appEnd;
+            const appStart = typeof term.applicationStart === "string" ? term.applicationStart : (typeof term.application_start === "string" ? term.application_start : "");
+            const appEnd = typeof term.applicationEnd === "string" ? term.applicationEnd : (typeof term.application_end === "string" ? term.application_end : (typeof term.application_deadline === "string" ? term.application_deadline : ""));
+            const intStart = typeof term.internshipStart === "string" ? term.internshipStart : (typeof term.start_date === "string" ? term.start_date : (typeof term.internship_start === "string" ? term.internship_start : "—"));
+            const intEnd = typeof term.internshipEnd === "string" ? term.internshipEnd : (typeof term.end_date === "string" ? term.end_date : (typeof term.internship_end === "string" ? term.internship_end : "—"));
+            const termName = typeof term.name === "string" ? term.name : "Term";
+            const termType = typeof term.type === "string" ? term.type : "Unknown";
+            const levels = Array.isArray(term.eligibleLevels) ? term.eligibleLevels : (Array.isArray(term.eligible_levels) ? term.eligible_levels : []);
+            const levelStr = levels.map((l: any) => typeof l === "string" ? l : String(l)).filter(Boolean).join(", ");
+            const isOpen = appStart && appEnd && today >= appStart && today <= appEnd;
             const isSelected = selectedTermId === String(term.id);
 
             return (
@@ -62,7 +65,7 @@ export function TermSelector({
                   <div>
                     <div className="flex items-center gap-2">
                       <p style={{ fontSize: "0.95rem" }} className="text-foreground font-medium">
-                        {term.name}
+                        {termName}
                       </p>
                       <span
                         className={`px-2 py-0.5 rounded text-xs ${
@@ -75,10 +78,10 @@ export function TermSelector({
                     </div>
                     <div className="flex items-center gap-4 mt-2">
                       <span className="text-muted-foreground" style={{ fontSize: "0.8rem" }}>
-                        Type: <strong>{term.type}</strong>
+                        Type: <strong>{termType}</strong>
                       </span>
                       <span className="text-muted-foreground" style={{ fontSize: "0.8rem" }}>
-                        Levels: {levels.length > 0 ? levels.join(", ") : "—"}
+                        Levels: {levelStr.length > 0 ? levelStr : "—"}
                       </span>
                     </div>
                     <div className="flex items-center gap-4 mt-1">

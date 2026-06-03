@@ -352,7 +352,7 @@ export function CompanyBranchSelector({
                 {newCompanyDup && (
                   <p className="text-amber-700 mt-1 flex items-center gap-1" style={{ fontSize: "0.75rem" }}>
                     <AlertCircle className="w-3.5 h-3.5" />
-                    "{newCompanyDup.name}" already exists. Please go back and select it instead.
+                    "{typeof newCompanyDup.name === "string" ? newCompanyDup.name : "Company"}" already exists. Please go back and select it instead.
                   </p>
                 )}
               </div>
@@ -434,11 +434,14 @@ function BranchFieldsBlock({ form, updateForm, ghanaRegions, dupWarning }: Branc
           className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background"
           style={{ fontSize: "0.85rem" }}
         >
-          {ghanaRegions.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
+          {ghanaRegions.map((r) => {
+            const regionStr = typeof r === "string" ? r : String(r);
+            return (
+              <option key={regionStr} value={regionStr}>
+                {regionStr}
+              </option>
+            );
+          })}
         </select>
       </div>
       <div>
