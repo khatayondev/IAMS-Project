@@ -1,0 +1,33 @@
+{
+  "name": "IAMS Student Portal",
+  "short_name": "IAMS",
+  "description": "Industrial Attachment Management System - Student Portal",
+  "start_url": "/student",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#4F46E5",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/vite.svg",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ],
+  "categories": ["education", "productivity"],
+  "screenshots_android": [
+    {
+      "src": "/vite.svg",
+      "sizes": "540x720"
+    }
+  ]
+}

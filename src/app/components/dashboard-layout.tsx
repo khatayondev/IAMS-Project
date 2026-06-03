@@ -12,6 +12,7 @@ import { getSettings, updateSettings, subscribeSettings } from "../lib/settings-
 import { getOverdueWeeklyRubrics } from "../services/grading-service";
 import { CheckInModal } from "./check-in-modal";
 import { hasCheckedInToday, subscribeAttendance } from "../services/attendance-service";
+import { StudentMobileShell } from "./student/student-mobile-shell";
 
 interface NavItem {
   to: string;
@@ -163,6 +164,11 @@ export function DashboardLayout() {
   }, []);
 
   if (!user) return null;
+
+  // For students on mobile, use the mobile shell instead
+  if (user.role === "student" && isMobile) {
+    return <StudentMobileShell />;
+  }
 
   const nav = getNavForRole(user.role);
   const unread = store.notifications.filter((n) => !n.read).length;
