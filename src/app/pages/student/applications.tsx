@@ -1,3 +1,4 @@
+// StudentApplicationsPage.tsx
 import { useState, useEffect } from "react";
 import { useAppContext } from "../../lib/context";
 import { apiClient } from "../../lib/api-client";
@@ -116,7 +117,6 @@ export function StudentApplicationsPage() {
 
   const { execute: submitAction, loading: isSubmitting } = useToastAction();
 
-  // STU-01: Open internship windows — backend status values are lowercase
   const availableTerms = terms.filter(
     (t) => t.status === "active" || t.status === "upcoming"
   );
@@ -138,12 +138,10 @@ export function StudentApplicationsPage() {
 
   const updateForm = (updates: Partial<FormData>) => setForm((prev) => ({ ...prev, ...updates }));
 
-  // STU-02: Eligibility check against backend term fields
   const checkEligibility = (termId: string): boolean => {
     const term = terms.find((t) => String(t.id) === termId);
     if (!term) return false;
 
-    // Check application deadline
     const today = new Date().toISOString().split("T")[0];
     if (term.application_deadline && today > term.application_deadline) {
       setEligibilityError(`The application deadline has passed (${term.application_deadline}).`);
@@ -154,7 +152,6 @@ export function StudentApplicationsPage() {
       return false;
     }
 
-    // Check for existing active application
     if (myApp && !["completed", "rejected"].includes(myApp.status ?? "")) {
       setEligibilityError(
         "You already have an active application. You cannot submit another one until your current application is resolved."
@@ -217,7 +214,6 @@ export function StudentApplicationsPage() {
     }
   };
 
-  // STU-06: Submit application via async transaction
   const handleCancelApplication = async () => {
     if (!myApp?.id) return;
     const res = await apiClient.deleteApplication(String(myApp.id));
@@ -244,9 +240,8 @@ export function StudentApplicationsPage() {
           companyId = String(company.id);
 
           if (form.branchChoice === "existing") {
-            // Branch selected, ready to submit
+            // branch already selected, fine
           } else {
-            // Create new branch under existing company asynchronously
             const branchRes = await apiClient.createCompanyBranch(String(company.id), {
               name: form.newBranchName,
               region: form.newBranchRegion,
@@ -259,7 +254,6 @@ export function StudentApplicationsPage() {
             }
           }
         } else {
-          // Create brand new company + branch atomically asynchronously
           const companyRes = await apiClient.createCompanyWithBranch(
             {
               name: form.newCompanyName,
@@ -284,9 +278,6 @@ export function StudentApplicationsPage() {
           companyId = companyRes.data.company.id;
         }
 
-        // Now submit the application using the resolved ids
-        // Note: Student profile data (name, ID, dept, etc.) is auto-filled from user context on backend
-        // Phone, emergency contact, and dates can be sent via cover_letter or future fields
         const submitRes = await apiClient.createApplication({
           company_id: Number(companyId),
           academic_term_id: Number(form.termId),
@@ -324,7 +315,6 @@ export function StudentApplicationsPage() {
             View open internship windows, apply, and track your application
           </p>
         </div>
-        {/* Tab Switcher */}
         <div className="flex gap-3 justify-center shrink-0">
           {[
             { key: "windows" as const, label: "Open Windows", icon: Calendar },
@@ -353,7 +343,6 @@ export function StudentApplicationsPage() {
         </div>
       </div>
 
-      {/* VIEW: OPEN WINDOWS (STU-01) */}
       {view === "windows" && (
         <TermWindowsList
           availableTerms={availableTerms}
@@ -362,10 +351,8 @@ export function StudentApplicationsPage() {
         />
       )}
 
-      {/* VIEW: APPLY FLOW */}
       {view === "apply" && (
         <div className="bg-card border border-border rounded-2xl p-5 md:p-6 space-y-6 relative overflow-hidden">
-          {/* Global Loading Overlay */}
           {isSubmitting && (
             <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] z-50 flex items-center justify-center">
               <div className="flex flex-col items-center gap-2">
@@ -375,7 +362,6 @@ export function StudentApplicationsPage() {
             </div>
           )}
 
-          {/* Stepper Progress bar */}
           <div className="flex items-center justify-between gap-4 border-b border-border pb-5 overflow-x-auto">
             {steps.map((s) => {
               const active = step === s.num;
@@ -413,7 +399,6 @@ export function StudentApplicationsPage() {
                 onSelectTerm={handleSelectTerm}
               />
             )}
-
             {step === 2 && (
               <CompanyBranchSelector
                 form={form}
@@ -422,9 +407,7 @@ export function StudentApplicationsPage() {
                 branches={branches}
               />
             )}
-
             {step === 3 && <PersonalDetailsForm form={form} updateForm={updateForm} user={user} />}
-
             {step === 4 && (
               <ApplicationReview
                 form={form}
@@ -437,7 +420,6 @@ export function StudentApplicationsPage() {
             )}
           </div>
 
-          {/* Navigation Buttons */}
           <div className="flex justify-between items-center border-t border-border pt-5">
             <button
               type="button"
@@ -447,11 +429,9 @@ export function StudentApplicationsPage() {
             >
               <ChevronLeft className="w-4 h-4" /> {step === 1 ? "Back to Windows" : "Previous"}
             </button>
-
             <p className="text-muted-foreground" style={{ fontSize: "0.8rem" }}>
               Step {step} of 4
             </p>
-
             {step < 4 ? (
               <button
                 type="button"
@@ -477,7 +457,6 @@ export function StudentApplicationsPage() {
         </div>
       )}
 
-      {/* VIEW: TRACKER */}
       {view === "tracker" && (
         <ApplicationTracker
           myApp={myApp}
