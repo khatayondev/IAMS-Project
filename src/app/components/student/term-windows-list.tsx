@@ -57,6 +57,10 @@ export function TermWindowsList({
                 )
               : null;
 
+            const termName = typeof term.name === "string" ? term.name : "Term";
+            const termStatus = typeof term.status === "string" ? term.status : "Upcoming";
+            const termType = typeof term.type === "string" ? term.type : "Unknown";
+
             return (
               <div
                 key={term.id}
@@ -66,16 +70,16 @@ export function TermWindowsList({
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3>{term.name}</h3>
+                        <h3>{termName}</h3>
                         <span
                           className={`px-2.5 py-0.5 rounded-lg text-xs font-semibold ${
-                            term.status === "Active"
+                            termStatus === "Active"
                               ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
                               : "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
                           }`}
                           style={{ fontSize: "0.7rem" }}
                         >
-                          {term.status}
+                          {termStatus}
                         </span>
                         {isOpen && daysLeft !== null && daysLeft <= 5 && (
                           <span
@@ -88,13 +92,13 @@ export function TermWindowsList({
                       </div>
                       <span
                         className={`inline-block mt-1.5 px-2 py-0.5 rounded text-xs font-medium ${
-                          term.type === "Semestrial"
+                          termType === "Semestrial"
                             ? "bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400"
                             : "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
                         }`}
                         style={{ fontSize: "0.7rem" }}
                       >
-                        {term.type} Internship
+                        {termType} Internship
                       </span>
                     </div>
                     <button
