@@ -328,13 +328,18 @@ export function StudentApplicationsPage() {
           companyId = companyRes.data.company.id;
         }
 
-        const submitRes = await apiClient.createApplication({
+        const createRes = await apiClient.createApplication({
           company_id: Number(companyId),
           academic_term_id: Number(form.termId),
           application_type: "individual",
           cover_letter: form.additionalNotes || undefined,
           proposed_start_date: form.preferredStartDate || undefined,
         });
+        if (!createRes.success || !createRes.data?.id) {
+          return createRes;
+        }
+
+        const submitRes = await apiClient.submitApplication(String(createRes.data.id));
         if (submitRes.success) {
           setForm({ ...defaultForm });
           setStep(1);
