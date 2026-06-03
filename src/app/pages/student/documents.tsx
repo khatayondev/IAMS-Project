@@ -40,14 +40,18 @@ export function DocumentsPage() {
 
   const handleDownloadPlacementLetter = () => {
     if (!myApp) return;
+    const companyName = typeof myApp.company?.name === "string" ? myApp.company.name : (typeof myApp.companyName === "string" ? myApp.companyName : "Company");
+    const companyAddress = typeof myApp.company?.address === "string" ? myApp.company.address : undefined;
+    const supervisorName = typeof myApp.academic_supervisor?.user?.name === "string" ? myApp.academic_supervisor.user.name : (typeof myApp.supervisorAssigned === "string" ? myApp.supervisorAssigned : undefined);
+
     openPlacementLetter({
       studentName: myApp.student?.user?.name ?? myApp.studentName ?? user?.name ?? "Student",
       studentId: myApp.student?.student_id ?? myApp.studentId ?? user?.studentId ?? "—",
       department: myApp.student?.department ?? myApp.department ?? user?.department ?? "—",
       level: myApp.student?.level ?? myApp.level ?? "—",
-      companyName: myApp.company?.name ?? myApp.companyName ?? "Company",
-      companyAddress: myApp.company?.address,
-      supervisorName: myApp.academic_supervisor?.user?.name ?? myApp.supervisorAssigned,
+      companyName,
+      companyAddress,
+      supervisorName,
       startDate: myApp.proposed_start_date,
       endDate: myApp.proposed_end_date,
     });

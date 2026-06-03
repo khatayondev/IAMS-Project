@@ -83,14 +83,18 @@ export function ApplicationTracker({ myApp, terms, onViewWindows, onCancelApplic
   const [isCancelling, setIsCancelling] = useState(false);
 
   const handleDownloadPlacementLetter = () => {
+    const companyName = typeof myApp.company?.name === "string" ? myApp.company.name : (typeof myApp.companyName === "string" ? myApp.companyName : "Company");
+    const companyAddress = typeof myApp.company?.address === "string" ? myApp.company.address : undefined;
+    const supervisorName = typeof myApp.academic_supervisor?.user?.name === "string" ? myApp.academic_supervisor.user.name : (typeof myApp.supervisorAssigned === "string" ? myApp.supervisorAssigned : undefined);
+
     openPlacementLetter({
       studentName: myApp.student?.user?.name ?? myApp.studentName ?? "Student",
       studentId: myApp.student?.student_id ?? myApp.studentId ?? "—",
       department: myApp.student?.department ?? myApp.department ?? "—",
       level: myApp.student?.level ?? myApp.level ?? "—",
-      companyName: myApp.company?.name ?? myApp.companyName ?? "Company",
-      companyAddress: myApp.company?.address,
-      supervisorName: myApp.academic_supervisor?.user?.name ?? myApp.supervisorAssigned,
+      companyName,
+      companyAddress,
+      supervisorName,
       startDate: myApp.proposed_start_date,
       endDate: myApp.proposed_end_date,
     });
@@ -249,11 +253,11 @@ export function ApplicationTracker({ myApp, terms, onViewWindows, onCancelApplic
         <ApplicationJourney
           app={{
             status: myApp.status,
-            companyStatus: myApp.company?.approval_status ?? myApp.companyStatus ?? "",
+            companyStatus: (typeof myApp.company?.approval_status === "string" ? myApp.company.approval_status : myApp.companyStatus) ?? "",
             supervisorAssigned: myApp.academic_supervisor?.user?.name ?? myApp.supervisorAssigned ?? null,
             dateApplied: myApp.created_at ? new Date(myApp.created_at).toLocaleDateString() : (myApp.dateApplied ?? "—"),
-            companyName: myApp.company?.name ?? myApp.companyName ?? "—",
-            branchName: myApp.branch?.name ?? myApp.branchName,
+            companyName: (typeof myApp.company?.name === "string" ? myApp.company.name : myApp.companyName) ?? "—",
+            branchName: typeof myApp.branch?.name === "string" ? myApp.branch.name : myApp.branchName,
           }}
           term={matchedTerm ? {
             name: matchedTerm.name,
@@ -532,9 +536,9 @@ function ApplicationJourney({
           onAcceptanceSubmitted?.();
         }}
         applicationId={myApp.id}
-        companyName={myApp.company?.name ?? myApp.companyName ?? "Company"}
-        proposedStartDate={myApp.proposed_start_date}
-        proposedEndDate={myApp.proposed_end_date}
+        companyName={typeof myApp.company?.name === "string" ? myApp.company.name : (typeof myApp.companyName === "string" ? myApp.companyName : "Company")}
+        proposedStartDate={typeof myApp.proposed_start_date === "string" ? myApp.proposed_start_date : undefined}
+        proposedEndDate={typeof myApp.proposed_end_date === "string" ? myApp.proposed_end_date : undefined}
       />
     </div>
   );
