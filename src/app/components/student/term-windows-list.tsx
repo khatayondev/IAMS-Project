@@ -47,13 +47,19 @@ export function TermWindowsList({
         <div className="space-y-3">
           {availableTerms.map((term) => {
             const today = new Date().toISOString().split("T")[0];
-            const isOpen = today >= term.applicationStart && today <= term.applicationEnd;
-            const daysLeft = isOpen
+            const appStart = term.applicationStart ?? "";
+            const appEnd = term.applicationEnd ?? "";
+            const isOpen = appStart && appEnd && today >= appStart && today <= appEnd;
+            const daysLeft = isOpen && appEnd
               ? Math.max(
                   0,
-                  Math.ceil((new Date(term.applicationEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                  Math.ceil((new Date(appEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
                 )
               : null;
+
+            const termName = String(term.name ?? "Term");
+            const termStatus = String(term.status ?? "Upcoming");
+            const termType = String(term.type ?? "Unknown");
 
             return (
               <div
@@ -64,16 +70,16 @@ export function TermWindowsList({
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3>{term.name}</h3>
+                        <h3>{termName}</h3>
                         <span
                           className={`px-2.5 py-0.5 rounded-lg text-xs font-semibold ${
-                            term.status === "Active"
+                            termStatus === "Active"
                               ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
                               : "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
                           }`}
                           style={{ fontSize: "0.7rem" }}
                         >
-                          {term.status}
+                          {termStatus}
                         </span>
                         {isOpen && daysLeft !== null && daysLeft <= 5 && (
                           <span
@@ -86,13 +92,13 @@ export function TermWindowsList({
                       </div>
                       <span
                         className={`inline-block mt-1.5 px-2 py-0.5 rounded text-xs font-medium ${
-                          term.type === "Semestrial"
+                          termType === "Semestrial"
                             ? "bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400"
                             : "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
                         }`}
                         style={{ fontSize: "0.7rem" }}
                       >
-                        {term.type} Internship
+                        {termType} Internship
                       </span>
                     </div>
                     <button
@@ -120,66 +126,74 @@ export function TermWindowsList({
                   </div>
 
                   {/* Details Grid */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                    <div className="flex items-start gap-2">
-                      <Calendar className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-muted-foreground font-semibold" style={{ fontSize: "0.7rem" }}>
-                          Application Window
-                        </p>
-                        <p style={{ fontSize: "0.8rem" }} className="font-medium">
-                          {term.applicationStart}
-                        </p>
-                        <p style={{ fontSize: "0.8rem" }} className="text-muted-foreground">
-                          to {term.applicationEnd}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <Clock className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-muted-foreground font-semibold" style={{ fontSize: "0.7rem" }}>
-                          Internship Period
-                        </p>
-                        <p style={{ fontSize: "0.8rem" }} className="font-medium">
-                          {term.internshipStart}
-                        </p>
-                        <p style={{ fontSize: "0.8rem" }} className="text-muted-foreground">
-                          to {term.internshipEnd}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <Shield className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-muted-foreground font-semibold" style={{ fontSize: "0.7rem" }}>
-                          Eligible Levels
-                        </p>
-                        <div className="flex flex-wrap gap-1 mt-0.5">
-                          {term.eligibleLevels.map((l) => (
-                            <span key={l} className="px-2 py-0.5 bg-secondary rounded font-medium" style={{ fontSize: "0.75rem" }}>
-                              {l}
-                            </span>
-                          ))}
+                  {(() => {
+                    const intStart = term.internshipStart ??"—";
+                    const intEnd = term.internshipEnd ?? "—";
+                    const levels = (term.eligibleLevels ??  []) as string[];
+                    const depts = (term.departments ?? []) as string[];
+                    return (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                        <div className="flex items-start gap-2">
+                          <Calendar className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-muted-foreground font-semibold" style={{ fontSize: "0.7rem" }}>
+                              Application Window
+                            </p>
+                            <p style={{ fontSize: "0.8rem" }} className="font-medium">
+                              {appStart || "—"}
+                            </p>
+                            <p style={{ fontSize: "0.8rem" }} className="text-muted-foreground">
+                              to {appEnd || "—"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Clock className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-muted-foreground font-semibold" style={{ fontSize: "0.7rem" }}>
+                              Internship Period
+                            </p>
+                            <p style={{ fontSize: "0.8rem" }} className="font-medium">
+                              {intStart}
+                            </p>
+                            <p style={{ fontSize: "0.8rem" }} className="text-muted-foreground">
+                              to {intEnd}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Shield className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-muted-foreground font-semibold" style={{ fontSize: "0.7rem" }}>
+                              Eligible Levels
+                            </p>
+                            <div className="flex flex-wrap gap-1 mt-0.5">
+                              {levels.length > 0 ? levels.map((l) => (
+                                <span key={l} className="px-2 py-0.5 bg-secondary rounded font-medium" style={{ fontSize: "0.75rem" }}>
+                                  {l}
+                                </span>
+                              )) : <span className="text-muted-foreground text-xs">—</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Building2 className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-muted-foreground font-semibold" style={{ fontSize: "0.7rem" }}>
+                              Eligible Departments
+                            </p>
+                            <div className="flex flex-wrap gap-1 mt-0.5">
+                              {depts.length > 0 ? depts.map((d) => (
+                                <span key={d} className="px-2 py-0.5 bg-secondary rounded font-medium" style={{ fontSize: "0.75rem" }}>
+                                  {d}
+                                </span>
+                              )) : <span className="text-muted-foreground text-xs">—</span>}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <Building2 className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-muted-foreground font-semibold" style={{ fontSize: "0.7rem" }}>
-                          Eligible Departments
-                        </p>
-                        <div className="flex flex-wrap gap-1 mt-0.5">
-                          {term.departments.map((d) => (
-                            <span key={d} className="px-2 py-0.5 bg-secondary rounded font-medium" style={{ fontSize: "0.75rem" }}>
-                              {d}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                    );
+                  })()}
                 </div>
               </div>
             );

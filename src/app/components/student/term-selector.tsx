@@ -34,14 +34,29 @@ export function TermSelector({
         <div className="space-y-3">
           {availableTerms.map((term) => {
             const today = new Date().toISOString().split("T")[0];
-            const isOpen = today >= term.applicationStart && today <= term.applicationEnd;
-            const isSelected = selectedTermId === term.id;
+
+            // Real API uses application_deadline; fallback to applicationStart/Start
+            const appStart = String(term.application_deadline ?? term.application_start ?? term.applicationStart ?? "");
+            const appEnd = String(term.application_deadline ?? term.application_end ?? term.applicationEnd ?? "");
+
+            // Real API uses start_date/end_date; fallback to internship variants
+            const intStart = String(term.start_date ?? term.internshipStart ?? term.internship_start ?? "—");
+            const intEnd = String(term.end_date ?? term.internshipEnd ?? term.internship_end ?? "—");
+
+            // Normalize strings
+            const termName = typeof term.name === "string" ? term.name : "Term";
+            const termType = typeof term.type === "string" ? term.type : "Unknown";
+            const levels = Array.isArray(term.eligible_levels) ? term.eligible_levels : (Array.isArray(term.eligibleLevels) ? term.eligibleLevels : []);
+            const levelStr = levels.map((l: any) => typeof l === "string" ? l : String(l)).filter(Boolean).join(", ");
+
+            const isOpen = appStart && appEnd && today >= appStart && today <= appEnd;
+            const isSelected = selectedTermId === String(term.id);
 
             return (
               <button
                 key={term.id}
                 type="button"
-                onClick={() => onSelectTerm(term.id)}
+                onClick={() => onSelectTerm(String(term.id))}
                 disabled={!isOpen}
                 className={`w-full text-left p-5 rounded-xl border-2 transition-all ${
                   isSelected
@@ -57,7 +72,7 @@ export function TermSelector({
                   <div>
                     <div className="flex items-center gap-2">
                       <p style={{ fontSize: "0.95rem" }} className="text-foreground font-medium">
-                        {term.name}
+                        {termName}
                       </p>
                       <span
                         className={`px-2 py-0.5 rounded text-xs ${
@@ -70,18 +85,18 @@ export function TermSelector({
                     </div>
                     <div className="flex items-center gap-4 mt-2">
                       <span className="text-muted-foreground" style={{ fontSize: "0.8rem" }}>
-                        Type: <strong>{term.type}</strong>
+                        Type: <strong>{termType}</strong>
                       </span>
                       <span className="text-muted-foreground" style={{ fontSize: "0.8rem" }}>
-                        Levels: {term.eligibleLevels.join(", ")}
+                        Levels: {levelStr.length > 0 ? levelStr : "—"}
                       </span>
                     </div>
                     <div className="flex items-center gap-4 mt-1">
                       <span className="text-muted-foreground" style={{ fontSize: "0.75rem" }}>
-                        Apply: {term.applicationStart} → {term.applicationEnd}
+                        Apply: {appStart || "—"} → {appEnd || "—"}
                       </span>
                       <span className="text-muted-foreground" style={{ fontSize: "0.75rem" }}>
-                        Internship: {term.internshipStart} → {term.internshipEnd}
+                        Internship: {intStart} → {intEnd}
                       </span>
                     </div>
                   </div>

@@ -10,13 +10,14 @@ const statusColors: Record<string, string> = {
   Submitted: "bg-indigo-100 text-indigo-700",
 };
 
-export function StatusBadge({ status }: { status: string }) {
+export function StatusBadge({ status }: { status: string | any }) {
+  const statusStr = typeof status === "string" ? status : (status?.name ?? status?.status ?? String(status) ?? "Unknown");
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full ${statusColors[status] || "bg-gray-100 text-gray-700"}`}
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full ${statusColors[statusStr] || "bg-gray-100 text-gray-700"}`}
       style={{ fontSize: "0.75rem" }}
     >
-      {status}
+      {statusStr}
     </span>
   );
 }

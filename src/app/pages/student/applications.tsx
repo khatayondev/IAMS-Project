@@ -1,3 +1,4 @@
+// StudentApplicationsPage.tsx
 import { useState, useEffect } from "react";
 import { useAppContext } from "../../lib/context";
 import { apiClient } from "../../lib/api-client";
@@ -79,6 +80,7 @@ export function StudentApplicationsPage() {
   const [myApp, setMyApp] = useState<any | null>(null);
   const [terms, setTerms] = useState<any[]>([]);
   const [companies, setCompanies] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -102,25 +104,44 @@ export function StudentApplicationsPage() {
   const [form, setForm] = useState<FormData>({ ...defaultForm });
   const [eligibilityError, setEligibilityError] = useState<string | null>(null);
 
+  // Load branches when company selection changes
+  useEffect(() => {
+    if (form.selectedCompanyId && form.companyChoice === "existing") {
+      apiClient.getCompanyBranches(form.selectedCompanyId).then((res) => {
+        if (res.success) setBranches(res.data ?? []);
+      });
+    } else {
+      setBranches([]);
+    }
+  }, [form.selectedCompanyId, form.companyChoice]);
+
   const { execute: submitAction, loading: isSubmitting } = useToastAction();
 
-  // STU-01: Open internship windows — backend status values are lowercase
   const availableTerms = terms.filter(
     (t) => t.status === "active" || t.status === "upcoming"
   );
 
   const selectedTerm    = terms.find((t) => t.id === form.termId);
   const selectedCompany = companies.find((c) => String(c.id) === form.selectedCompanyId);
-  const selectedBranch  = form.selectedBranchId ? { id: form.selectedBranchId, name: form.newBranchName } : null;
+  const selectedBranch  = form.branchChoice === "existing" && form.selectedBranchId
+    ? branches.find((b) => String(b.id) === form.selectedBranchId)
+    : form.branchChoice === "new"
+    ? {
+        id: "new",
+        name: form.newBranchName,
+        region: form.newBranchRegion,
+        location: form.newBranchLocation,
+        address: form.newBranchAddress,
+        telephone: form.newBranchTelephone,
+      }
+    : null;
 
   const updateForm = (updates: Partial<FormData>) => setForm((prev) => ({ ...prev, ...updates }));
 
-  // STU-02: Eligibility check against backend term fields
   const checkEligibility = (termId: string): boolean => {
     const term = terms.find((t) => String(t.id) === termId);
     if (!term) return false;
 
-    // Check application deadline
     const today = new Date().toISOString().split("T")[0];
     if (term.application_deadline && today > term.application_deadline) {
       setEligibilityError(`The application deadline has passed (${term.application_deadline}).`);
@@ -131,7 +152,6 @@ export function StudentApplicationsPage() {
       return false;
     }
 
-    // Check for existing active application
     if (myApp && !["completed", "rejected"].includes(myApp.status ?? "")) {
       setEligibilityError(
         "You already have an active application. You cannot submit another one until your current application is resolved."
@@ -194,15 +214,22 @@ export function StudentApplicationsPage() {
     }
   };
 
-  // STU-06: Submit application via async transaction
+  const handleCancelApplication = async () => {
+    if (!myApp?.id) return;
+    const res = await apiClient.deleteApplication(String(myApp.id));
+    if (res.success) {
+      setMyApp(null);
+      setView("windows");
+      setStep(1);
+      setForm({ ...defaultForm });
+    }
+    return res;
+  };
+
   const handleSubmit = async () => {
     await submitAction(
       async () => {
         let companyId = "";
-        let companyName = "";
-        let branchId = "";
-        let branchName = "";
-        let companyStatus: "Approved" | "Pending" = "Approved";
         const actor = user?.name || "Student";
 
         if (form.companyChoice === "existing") {
@@ -211,32 +238,22 @@ export function StudentApplicationsPage() {
             return { success: false, data: null, message: "Selected company not found." };
           }
           companyId = String(company.id);
-          companyName = company.name;
-          companyStatus = (company.approval_status ?? company.status) === "approved" ? "Approved" : "Pending";
 
           if (form.branchChoice === "existing") {
-            branchId = form.selectedBranchId;
-            branchName = form.newBranchName || company.name;
+            // branch already selected, fine
           } else {
-            // Create new branch under existing company asynchronously
-            const branchRes = await apiClient.createBranch({
-              companyId: company.id,
+            const branchRes = await apiClient.createCompanyBranch(String(company.id), {
               name: form.newBranchName,
               region: form.newBranchRegion,
               location: form.newBranchLocation,
               address: form.newBranchAddress,
               telephone: form.newBranchTelephone,
-              addedBy: actor,
-              autoApprove: false,
             });
             if (!branchRes.success || !branchRes.data) {
               return { success: false, data: null, message: branchRes.message || "Failed to create branch." };
             }
-            branchId = branchRes.data.id;
-            branchName = branchRes.data.name;
           }
         } else {
-          // Create brand new company + branch atomically asynchronously
           const companyRes = await apiClient.createCompanyWithBranch(
             {
               name: form.newCompanyName,
@@ -259,35 +276,15 @@ export function StudentApplicationsPage() {
             return { success: false, data: null, message: companyRes.message || "Failed to register company." };
           }
           companyId = companyRes.data.company.id;
-          companyName = companyRes.data.company.name;
-          branchId = companyRes.data.branch.id;
-          branchName = companyRes.data.branch.name;
-          companyStatus = "Pending";
         }
 
-        // Now submit the application using the resolved ids
-        const newApp = {
-          termId: form.termId,
-          studentName: user?.name || "",
-          studentId: user?.studentId || "",
-          department: user?.department || "",
-          level: "L300",
-          companyId,
-          companyName,
-          branchId,
-          branchName,
-          companyStatus,
-          status: "Pending" as const,
-          phoneNumber: form.phoneNumber,
-          emergencyContact: form.emergencyContact,
-          emergencyPhone: form.emergencyPhone,
-          preferredStartDate: form.preferredStartDate,
-          additionalNotes: form.additionalNotes,
-          uploadCV: form.uploadCV,
-          uploadMotivation: form.uploadMotivation,
-        };
-
-        const submitRes = await apiClient.createApplication(newApp);
+        const submitRes = await apiClient.createApplication({
+          company_id: Number(companyId),
+          academic_term_id: Number(form.termId),
+          application_type: "individual",
+          cover_letter: form.additionalNotes || undefined,
+          proposed_start_date: form.preferredStartDate || undefined,
+        });
         if (submitRes.success) {
           setForm({ ...defaultForm });
           setView("tracker");
@@ -318,7 +315,6 @@ export function StudentApplicationsPage() {
             View open internship windows, apply, and track your application
           </p>
         </div>
-        {/* Tab Switcher */}
         <div className="flex gap-3 justify-center shrink-0">
           {[
             { key: "windows" as const, label: "Open Windows", icon: Calendar },
@@ -347,7 +343,6 @@ export function StudentApplicationsPage() {
         </div>
       </div>
 
-      {/* VIEW: OPEN WINDOWS (STU-01) */}
       {view === "windows" && (
         <TermWindowsList
           availableTerms={availableTerms}
@@ -356,10 +351,8 @@ export function StudentApplicationsPage() {
         />
       )}
 
-      {/* VIEW: APPLY FLOW */}
       {view === "apply" && (
         <div className="bg-card border border-border rounded-2xl p-5 md:p-6 space-y-6 relative overflow-hidden">
-          {/* Global Loading Overlay */}
           {isSubmitting && (
             <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] z-50 flex items-center justify-center">
               <div className="flex flex-col items-center gap-2">
@@ -369,7 +362,6 @@ export function StudentApplicationsPage() {
             </div>
           )}
 
-          {/* Stepper Progress bar */}
           <div className="flex items-center justify-between gap-4 border-b border-border pb-5 overflow-x-auto">
             {steps.map((s) => {
               const active = step === s.num;
@@ -407,17 +399,15 @@ export function StudentApplicationsPage() {
                 onSelectTerm={handleSelectTerm}
               />
             )}
-
             {step === 2 && (
               <CompanyBranchSelector
                 form={form}
                 updateForm={updateForm}
                 companies={companies}
+                branches={branches}
               />
             )}
-
             {step === 3 && <PersonalDetailsForm form={form} updateForm={updateForm} user={user} />}
-
             {step === 4 && (
               <ApplicationReview
                 form={form}
@@ -430,7 +420,6 @@ export function StudentApplicationsPage() {
             )}
           </div>
 
-          {/* Navigation Buttons */}
           <div className="flex justify-between items-center border-t border-border pt-5">
             <button
               type="button"
@@ -440,11 +429,9 @@ export function StudentApplicationsPage() {
             >
               <ChevronLeft className="w-4 h-4" /> {step === 1 ? "Back to Windows" : "Previous"}
             </button>
-
             <p className="text-muted-foreground" style={{ fontSize: "0.8rem" }}>
               Step {step} of 4
             </p>
-
             {step < 4 ? (
               <button
                 type="button"
@@ -470,12 +457,22 @@ export function StudentApplicationsPage() {
         </div>
       )}
 
-      {/* VIEW: TRACKER */}
       {view === "tracker" && (
         <ApplicationTracker
           myApp={myApp}
           terms={terms}
           onViewWindows={() => setView("windows")}
+          onCancelApplication={handleCancelApplication}
+          onAcceptanceSubmitted={() => {
+            apiClient.getApplications().then((res) => {
+              if (res.success && res.data.length > 0) {
+                const sorted = [...res.data].sort((a, b) =>
+                  (b.created_at ?? "") > (a.created_at ?? "") ? 1 : -1
+                );
+                setMyApp(sorted[0]);
+              }
+            });
+          }}
         />
       )}
     </div>

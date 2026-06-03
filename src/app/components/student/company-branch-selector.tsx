@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { GitBranch, Search, Building2, Plus, AlertCircle, Info, User, Mail, Phone, MapPin } from "lucide-react";
 import { StatusBadge } from "../status-badge";
 import { ghanaRegions } from "../../lib/mock-data";
+import { apiClient } from "../../lib/api-client";
 
 type CompanyChoice = "none" | "existing" | "new";
 type BranchChoice = "none" | "existing" | "new";
@@ -34,16 +35,19 @@ interface CompanyBranchSelectorProps {
   form: FormData;
   updateForm: (updates: Partial<FormData>) => void;
   companies: any[];
+  branches?: any[];
 }
 
 export function CompanyBranchSelector({
   form,
   updateForm,
   companies,
+  branches = [],
 }: CompanyBranchSelectorProps) {
   const [companySearch, setCompanySearch] = useState("");
 
   const selectedCompany = companies.find((c: any) => String(c.id) === form.selectedCompanyId);
+  const branchesForSelected = branches;
 
   const searchCompanies = (query: string, limit: number) => {
     if (!query.trim()) return [];
@@ -63,14 +67,18 @@ export function CompanyBranchSelector({
     () => (companySearch.trim() ? findCompanyByName(companySearch) : undefined),
     [companySearch, companies]
   );
-  // Backend API has no branch concept — branches list is always empty
-  const branchesForSelected: any[] = [];
   // Live duplicate check on new-company name
   const newCompanyDup = useMemo(
     () => (form.newCompanyName.trim() ? findCompanyByName(form.newCompanyName) : undefined),
     [form.newCompanyName, companies]
   );
-  const newBranchDup = undefined;
+  // Check if new branch name already exists
+  const newBranchDup = useMemo(
+    () => branchesForSelected.find(
+      (b) => typeof b.name === "string" && b.name.toLowerCase() === form.newBranchName.trim().toLowerCase()
+    ),
+    [branchesForSelected, form.newBranchName]
+  );
   return (
     <div className="space-y-5">
       <div>
@@ -102,39 +110,32 @@ export function CompanyBranchSelector({
               </p>
               {matches.length > 0 ? (
                 <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-1">
-                  {matches.map(({ company: c }) => {
-                    const branchCount = c.branchCount ?? 0;
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() =>
-                          updateForm({
-                            companyChoice: "existing",
-                            selectedCompanyId: c.id,
-                            branchChoice: "none",
-                          })
-                        }
-                        className="w-full text-left p-3.5 rounded-xl border border-border hover:border-primary hover:bg-primary/5 transition-all bg-card"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p style={{ fontSize: "0.9rem" }} className="font-medium text-foreground">
-                              {c.name}
-                            </p>
-                            <p className="text-muted-foreground mt-0.5" style={{ fontSize: "0.75rem" }}>
-                              {c.industry} · {c.contactPerson}
-                            </p>
-                            <p className="text-muted-foreground mt-0.5" style={{ fontSize: "0.7rem" }}>
-                              <GitBranch className="inline w-3 h-3 mr-1" />
-                              {branchCount} branch{branchCount === 1 ? "" : "es"}
-                            </p>
-                          </div>
-                          <StatusBadge status={c.status} />
+                  {matches.map(({ company: c }) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() =>
+                        updateForm({
+                          companyChoice: "existing",
+                          selectedCompanyId: String(c.id),
+                          branchChoice: "none",
+                        })
+                      }
+                      className="w-full text-left p-3.5 rounded-xl border border-border hover:border-primary hover:bg-primary/5 transition-all bg-card"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p style={{ fontSize: "0.9rem" }} className="font-medium text-foreground">
+                            {c.name}
+                          </p>
+                          <p className="text-muted-foreground mt-0.5" style={{ fontSize: "0.75rem" }}>
+                            {c.industry || "—"} · {c.contact_person_name || c.contactPerson || "—"}
+                          </p>
                         </div>
-                      </button>
-                    );
-                  })}
+                        <StatusBadge status={c.status} />
+                      </div>
+                    </button>
+                  ))}
                 </div>
               ) : (
                 <div className="bg-secondary/30 rounded-xl p-4 text-center">
@@ -167,7 +168,7 @@ export function CompanyBranchSelector({
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
                   <p className="text-amber-800" style={{ fontSize: "0.8rem" }}>
-                    <strong>"{exactDup.name}"</strong> already exists in the system. Please select it from the suggestions above and add a branch instead of creating a duplicate.
+                    <strong>"{typeof exactDup?.name === "string" ? exactDup.name : "Company"}"</strong> already exists in the system. Please select it from the suggestions above and add a branch instead of creating a duplicate.
                   </p>
                 </div>
               )}
@@ -184,10 +185,10 @@ export function CompanyBranchSelector({
               <Building2 className="w-5 h-5 text-primary mt-0.5" />
               <div>
                 <p style={{ fontSize: "0.95rem" }} className="font-medium text-foreground">
-                  {selectedCompany.name}
+                  {typeof selectedCompany.name === "string" ? selectedCompany.name : "Company"}
                 </p>
                 <p className="text-muted-foreground mt-0.5" style={{ fontSize: "0.75rem" }}>
-                  {selectedCompany.contactPerson} · {selectedCompany.contactEmail}
+                  {typeof selectedCompany.contact_person_name === "string" ? selectedCompany.contact_person_name : (typeof selectedCompany.contactPerson === "string" ? selectedCompany.contactPerson : "—")} · {typeof selectedCompany.contact_person_email === "string" ? selectedCompany.contact_person_email : (typeof selectedCompany.contactEmail === "string" ? selectedCompany.contactEmail : "—")}
                 </p>
                 <div className="mt-1">
                   <StatusBadge status={selectedCompany.status} />
@@ -225,33 +226,42 @@ export function CompanyBranchSelector({
                   No branches recorded yet. Add the first one below.
                 </p>
               )}
-              {branchesForSelected.map((b) => (
-                <button
-                  key={b.id}
-                  type="button"
-                  onClick={() => updateForm({ branchChoice: "existing", selectedBranchId: b.id })}
-                  className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
-                    form.branchChoice === "existing" && form.selectedBranchId === b.id
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/30"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p style={{ fontSize: "0.85rem" }} className="font-medium">
-                        {b.name}
-                      </p>
-                      <p className="text-muted-foreground mt-0.5" style={{ fontSize: "0.75rem" }}>
-                        {b.location}, {b.region} · {b.telephone}
-                      </p>
-                      <p className="text-muted-foreground" style={{ fontSize: "0.7rem" }}>
-                        {b.address}
-                      </p>
+              {branchesForSelected.map((b) => {
+                const branchName = typeof b.name === "string" ? b.name : "Branch";
+                const location = typeof b.location === "string" ? b.location : "—";
+                const region = typeof b.region === "string" ? b.region : "—";
+                const telephone = typeof b.telephone === "string" ? b.telephone : "—";
+                const address = typeof b.address === "string" ? b.address : "—";
+                const branchId = typeof b.id === "string" ? b.id : String(b.id);
+
+                return (
+                  <button
+                    key={branchId}
+                    type="button"
+                    onClick={() => updateForm({ branchChoice: "existing", selectedBranchId: branchId })}
+                    className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
+                      form.branchChoice === "existing" && form.selectedBranchId === branchId
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/30"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p style={{ fontSize: "0.85rem" }} className="font-medium">
+                          {branchName}
+                        </p>
+                        <p className="text-muted-foreground mt-0.5" style={{ fontSize: "0.75rem" }}>
+                          {location}, {region} · {telephone}
+                        </p>
+                        <p className="text-muted-foreground" style={{ fontSize: "0.7rem" }}>
+                          {address}
+                        </p>
+                      </div>
+                      <StatusBadge status={b.status} />
                     </div>
-                    <StatusBadge status={b.status} />
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
 
               <button
                 type="button"
@@ -282,7 +292,7 @@ export function CompanyBranchSelector({
                 ghanaRegions={ghanaRegions}
                 dupWarning={
                   newBranchDup
-                    ? `A branch named "${newBranchDup.name}" already exists for this company.`
+                    ? `A branch named "${typeof newBranchDup.name === "string" ? newBranchDup.name : "Branch"}" already exists for this company.`
                     : undefined
                 }
               />
@@ -342,7 +352,7 @@ export function CompanyBranchSelector({
                 {newCompanyDup && (
                   <p className="text-amber-700 mt-1 flex items-center gap-1" style={{ fontSize: "0.75rem" }}>
                     <AlertCircle className="w-3.5 h-3.5" />
-                    "{newCompanyDup.name}" already exists. Please go back and select it instead.
+                    "{typeof newCompanyDup.name === "string" ? newCompanyDup.name : "Company"}" already exists. Please go back and select it instead.
                   </p>
                 )}
               </div>
@@ -424,11 +434,14 @@ function BranchFieldsBlock({ form, updateForm, ghanaRegions, dupWarning }: Branc
           className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background"
           style={{ fontSize: "0.85rem" }}
         >
-          {ghanaRegions.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
+          {ghanaRegions.map((r) => {
+            const regionStr = typeof r === "string" ? r : String(r);
+            return (
+              <option key={regionStr} value={regionStr}>
+                {regionStr}
+              </option>
+            );
+          })}
         </select>
       </div>
       <div>

@@ -299,6 +299,32 @@ export const apiClient = {
     );
   },
 
+  async submitCompanyAcceptance(
+    id: string,
+    data: {
+      industry_supervisor_name?: string;
+      industry_supervisor_title?: string;
+      industry_supervisor_email?: string;
+      industry_supervisor_phone?: string;
+      confirmed_start_date?: string;
+      confirmed_end_date?: string;
+      student_role?: string;
+      placement_department?: string;
+      acceptance_notes?: string;
+    }
+  ): Promise<ApiResponse<ApplicationResponse | null>> {
+    return requestApi<ApplicationResponse | null>(
+      replacePathParams(API_ENDPOINTS.APPLICATIONS, { id }),
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          ...data,
+          status: "company_accepted",
+        }),
+      }
+    );
+  },
+
   async bulkApproveApplications(ids: string[]): Promise<ApiResponse<null>> {
     return requestApi<null>(API_ENDPOINTS.APPLICATION_BULK_APPROVE, {
       method: "POST",
@@ -373,7 +399,7 @@ export const apiClient = {
     };
   },
 
-  // The real API has no branch concept — returns a synthetic branch record
+  // DEPRECATED: Use createCompanyBranch() instead. This returns a synthetic local ID.
   async createBranch(data: {
     companyId: string;
     name: string;
@@ -383,6 +409,7 @@ export const apiClient = {
     telephone?: string;
     [key: string]: unknown;
   }): Promise<ApiResponse<{ id: string; name: string } | null>> {
+    console.warn("createBranch() is deprecated — use createCompanyBranch(companyId, data) instead");
     return { success: true, data: { id: `local-branch-${Date.now()}`, name: data.name } };
   },
 
@@ -1104,7 +1131,7 @@ export const apiClient = {
     );
   },
 
-  async autoAssignSupervisors(data: { term_id: number; department_id?: number }): Promise<ApiResponse<any>> {
+  async autoAssignSupervisors(data: { term_id: number; department_id?: string | number }): Promise<ApiResponse<any>> {
     return requestApi<any>(API_ENDPOINTS.SUPERVISOR_ASSIGNMENTS_AUTO, { method: "POST", body: JSON.stringify(data) });
   },
 

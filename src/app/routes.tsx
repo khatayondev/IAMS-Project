@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from "react-router";
 import { DashboardLayout } from "./components/dashboard-layout";
 import { AuthGuard } from "./components/auth-guard";
+import { StudentProfileGuard } from "./components/student-profile-guard";
 
 // Auth
 import { LoginPage } from "./pages/auth/login";
@@ -41,6 +42,8 @@ import { DocumentsPage } from "./pages/student/documents";
 import { StudentApplicationsPage } from "./pages/student/applications";
 import { StudentGradesPage } from "./pages/student/grades";
 import { StudentHistoryPage } from "./pages/student/history";
+import { StudentProfileSetup } from "./pages/student/profile-setup";
+import { StudentAttendancePage } from "./pages/student/attendance";
 
 // Supervisor Pages
 import { SupervisorDashboard } from "./pages/supervisor/dashboard";
@@ -80,6 +83,7 @@ function AcademicCommunications() { return <CommunicationsPage viewRole="academi
 
 function StudentIssues() { return <IssuesPage viewRole="student" />; }
 function StudentCommunications() { return <CommunicationsPage viewRole="student" />; }
+function StudentSettings() { return <SettingsPage />; }
 
 function SupervisorAttendance() { return <AttendancePage viewRole="supervisor" />; }
 function SupervisorCommunications() { return <CommunicationsPage viewRole="supervisor" />; }
@@ -176,19 +180,24 @@ export const router = createBrowserRouter([
     path: "/student",
     element: (
       <StudentGuard>
-        <DashboardLayout />
+        <StudentProfileGuard>
+          <DashboardLayout />
+        </StudentProfileGuard>
       </StudentGuard>
     ),
     children: [
       { index: true, element: <StudentDashboard /> },
+      { path: "profile-setup", element: <StudentProfileSetup /> },
       { path: "applications", element: <StudentApplicationsPage /> },
       { path: "logbook", element: <LogbookPage /> },
+      { path: "attendance", element: <StudentAttendancePage /> },
       { path: "documents", element: <DocumentsPage /> },
       { path: "evaluation", element: <StudentGradesPage /> },
       { path: "grades", element: <Navigate to="/student/evaluation" replace /> },
       { path: "history", element: <StudentHistoryPage /> },
       { path: "issues", Component: StudentIssues },
       { path: "communications", Component: StudentCommunications },
+      { path: "settings", Component: StudentSettings },
     ],
   },
 

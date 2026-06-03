@@ -288,11 +288,11 @@ export interface TermDashboardResponse {
 // ── Logbook ──
 
 export interface SubmitLogbookRequest {
-  studentId: string;
-  date: string;
-  activities: string;
-  skills: string;
-  challenges: string;
+  internship_id: number;
+  entry_date: string;
+  activities_description: string;
+  skills_learned?: string;
+  challenges_faced?: string;
 }
 
 export interface ApproveLogbookRequest {
@@ -307,24 +307,23 @@ export interface RevisionLogbookRequest {
 
 export interface LogbookFilters extends PaginationParams {
   studentId?: string;
+  internship_id?: number;
   department?: string;
   approvalStatus?: "Pending" | "Approved" | "Revision Requested";
   dateFrom?: string;
   dateTo?: string;
+  per_page?: number;
 }
 
 export interface LogbookEntryResponse {
   id: string;
-  studentId: string;
-  date: string;
-  activities: string;
-  skills: string;
-  challenges: string;
-  supervisorComment?: string;
-  approvalStatus: "Pending" | "Approved" | "Revision Requested";
-  approvedBy?: string;
-  approvedAt?: string;
-  createdAt: string;
+  internship_id: number;
+  entry_date: string;
+  activities_description: string;
+  skills_learned?: string;
+  challenges_faced?: string;
+  status: "draft" | "submitted" | "approved" | "revision_requested";
+  created_at: string;
 }
 
 // ── Attendance ──

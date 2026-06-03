@@ -1,5 +1,6 @@
 import { useState, useSyncExternalStore } from "react";
 import { useAppContext } from "../lib/context";
+import { apiClient } from "../lib/api-client";
 import {
   Save, Upload, Shield, Bell, Settings2, User, Globe, Lock, Database,
   Monitor, Mail, Clock, Building2, GraduationCap, AlertTriangle, CheckCircle2, Moon, Sun, SlidersHorizontal
@@ -24,7 +25,10 @@ export function SettingsPage() {
   // Profile
   const [profileName, setProfileName] = useState(user?.name || "");
   const [profileEmail] = useState(user?.email || "");
-  const [profilePhone, setProfilePhone] = useState("+233 50 123 4567");
+  const [profilePhone, setProfilePhone] = useState(user?.phone || "");
+  const [emergencyContact, setEmergencyContact] = useState("");
+  const [emergencyPhone, setEmergencyPhone] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // General (CLO only)
   const [uniName, setUniName] = useState("Ho Technical University");
@@ -49,6 +53,36 @@ export function SettingsPage() {
   // DLO-specific
   const [deptMaxLoad, setDeptMaxLoad] = useState("8");
   const [deptDeadline, setDeptDeadline] = useState("");
+
+  const handleSaveProfile = async () => {
+    if (!user?.id) return;
+    setIsSavingProfile(true);
+    try {
+      const res = await apiClient.updateUser(user.id, { name: profileName });
+      if (res.success) {
+        toast.success("Profile updated successfully.");
+      } else {
+        toast.error("Failed to update profile.");
+      }
+    } catch (error) {
+      toast.error("Error updating profile.");
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleSaveNotifications = async () => {
+    try {
+      const res = await apiClient.updateSettings({ emailNotifications: emailNotifs });
+      if (res.success) {
+        toast.success("Notification preferences saved.");
+      } else {
+        toast.error("Failed to save notification preferences.");
+      }
+    } catch (error) {
+      toast.error("Error saving notification preferences.");
+    }
+  };
 
   const handleSaveRules = () => {
     updateSettings({
@@ -158,13 +192,25 @@ export function SettingsPage() {
               </div>
               <div>
                 <label style={{ fontSize: "0.8rem" }}>Phone Number</label>
-                <input type="tel" value={profilePhone} onChange={(e) => setProfilePhone(e.target.value)} className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background" style={{ fontSize: "0.85rem" }} />
+                <input type="tel" value={profilePhone} onChange={(e) => setProfilePhone(e.target.value)} placeholder="+233 50 123 4567" className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background" style={{ fontSize: "0.85rem" }} />
               </div>
               {user?.department && (
                 <div>
                   <label style={{ fontSize: "0.8rem" }}>Department</label>
                   <input type="text" value={user.department} disabled className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-muted/30" style={{ fontSize: "0.85rem" }} />
                 </div>
+              )}
+              {role === "student" && (
+                <>
+                  <div>
+                    <label style={{ fontSize: "0.8rem" }}>Emergency Contact Name</label>
+                    <input type="text" value={emergencyContact} onChange={(e) => setEmergencyContact(e.target.value)} placeholder="Full name" className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background" style={{ fontSize: "0.85rem" }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.8rem" }}>Emergency Contact Phone</label>
+                    <input type="tel" value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} placeholder="+233 50 000 0000" className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background" style={{ fontSize: "0.85rem" }} />
+                  </div>
+                </>
               )}
             </div>
 
@@ -190,8 +236,8 @@ export function SettingsPage() {
               </div>
             )}
 
-            <button onClick={() => toast.success("Profile updated.")} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 flex items-center gap-2" style={{ fontSize: "0.85rem" }}>
-              <Save className="w-4 h-4" /> Save Profile
+            <button onClick={handleSaveProfile} disabled={isSavingProfile} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-2" style={{ fontSize: "0.85rem" }}>
+              <Save className="w-4 h-4" /> {isSavingProfile ? "Saving..." : "Save Profile"}
             </button>
           </div>
         </div>
@@ -380,7 +426,7 @@ export function SettingsPage() {
             </div>
           )}
 
-          <button onClick={() => toast.success("Notification preferences saved.")} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 flex items-center gap-2" style={{ fontSize: "0.85rem" }}>
+          <button onClick={handleSaveNotifications} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 flex items-center gap-2" style={{ fontSize: "0.85rem" }}>
             <Save className="w-4 h-4" /> Save Preferences
           </button>
         </div>

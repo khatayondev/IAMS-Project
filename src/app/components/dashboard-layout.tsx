@@ -2,8 +2,8 @@ import { Outlet, NavLink, useNavigate } from "react-router";
 import {
   LayoutDashboard, FileText, Building2, Calendar, Users, Settings, Bell, LogOut,
   GraduationCap, ClipboardCheck, BarChart3, Menu, Shield, BookOpen, BookMarked,
-  Upload, MessageSquarePlus, AlertTriangle, MapPin, UserPlus, X,
-  Moon, Sun, ChevronDown, HelpCircle, Search, CheckCircle2, Award, Layers
+  Upload, MessageSquarePlus, AlertTriangle, MapPin, UserPlus, X, User,
+  Moon, Sun, ChevronDown, HelpCircle, Search, CheckCircle2, Award, Layers, TrendingUp
 } from "lucide-react";
 import { useAppContext } from "../lib/context";
 import { useState, useEffect, useSyncExternalStore, useRef } from "react";
@@ -55,13 +55,16 @@ const dloNav: NavItem[] = [
 
 const studentNav: NavItem[] = [
   { to: "/student", icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/student/profile-setup", icon: User, label: "My Profile" },
   { to: "/student/applications", icon: FileText, label: "Applications" },
   { to: "/student/logbook", icon: BookMarked, label: "Daily Logbook" },
+  { to: "/student/attendance", icon: TrendingUp, label: "Attendance" },
   { to: "/student/documents", icon: Upload, label: "Documents" },
-  { to: "/student/evaluation", icon: ClipboardCheck, label: "My Score & Evaluation" },
+  { to: "/student/grades", icon: Award, label: "My Score & Evaluation" },
   { to: "/student/history", icon: Award, label: "Internship History" },
   { to: "/student/issues", icon: AlertTriangle, label: "Report Issue" },
   { to: "/student/communications", icon: MessageSquarePlus, label: "Communications" },
+  { to: "/student/settings", icon: Settings, label: "Settings" },
 ];
 
 const supervisorNav: NavItem[] = [
