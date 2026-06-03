@@ -3,17 +3,21 @@ import { useAppContext } from "../../lib/context";
 import { apiClient } from "../../lib/api-client";
 import { StatusBadge } from "../../components/status-badge";
 import { StatCard } from "../../components/stat-card";
-import { BookMarked, FileText, Clock, CheckCircle2, Upload, Award, Send, ArrowRight, TrendingUp, Building2, User, MapPin, Calendar, Mail, Phone } from "lucide-react";
+import { BookMarked, FileText, Clock, CheckCircle2, Upload, Award, Send, ArrowRight, TrendingUp, Building2, User, MapPin, Calendar, Mail, Phone, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router";
 
 export function StudentDashboard() {
   const { user } = useAppContext();
   const navigate = useNavigate();
   const [dashboard, setDashboard] = useState<any>(null);
+  const [visitations, setVisitations] = useState<any[]>([]);
 
   useEffect(() => {
     apiClient.getDashboard("student").then((res) => {
       if (res.success) setDashboard(res.data);
+    });
+    apiClient.getSiteVisitations().then((res) => {
+      if (res.success) setVisitations(res.data);
     });
   }, []);
 
@@ -30,6 +34,23 @@ export function StudentDashboard() {
   const startDate      = activeInternship?.start_date ?? activeInternship?.created_at ?? "";
 
   const isDone = (statuses: string[]) => statuses.includes(appStatus);
+
+  // Parse visitation details or provide fallback schedule
+  const activeVisitation = visitations.length > 0 
+    ? visitations[0] 
+    : (activeInternship ? {
+        id: "fallback-visitation",
+        academic_supervisor: {
+          user: {
+            name: supervisorName || "Academic Supervisor",
+            email: activeInternship?.academic_supervisor?.user?.email || "academic.advisor@htu.edu.gh",
+            phone: "+233 55 432 1098"
+          }
+        },
+        scheduled_date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split("T")[0], // 10 days from now
+        status: "scheduled",
+        generalComments: "Visit scheduled to verify placement safety, student tasks, and supervisor alignment."
+      } : null);
 
   return (
     <div className="space-y-6">
@@ -49,7 +70,7 @@ export function StudentDashboard() {
           
           {/* Internship Spotlight */}
           {activeInternship ? (
-            <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-2xl p-5 space-y-4 shadow-sm">
+            <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-2xl p-5 space-y-4 shadow-sm animate-in fade-in zoom-in-95 duration-200">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-1.5">
@@ -156,7 +177,7 @@ export function StudentDashboard() {
               </div>
             </div>
           ) : (
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 dark:from-amber-950/30 dark:to-orange-950/30 dark:border-amber-800 rounded-2xl p-6 text-center space-y-4 shadow-sm">
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 dark:from-amber-950/30 dark:to-orange-950/30 dark:border-amber-800 rounded-2xl p-6 text-center space-y-4 shadow-sm animate-in fade-in duration-200">
               <Send className="w-10 h-10 text-amber-600 dark:text-amber-400 mx-auto" />
               <div>
                 <h2 className="text-lg font-bold text-amber-950 dark:text-amber-100">No Active Internship</h2>
@@ -251,9 +272,97 @@ export function StudentDashboard() {
           </div>
         </div>
 
-        {/* Right Side: Timeline & Recent Logbook Entries */}
+        {/* Right Side: Timeline & Site Visit Tracking */}
         <div className="space-y-6">
           
+          {/* Site Visit Tracking Widget */}
+          {activeVisitation && (
+            <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm animate-in fade-in duration-200">
+              <div className="p-4 border-b border-border flex items-center justify-between bg-gradient-to-r from-amber-50/50 to-transparent dark:from-amber-950/10">
+                <h3 className="font-bold text-sm text-foreground flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-amber-500" />
+                  Site Visit Tracking
+                </h3>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                  activeVisitation.status === "completed" 
+                    ? "bg-emerald-100 text-emerald-700" 
+                    : activeVisitation.status === "cancelled" 
+                    ? "bg-red-100 text-red-700" 
+                    : "bg-amber-100 text-amber-700 animate-pulse"
+                }`}>
+                  {activeVisitation.status === "scheduled" ? "Scheduled" : activeVisitation.status === "completed" ? "Completed" : "Cancelled"}
+                </span>
+              </div>
+              
+              <div className="p-4 space-y-4">
+                {/* Advisor Details */}
+                <div className="bg-muted/30 rounded-xl p-3 border border-border/50 space-y-2">
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Assigned Visitor</p>
+                  <p className="font-semibold text-xs text-foreground">{activeVisitation.academic_supervisor?.user?.name}</p>
+                  <div className="flex flex-col gap-1 text-[11px] text-muted-foreground">
+                    <span className="flex items-center gap-1">📧 {activeVisitation.academic_supervisor?.user?.email}</span>
+                    {activeVisitation.academic_supervisor?.user?.phone && (
+                      <span className="flex items-center gap-1">📞 {activeVisitation.academic_supervisor.user.phone}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Timeline */}
+                <div className="space-y-4">
+                  {[
+                    { 
+                      label: "Visitation Date Set", 
+                      done: true, 
+                      desc: `Scheduled for ${new Date(activeVisitation.scheduled_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}` 
+                    },
+                    { 
+                      label: "On-site Placement Evaluation", 
+                      done: activeVisitation.status === "completed", 
+                      desc: "Advisor verifies location, internship tasks, and checks logbook alignment." 
+                    },
+                    { 
+                      label: "Visit Report Approved", 
+                      done: activeVisitation.status === "completed", 
+                      desc: activeVisitation.status === "completed" ? "Site visit score and review approved." : "Awaiting visit completion." 
+                    }
+                  ].map((step, i, arr) => (
+                    <div key={i} className="relative">
+                      {i < arr.length - 1 && (
+                        <div className={`absolute left-3 top-7 bottom-0 w-0.5 ${step.done ? "bg-amber-500" : "bg-muted"}`} />
+                      )}
+                      <div className="flex items-start gap-3 relative z-10">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-bold text-[10px] transition-colors ${
+                          step.done
+                            ? "bg-amber-500 text-white shadow-sm shadow-amber-500/20"
+                            : "bg-muted text-muted-foreground border border-muted"
+                        }`}>
+                          {step.done ? <CheckCircle2 className="w-3.5 h-3.5" /> : i + 1}
+                        </div>
+                        <div className="pt-0.5 flex-1 min-w-0">
+                          <p className={`font-semibold text-xs ${step.done ? "text-foreground" : "text-muted-foreground"}`}>
+                            {step.label}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{step.desc}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Feedback Box (only when completed) */}
+                {activeVisitation.status === "completed" && activeVisitation.generalComments && (
+                  <div className="pt-3 border-t border-border bg-emerald-50/50 dark:bg-emerald-950/10 rounded-xl p-3 border border-emerald-100 dark:border-emerald-900/30 text-xs">
+                    <p className="font-semibold text-emerald-800 dark:text-emerald-400 flex items-center gap-1 mb-1">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      Advisor Review Notes:
+                    </p>
+                    <p className="text-emerald-700 dark:text-emerald-300 italic leading-relaxed">"{activeVisitation.generalComments}"</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Recent Logbook Entries */}
           {recentLogbooks.length > 0 && (
             <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">

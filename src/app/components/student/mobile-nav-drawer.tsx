@@ -68,7 +68,7 @@ export function MobileNavDrawer({ isOpen, onClose, onLogout }: MobileNavDrawerPr
       {/* Drawer */}
       <div
         className={`fixed inset-y-0 left-0 z-50 w-[280px] bg-background border-r border-border transform transition-transform duration-300 ease-out md:hidden flex flex-col h-full ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          isOpen ? "translate-x-0" : "-translate-x-full pointer-events-none invisible"
         }`}
       >
         {/* Header */}

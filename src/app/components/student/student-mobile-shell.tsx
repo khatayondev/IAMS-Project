@@ -47,7 +47,7 @@ export function StudentMobileShell() {
   return (
     <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
       {/* Header */}
-      <header className="sticky top-0 z-40 h-14 bg-background border-b border-border flex items-center px-4 gap-3 shrink-0">
+      <header className="relative z-20 h-14 bg-background border-b border-border flex items-center px-4 gap-3 shrink-0">
         <button
           onClick={() => setDrawerOpen(true)}
           className="p-2 hover:bg-accent rounded-lg transition-colors"
@@ -101,18 +101,16 @@ export function StudentMobileShell() {
       />
 
       {/* Check-in modal */}
-      {user?.studentId && (
-        <CheckInModal
-          isOpen={isCheckInModalOpen}
-          onClose={() => setIsCheckInModalOpen(false)}
-          onSuccess={() => {
-            setIsCheckInModalOpen(false);
-            setCheckedInToday(hasCheckedInToday(user.studentId || ""));
-          }}
-          internshipId={activeInternship?.id}
-          internshipStatus={activeInternship?.status}
-        />
-      )}
+      <CheckInModal
+        isOpen={isCheckInModalOpen}
+        onClose={() => setIsCheckInModalOpen(false)}
+        onSuccess={() => {
+          setIsCheckInModalOpen(false);
+          setCheckedInToday(hasCheckedInToday(user?.studentId || ""));
+        }}
+        internshipId={activeInternship?.id}
+        internshipStatus={activeInternship?.status}
+      />
     </div>
   );
 }
