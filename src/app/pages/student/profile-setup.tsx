@@ -162,32 +162,27 @@ export function StudentProfileSetup() {
   ];
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-2xl p-6">
-        <h1 className="text-3xl font-bold">Complete Your Internship Profile</h1>
-        <p className="text-muted-foreground mt-2">
-          Before you can apply for internships, we need you to complete your profile. This helps us match you with the best opportunities based on your skills, interests, and preferences.
+      <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <h1 className="text-2xl font-bold">Complete Profile</h1>
+        <p className="text-muted-foreground text-xs mt-2">
+          Complete all sections to apply for internships.
         </p>
-        <div className="mt-4 p-3 bg-blue-100 dark:bg-blue-900/50 rounded-lg border border-blue-300 dark:border-blue-700">
-          <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-            ℹ️ This is a required step to activate your account. Your information will be used to recommend suitable internships and help supervisors understand your background.
-          </p>
-        </div>
       </div>
 
       {/* Completion Progress */}
-      <div className="bg-card border border-border rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold flex items-center gap-2">
+      <div className="bg-card border border-border rounded-lg p-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold text-sm flex items-center gap-2">
             {completionPercentage === 100 ? (
-              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             ) : (
-              <AlertCircle className="w-5 h-5 text-amber-600" />
+              <AlertCircle className="w-4 h-4 text-amber-600" />
             )}
-            Profile Completion
+            Progress
           </h3>
-          <span className="text-lg font-bold text-primary">{completionPercentage}%</span>
+          <span className="font-bold text-primary text-sm">{completionPercentage}%</span>
         </div>
         <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
           <div
@@ -195,102 +190,90 @@ export function StudentProfileSetup() {
             style={{ width: `${completionPercentage}%` }}
           />
         </div>
-        <p className="text-muted-foreground text-sm mt-2">
-          {completionPercentage === 100
-            ? "✓ Your profile is complete!"
-            : `Complete ${100 - completionPercentage}% more to unlock better matching`}
-        </p>
       </div>
 
-      {/* Tab Navigation */}
+      {/* Tab Navigation - Horizontal scroll on mobile */}
       <div className="flex gap-2 border-b border-border pb-0 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`px-4 py-3 font-medium text-sm whitespace-nowrap transition-colors border-b-2 ${
+            className={`px-3 py-2 font-medium text-xs whitespace-nowrap transition-colors border-b-2 flex items-center gap-1 ${
               activeTab === tab.id
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            <tab.icon className="w-4 h-4 inline mr-2" />
+            <tab.icon className="w-3.5 h-3.5" />
             {tab.label}
           </button>
         ))}
       </div>
 
       {/* Tab Content */}
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* Personal Information Tab */}
         {activeTab === "personal" && (
-          <div className="space-y-4">
-            <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
-              <h3 className="font-semibold flex items-center gap-2">
-                <User className="w-5 h-5 text-primary" />
-                Personal Information
-              </h3>
+          <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+            <h3 className="font-semibold text-sm flex items-center gap-2">
+              <User className="w-4 h-4 text-primary" />
+              Personal Information
+            </h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Full Name *</label>
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Your full name"
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium">Full Name *</label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Your full name"
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
+              </div>
 
-                <div>
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Email *</label>
-                  <input
-                    type="email"
-                    value={email}
-                    disabled
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-muted/30"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                  <p className="text-muted-foreground text-xs mt-1">Managed via Google SSO</p>
-                </div>
+              <div>
+                <label className="text-xs font-medium">Email *</label>
+                <input
+                  type="email"
+                  value={email}
+                  disabled
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-muted/30 text-sm"
+                />
+                <p className="text-muted-foreground text-xs mt-1">Managed via Google SSO</p>
+              </div>
 
-                <div>
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Phone Number *</label>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+233 50 123 4567"
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                </div>
+              <div>
+                <label className="text-xs font-medium">Phone Number *</label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+233 50 123 4567"
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
+              </div>
 
-                <div>
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Emergency Contact Name *</label>
-                  <input
-                    type="text"
-                    value={emergencyContact}
-                    onChange={(e) => setEmergencyContact(e.target.value)}
-                    placeholder="Name of emergency contact"
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                </div>
+              <div>
+                <label className="text-xs font-medium">Emergency Contact Name *</label>
+                <input
+                  type="text"
+                  value={emergencyContact}
+                  onChange={(e) => setEmergencyContact(e.target.value)}
+                  placeholder="Name of emergency contact"
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
+              </div>
 
-                <div className="md:col-span-2">
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Emergency Contact Phone *</label>
-                  <input
-                    type="tel"
-                    value={emergencyPhone}
-                    onChange={(e) => setEmergencyPhone(e.target.value)}
-                    placeholder="+233 50 000 0000"
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                </div>
+              <div>
+                <label className="text-xs font-medium">Emergency Contact Phone *</label>
+                <input
+                  type="tel"
+                  value={emergencyPhone}
+                  onChange={(e) => setEmergencyPhone(e.target.value)}
+                  placeholder="+233 50 000 0000"
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
               </div>
             </div>
           </div>
@@ -298,99 +281,91 @@ export function StudentProfileSetup() {
 
         {/* Academic Information Tab */}
         {activeTab === "academic" && (
-          <div className="space-y-4">
-            <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Book className="w-5 h-5 text-primary" />
-                Academic Information
-              </h3>
+          <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+            <h3 className="font-semibold text-sm flex items-center gap-2">
+              <Book className="w-4 h-4 text-primary" />
+              Academic Information
+            </h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Student ID *</label>
-                  <input
-                    type="text"
-                    value={studentId}
-                    onChange={(e) => setStudentId(e.target.value)}
-                    placeholder="e.g., STU/2021/001"
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium">Student ID *</label>
+                <input
+                  type="text"
+                  value={studentId}
+                  onChange={(e) => setStudentId(e.target.value)}
+                  placeholder="e.g., STU/2021/001"
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
+              </div>
 
-                <div>
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Department *</label>
-                  <select
-                    value={department}
-                    onChange={(e) => setDepartment(e.target.value)}
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  >
-                    <option value="">Select Department</option>
-                    <option value="Computer Science">Computer Science</option>
-                    <option value="Information Technology">Information Technology</option>
-                    <option value="Software Engineering">Software Engineering</option>
-                    <option value="Electrical Engineering">Electrical Engineering</option>
-                    <option value="Mechanical Engineering">Mechanical Engineering</option>
-                    <option value="Civil Engineering">Civil Engineering</option>
-                    <option value="Business Administration">Business Administration</option>
-                  </select>
-                </div>
+              <div>
+                <label className="text-xs font-medium">Department *</label>
+                <select
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                >
+                  <option value="">Select Department</option>
+                  <option value="Computer Science">Computer Science</option>
+                  <option value="Information Technology">Information Technology</option>
+                  <option value="Software Engineering">Software Engineering</option>
+                  <option value="Electrical Engineering">Electrical Engineering</option>
+                  <option value="Mechanical Engineering">Mechanical Engineering</option>
+                  <option value="Civil Engineering">Civil Engineering</option>
+                  <option value="Business Administration">Business Administration</option>
+                </select>
+              </div>
 
-                <div>
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Current Level *</label>
-                  <select
-                    value={level}
-                    onChange={(e) => setLevel(e.target.value)}
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  >
-                    <option value="100">100 Level (1st Year)</option>
-                    <option value="200">200 Level (2nd Year)</option>
-                    <option value="300">300 Level (3rd Year)</option>
-                    <option value="400">400 Level (4th Year)</option>
-                  </select>
-                </div>
+              <div>
+                <label className="text-xs font-medium">Current Level *</label>
+                <select
+                  value={level}
+                  onChange={(e) => setLevel(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                >
+                  <option value="100">100 Level (1st Year)</option>
+                  <option value="200">200 Level (2nd Year)</option>
+                  <option value="300">300 Level (3rd Year)</option>
+                  <option value="400">400 Level (4th Year)</option>
+                </select>
+              </div>
 
-                <div>
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Current CGPA</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="4"
-                    value={cgpa}
-                    onChange={(e) => setCgpa(e.target.value)}
-                    placeholder="3.75"
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                  <p className="text-muted-foreground text-xs mt-1">Out of 4.0</p>
-                </div>
+              <div>
+                <label className="text-xs font-medium">Current CGPA</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="4"
+                  value={cgpa}
+                  onChange={(e) => setCgpa(e.target.value)}
+                  placeholder="3.75"
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
+                <p className="text-muted-foreground text-xs mt-1">Out of 4.0</p>
+              </div>
 
-                <div className="md:col-span-2">
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Current Courses/Modules</label>
-                  <textarea
-                    value={currentCourses}
-                    onChange={(e) => setCurrentCourses(e.target.value)}
-                    placeholder="List your current courses (comma-separated)"
-                    rows={2}
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                </div>
+              <div>
+                <label className="text-xs font-medium">Current Courses/Modules</label>
+                <textarea
+                  value={currentCourses}
+                  onChange={(e) => setCurrentCourses(e.target.value)}
+                  placeholder="List your current courses (comma-separated)"
+                  rows={2}
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
+              </div>
 
-                <div className="md:col-span-2">
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Major Subjects/Specializations</label>
-                  <textarea
-                    value={majorSubjects}
-                    onChange={(e) => setMajorSubjects(e.target.value)}
-                    placeholder="e.g., Web Development, Database Design, Cloud Computing"
-                    rows={2}
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                </div>
+              <div>
+                <label className="text-xs font-medium">Major Subjects/Specializations</label>
+                <textarea
+                  value={majorSubjects}
+                  onChange={(e) => setMajorSubjects(e.target.value)}
+                  placeholder="e.g., Web Development, Database Design, Cloud Computing"
+                  rows={2}
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
               </div>
             </div>
           </div>
@@ -398,83 +373,75 @@ export function StudentProfileSetup() {
 
         {/* Internship Preferences Tab */}
         {activeTab === "internship" && (
-          <div className="space-y-4">
-            <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Briefcase className="w-5 h-5 text-primary" />
-                Internship Preferences
-              </h3>
+          <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+            <h3 className="font-semibold text-sm flex items-center gap-2">
+              <Briefcase className="w-4 h-4 text-primary" />
+              Internship Preferences
+            </h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Preferred Start Date *</label>
-                  <input
-                    type="date"
-                    value={preferredStartDate}
-                    onChange={(e) => setPreferredStartDate(e.target.value)}
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium">Preferred Start Date *</label>
+                <input
+                  type="date"
+                  value={preferredStartDate}
+                  onChange={(e) => setPreferredStartDate(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
+              </div>
 
-                <div>
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Preferred End Date</label>
-                  <input
-                    type="date"
-                    value={preferredEndDate}
-                    onChange={(e) => setPreferredEndDate(e.target.value)}
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                </div>
+              <div>
+                <label className="text-xs font-medium">Preferred End Date</label>
+                <input
+                  type="date"
+                  value={preferredEndDate}
+                  onChange={(e) => setPreferredEndDate(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
+              </div>
 
-                <div className="md:col-span-2">
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Preferred Industries *</label>
-                  <textarea
-                    value={preferredIndustries}
-                    onChange={(e) => setPreferredIndustries(e.target.value)}
-                    placeholder="e.g., FinTech, E-commerce, Healthcare, Telecommunications"
-                    rows={2}
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                </div>
+              <div>
+                <label className="text-xs font-medium">Preferred Industries *</label>
+                <textarea
+                  value={preferredIndustries}
+                  onChange={(e) => setPreferredIndustries(e.target.value)}
+                  placeholder="e.g., FinTech, E-commerce, Healthcare"
+                  rows={2}
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
+              </div>
 
-                <div className="md:col-span-2">
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Desired Roles</label>
-                  <textarea
-                    value={desiredRoles}
-                    onChange={(e) => setDesiredRoles(e.target.value)}
-                    placeholder="e.g., Software Developer, Data Analyst, Business Analyst"
-                    rows={2}
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                </div>
+              <div>
+                <label className="text-xs font-medium">Desired Roles</label>
+                <textarea
+                  value={desiredRoles}
+                  onChange={(e) => setDesiredRoles(e.target.value)}
+                  placeholder="e.g., Software Developer, Data Analyst"
+                  rows={2}
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
+              </div>
 
-                <div className="md:col-span-2">
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Career Goals</label>
-                  <textarea
-                    value={careerGoals}
-                    onChange={(e) => setCareerGoals(e.target.value)}
-                    placeholder="What do you hope to achieve during this internship?"
-                    rows={3}
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                </div>
+              <div>
+                <label className="text-xs font-medium">Career Goals</label>
+                <textarea
+                  value={careerGoals}
+                  onChange={(e) => setCareerGoals(e.target.value)}
+                  placeholder="What do you hope to achieve?"
+                  rows={2}
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
+              </div>
 
-                <div className="md:col-span-2">
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Salary Expectations</label>
-                  <input
-                    type="text"
-                    value={salaryExpectations}
-                    onChange={(e) => setSalaryExpectations(e.target.value)}
-                    placeholder="e.g., GHS 1000-2000 per month (or negotiable)"
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                </div>
+              <div>
+                <label className="text-xs font-medium">Salary Expectations</label>
+                <input
+                  type="text"
+                  value={salaryExpectations}
+                  onChange={(e) => setSalaryExpectations(e.target.value)}
+                  placeholder="e.g., GHS 1000-2000/month"
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
               </div>
             </div>
           </div>
@@ -482,85 +449,77 @@ export function StudentProfileSetup() {
 
         {/* Skills & Experience Tab */}
         {activeTab === "skills" && (
-          <div className="space-y-4">
-            <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Award className="w-5 h-5 text-primary" />
-                Skills & Experience
-              </h3>
+          <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+            <h3 className="font-semibold text-sm flex items-center gap-2">
+              <Award className="w-4 h-4 text-primary" />
+              Skills & Experience
+            </h3>
 
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Technical Skills *</label>
-                  <textarea
-                    value={technicalSkills}
-                    onChange={(e) => setTechnicalSkills(e.target.value)}
-                    placeholder="e.g., Python, JavaScript, React, Java, SQL, Git, Linux"
-                    rows={3}
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium">Technical Skills *</label>
+                <textarea
+                  value={technicalSkills}
+                  onChange={(e) => setTechnicalSkills(e.target.value)}
+                  placeholder="e.g., Python, JavaScript, React, Java, SQL"
+                  rows={2}
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
+              </div>
 
-                <div>
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Soft Skills *</label>
-                  <textarea
-                    value={softSkills}
-                    onChange={(e) => setSoftSkills(e.target.value)}
-                    placeholder="e.g., Communication, Problem-solving, Team work, Leadership, Time management"
-                    rows={3}
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                </div>
+              <div>
+                <label className="text-xs font-medium">Soft Skills *</label>
+                <textarea
+                  value={softSkills}
+                  onChange={(e) => setSoftSkills(e.target.value)}
+                  placeholder="e.g., Communication, Problem-solving, Team work"
+                  rows={2}
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
+              </div>
 
-                <div>
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Languages</label>
-                  <textarea
-                    value={languages}
-                    onChange={(e) => setLanguages(e.target.value)}
-                    placeholder="e.g., English (Fluent), Twi (Native), French (Intermediate)"
-                    rows={2}
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                </div>
+              <div>
+                <label className="text-xs font-medium">Languages</label>
+                <textarea
+                  value={languages}
+                  onChange={(e) => setLanguages(e.target.value)}
+                  placeholder="e.g., English (Fluent), Twi (Native)"
+                  rows={2}
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
+              </div>
 
-                <div>
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Certifications & Achievements</label>
-                  <textarea
-                    value={certifications}
-                    onChange={(e) => setCertifications(e.target.value)}
-                    placeholder="e.g., Google Cloud Certified, AWS Solutions Architect, etc."
-                    rows={2}
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                </div>
+              <div>
+                <label className="text-xs font-medium">Certifications</label>
+                <textarea
+                  value={certifications}
+                  onChange={(e) => setCertifications(e.target.value)}
+                  placeholder="e.g., Google Cloud Certified, AWS"
+                  rows={2}
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
+              </div>
 
-                <div>
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Past Work/Project Experience</label>
-                  <textarea
-                    value={pastExperience}
-                    onChange={(e) => setPastExperience(e.target.value)}
-                    placeholder="Describe relevant projects, internships, or freelance work"
-                    rows={3}
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                </div>
+              <div>
+                <label className="text-xs font-medium">Past Experience</label>
+                <textarea
+                  value={pastExperience}
+                  onChange={(e) => setPastExperience(e.target.value)}
+                  placeholder="Projects, internships, or freelance work"
+                  rows={2}
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
+              </div>
 
-                <div>
-                  <label style={{ fontSize: "0.85rem" }} className="font-medium">Personal Interests & Hobbies</label>
-                  <textarea
-                    value={interests}
-                    onChange={(e) => setInterests(e.target.value)}
-                    placeholder="What are you passionate about? Any hobbies or interests?"
-                    rows={2}
-                    className="w-full mt-1.5 px-3 py-2 border border-border rounded-lg bg-background"
-                    style={{ fontSize: "0.9rem" }}
-                  />
-                </div>
+              <div>
+                <label className="text-xs font-medium">Interests & Hobbies</label>
+                <textarea
+                  value={interests}
+                  onChange={(e) => setInterests(e.target.value)}
+                  placeholder="What are you passionate about?"
+                  rows={2}
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
               </div>
             </div>
           </div>
@@ -568,11 +527,11 @@ export function StudentProfileSetup() {
       </div>
 
       {/* Save Button */}
-      <div className="flex gap-3 justify-end sticky bottom-6">
+      <div className="flex gap-2 sticky bottom-4 z-40">
         <button
           onClick={handleSaveProfile}
           disabled={isSaving}
-          className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 transition-all flex items-center gap-2 font-medium"
+          className="flex-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2 font-medium text-sm"
         >
           {isSaving ? (
             <>
@@ -582,16 +541,16 @@ export function StudentProfileSetup() {
           ) : (
             <>
               <Save className="w-4 h-4" />
-              Save Profile
+              Save
             </>
           )}
         </button>
       </div>
 
       {/* Required Fields Note */}
-      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 text-center">
-        <p className="text-amber-900 dark:text-amber-100 text-sm font-medium">
-          * All required fields must be completed to activate your account and access internship applications
+      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-center">
+        <p className="text-amber-900 dark:text-amber-100 text-xs font-medium">
+          * Complete all required fields to activate your account
         </p>
       </div>
     </div>

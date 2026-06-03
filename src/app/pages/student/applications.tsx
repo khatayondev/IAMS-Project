@@ -24,6 +24,31 @@ import { TermWindowsList } from "../../components/student/term-windows-list";
 type View = "windows" | "apply" | "tracker";
 type Step = 1 | 2 | 3 | 4;
 
+// Normalize term data from API response using same pattern as CLO terms page
+function toDateStr(iso?: string | null): string {
+  if (!iso) return "";
+  return iso.slice(0, 10);
+}
+
+function normalizeTerm(t: any) {
+  return {
+    id: String(t.id),
+    name: t.name ?? "Term",
+    status: String(t.status ?? "upcoming").toLowerCase(),
+    type: String(t.type ?? "regular").toLowerCase(),
+    // Real API uses application_deadline; fallback to legacy fields
+    applicationStart: toDateStr(t.application_deadline ?? t.application_start ?? t.applicationStart),
+    applicationEnd: toDateStr(t.application_end ?? t.applicationEnd) || toDateStr(t.application_deadline ?? t.application_start ?? t.applicationStart),
+    // Real API uses start_date/end_date for internship period
+    internshipStart: toDateStr(t.start_date ?? t.internship_start ?? t.internshipStart),
+    internshipEnd: toDateStr(t.end_date ?? t.internship_end ?? t.internshipEnd),
+    eligibleLevels: t.eligible_levels ?? t.eligibleLevels ?? [],
+    departments: (t.departments ?? []).map((d: any) =>
+      typeof d === "string" ? d : d.name ?? String(d)
+    ),
+  };
+}
+
 type CompanyChoice = "none" | "existing" | "new";
 type BranchChoice = "none" | "existing" | "new";
 
@@ -94,7 +119,7 @@ export function StudentApplicationsPage() {
         );
         setMyApp(sorted[0]);
       }
-      if (termsRes.success) setTerms(termsRes.data);
+      if (termsRes.success) setTerms(termsRes.data.map(normalizeTerm));
       if (companiesRes.success) setCompanies(companiesRes.data);
     });
   }, []);
@@ -103,6 +128,30 @@ export function StudentApplicationsPage() {
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<FormData>({ ...defaultForm });
   const [eligibilityError, setEligibilityError] = useState<string | null>(null);
+
+  // Load saved form and step from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedForm = localStorage.getItem("application_form");
+      const savedStep = localStorage.getItem("application_step");
+
+      if (savedForm) {
+        setForm(JSON.parse(savedForm));
+      }
+      if (savedStep) {
+        setStep(parseInt(savedStep) as Step);
+        setView("apply");
+      }
+    } catch (error) {
+      console.error("Failed to load saved application:", error);
+    }
+  }, []);
+
+  // Save form and step to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("application_form", JSON.stringify(form));
+    localStorage.setItem("application_step", String(step));
+  }, [form, step]);
 
   // Load branches when company selection changes
   useEffect(() => {
@@ -114,6 +163,7 @@ export function StudentApplicationsPage() {
       setBranches([]);
     }
   }, [form.selectedCompanyId, form.companyChoice]);
+
 
   const { execute: submitAction, loading: isSubmitting } = useToastAction();
 
@@ -143,15 +193,15 @@ export function StudentApplicationsPage() {
     if (!term) return false;
 
     const today = new Date().toISOString().split("T")[0];
-    if (term.application_deadline && today > term.application_deadline) {
-      setEligibilityError(`The application deadline has passed (${term.application_deadline}).`);
-      return false;
-    }
-    if (term.start_date && today < term.start_date) {
-      setEligibilityError(`The application window has not opened yet. It opens on ${term.start_date}.`);
+    const appDeadline = term.applicationEnd; // Single deadline date
+
+    // Check if deadline has passed
+    if (appDeadline && today > appDeadline) {
+      setEligibilityError(`The application deadline has passed (${appDeadline}).`);
       return false;
     }
 
+    // Check if already has active application
     if (myApp && !["completed", "rejected"].includes(myApp.status ?? "")) {
       setEligibilityError(
         "You already have an active application. You cannot submit another one until your current application is resolved."
@@ -278,15 +328,24 @@ export function StudentApplicationsPage() {
           companyId = companyRes.data.company.id;
         }
 
-        const submitRes = await apiClient.createApplication({
+        const createRes = await apiClient.createApplication({
           company_id: Number(companyId),
           academic_term_id: Number(form.termId),
           application_type: "individual",
           cover_letter: form.additionalNotes || undefined,
           proposed_start_date: form.preferredStartDate || undefined,
         });
+        if (!createRes.success || !createRes.data?.id) {
+          return createRes;
+        }
+
+        const submitRes = await apiClient.submitApplication(String(createRes.data.id));
         if (submitRes.success) {
           setForm({ ...defaultForm });
+          setStep(1);
+          // Clear saved form state after successful submission
+          localStorage.removeItem("application_form");
+          localStorage.removeItem("application_step");
           setView("tracker");
         }
         return submitRes;
@@ -306,41 +365,37 @@ export function StudentApplicationsPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1>Applications</h1>
-          <p className="text-muted-foreground" style={{ fontSize: "0.85rem" }}>
-            View open internship windows, apply, and track your application
-          </p>
-        </div>
-        <div className="flex gap-3 justify-center shrink-0">
-          {[
-            { key: "windows" as const, label: "Open Windows", icon: Calendar },
-            { key: "apply" as const, label: "Apply", icon: FileText },
-            { key: "tracker" as const, label: "My Application", icon: Eye },
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => {
-                setView(tab.key);
-                if (tab.key === "apply") setStep(1);
-              }}
-              className={`relative flex items-center justify-center w-12 h-12 rounded-full transition-all sm:w-auto sm:h-auto sm:px-4 sm:py-2 sm:rounded-lg sm:gap-2 ${
-                view === tab.key
-                  ? "bg-primary text-primary-foreground shadow-md"
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-            >
-              <tab.icon className="w-5 sm:w-4 h-5 sm:h-4" />
-              <span className="hidden sm:inline" style={{ fontSize: "0.8rem" }}>
-                {tab.label}
-              </span>
-            </button>
-          ))}
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold">Applications</h1>
+        <p className="text-muted-foreground text-sm mt-1">Manage your applications</p>
+      </div>
+
+      {/* View Tabs */}
+      <div className="flex gap-2 justify-center">
+        {[
+          { key: "windows" as const, label: "Windows", icon: Calendar },
+          { key: "apply" as const, label: "Apply", icon: FileText },
+          { key: "tracker" as const, label: "Track", icon: Eye },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => {
+              setView(tab.key);
+              if (tab.key === "apply") setStep(1);
+            }}
+            className={`flex items-center justify-center px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+              view === tab.key
+                ? "bg-primary text-primary-foreground shadow-md"
+                : "bg-muted/50 text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <tab.icon className="w-4 h-4 mr-1.5" />
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {view === "windows" && (
@@ -352,44 +407,41 @@ export function StudentApplicationsPage() {
       )}
 
       {view === "apply" && (
-        <div className="bg-card border border-border rounded-2xl p-5 md:p-6 space-y-6 relative overflow-hidden">
+        <div className="bg-card border border-border rounded-lg p-4 space-y-4 relative overflow-hidden">
           {isSubmitting && (
             <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] z-50 flex items-center justify-center">
               <div className="flex flex-col items-center gap-2">
                 <Loader2 className="w-10 h-10 text-primary animate-spin" />
-                <p className="text-sm font-medium">Submitting application...</p>
+                <p className="text-sm font-medium">Submitting...</p>
               </div>
             </div>
           )}
 
-          <div className="flex items-center justify-between gap-4 border-b border-border pb-5 overflow-x-auto">
-            {steps.map((s) => {
+          {/* Step indicator - compact horizontal */}
+          <div className="flex items-center gap-2 border-b border-border pb-4 overflow-x-auto">
+            {steps.map((s, idx) => {
               const active = step === s.num;
               const passed = step > s.num;
               return (
-                <div key={s.num} className="flex items-center gap-2 whitespace-nowrap">
+                <div key={s.num} className="flex items-center gap-2 shrink-0">
                   <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs ${
+                    className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${
                       active
-                        ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
+                        ? "bg-primary text-primary-foreground ring-2 ring-primary/30"
                         : passed
                         ? "bg-emerald-500 text-white"
                         : "bg-muted text-muted-foreground"
                     }`}
                   >
-                    {passed ? <CheckCircle2 className="w-4 h-4" /> : s.num}
+                    {passed ? <CheckCircle2 className="w-3 h-3" /> : s.num}
                   </div>
-                  <span
-                    style={{ fontSize: "0.8rem" }}
-                    className={active ? "font-bold text-foreground" : "text-muted-foreground"}
-                  >
-                    {s.label}
-                  </span>
+                  {idx < steps.length - 1 && <div className="w-3 h-0.5 bg-border" />}
                 </div>
               );
             })}
           </div>
 
+          {/* Current step content */}
           <div className="min-h-[300px]">
             {step === 1 && (
               <TermSelector
@@ -420,39 +472,37 @@ export function StudentApplicationsPage() {
             )}
           </div>
 
-          <div className="flex justify-between items-center border-t border-border pt-5">
-            <button
-              type="button"
-              onClick={() => (step === 1 ? setView("windows") : setStep((step - 1) as Step))}
-              className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-accent font-medium"
-              style={{ fontSize: "0.85rem" }}
-            >
-              <ChevronLeft className="w-4 h-4" /> {step === 1 ? "Back to Windows" : "Previous"}
-            </button>
-            <p className="text-muted-foreground" style={{ fontSize: "0.8rem" }}>
-              Step {step} of 4
-            </p>
-            {step < 4 ? (
+          {/* Navigation - full width on mobile */}
+          <div className="flex flex-col gap-3 border-t border-border pt-4">
+            <p className="text-muted-foreground text-xs text-center">Step {step} of 4</p>
+            <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => canProceed() && setStep((step + 1) as Step)}
-                disabled={!canProceed()}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                style={{ fontSize: "0.85rem" }}
+                onClick={() => (step === 1 ? setView("windows") : setStep((step - 1) as Step))}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 border border-border rounded-lg hover:bg-accent font-medium text-sm"
               >
-                Next <ChevronRight className="w-4 h-4" />
+                <ChevronLeft className="w-4 h-4" /> {step === 1 ? "Back" : "Prev"}
               </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={!canProceed() || isSubmitting}
-                className="flex items-center gap-2 px-5 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                style={{ fontSize: "0.85rem" }}
-              >
-                <CheckCircle2 className="w-4 h-4" /> Submit Application
-              </button>
-            )}
+              {step < 4 ? (
+                <button
+                  type="button"
+                  onClick={() => canProceed() && setStep((step + 1) as Step)}
+                  disabled={!canProceed()}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
+                >
+                  Next <ChevronRight className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={!canProceed() || isSubmitting}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
+                >
+                  <CheckCircle2 className="w-4 h-4" /> Submit
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

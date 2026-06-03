@@ -32,88 +32,78 @@ export function StudentDashboard() {
   const isDone = (statuses: string[]) => statuses.includes(appStatus);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Welcome back, {user?.name?.split(" ")[0]}</h1>
-          <p className="text-muted-foreground mt-1" style={{ fontSize: "0.9rem" }}>
-            {user?.studentId} · {user?.department}
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold">Welcome back, {user?.name?.split(" ")[0]}</h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          {user?.studentId} · {user?.department}
+        </p>
       </div>
 
       {/* Active Internship Spotlight or Apply CTA */}
       {activeInternship ? (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Main Internship Card */}
-          <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-2xl p-6 space-y-4">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="w-5 h-5 text-primary" />
-                  <h2 className="text-xl font-semibold">Active Internship</h2>
+          <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-xl p-4 space-y-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <TrendingUp className="w-4 h-4 text-primary shrink-0" />
+                  <h2 className="text-sm font-semibold">Active Internship</h2>
                 </div>
-                <p className="text-3xl font-bold text-foreground">{companyName}</p>
-                <p className="text-muted-foreground mt-2" style={{ fontSize: "0.9rem" }}>
+                <p className="text-xl font-bold text-foreground truncate">{companyName}</p>
+                <p className="text-muted-foreground text-xs mt-1">
                   {activeInternship?.company?.industry ?? "Industrial Attachment"}
                 </p>
               </div>
-              <div className="flex-shrink-0 text-right">
+              <div className="shrink-0">
                 <StatusBadge status={appStatus} />
               </div>
             </div>
 
-            {/* Internship Details Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-primary/10">
+            {/* Internship Details - Stacked on mobile */}
+            <div className="space-y-2 pt-2">
               {/* Start Date */}
               {startDate && (
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Calendar className="w-4 h-4 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-muted-foreground text-sm">Start Date</p>
-                    <p className="font-medium">{new Date(startDate).toLocaleDateString()}</p>
+                <div className="flex items-start gap-2">
+                  <Calendar className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-muted-foreground text-xs">Start Date</p>
+                    <p className="font-medium text-sm">{new Date(startDate).toLocaleDateString()}</p>
                   </div>
                 </div>
               )}
 
               {/* Department */}
               {activeInternship?.student?.department && (
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Building2 className="w-4 h-4 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-muted-foreground text-sm">Department</p>
-                    <p className="font-medium">{activeInternship.student.department}</p>
+                <div className="flex items-start gap-2">
+                  <Building2 className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-muted-foreground text-xs">Department</p>
+                    <p className="font-medium text-sm">{activeInternship.student.department}</p>
                   </div>
                 </div>
               )}
 
               {/* Company Location */}
               {activeInternship?.company?.location && (
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <MapPin className="w-4 h-4 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-muted-foreground text-sm">Location</p>
-                    <p className="font-medium truncate">{activeInternship.company.location}</p>
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-muted-foreground text-xs">Location</p>
+                    <p className="font-medium text-sm truncate">{activeInternship.company.location}</p>
                   </div>
                 </div>
               )}
 
               {/* Company Contact */}
               {activeInternship?.company?.contact_person_email && (
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Mail className="w-4 h-4 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-muted-foreground text-sm">Company Contact</p>
-                    <p className="font-medium truncate text-sm">{activeInternship.company.contact_person_email}</p>
+                <div className="flex items-start gap-2">
+                  <Mail className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-muted-foreground text-xs">Company Contact</p>
+                    <p className="font-medium text-xs truncate">{activeInternship.company.contact_person_email}</p>
                   </div>
                 </div>
               )}
@@ -121,17 +111,17 @@ export function StudentDashboard() {
 
             {/* Supervisors Section */}
             {(supervisorName || activeInternship?.industry_supervisor?.user?.name) && (
-              <div className="pt-4 border-t border-primary/10 space-y-3">
-                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Assigned Supervisors</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="pt-2 border-t border-primary/10 space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Supervisors</p>
+                <div className="space-y-2">
                   {/* Academic Supervisor */}
                   {supervisorName && (
-                    <div className="bg-white/50 dark:bg-white/5 rounded-lg p-3 border border-primary/10">
+                    <div className="bg-white/50 dark:bg-white/5 rounded-lg p-2 border border-primary/10">
                       <div className="flex items-start gap-2">
-                        <User className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                        <User className="w-3 h-3 text-primary mt-0.5 shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs text-muted-foreground">Academic Supervisor</p>
-                          <p className="font-medium text-sm">{supervisorName}</p>
+                          <p className="text-xs text-muted-foreground">Academic</p>
+                          <p className="font-medium text-xs">{supervisorName}</p>
                         </div>
                       </div>
                     </div>
@@ -139,15 +129,12 @@ export function StudentDashboard() {
 
                   {/* Industry Supervisor */}
                   {activeInternship?.industry_supervisor?.user?.name && (
-                    <div className="bg-white/50 dark:bg-white/5 rounded-lg p-3 border border-primary/10">
+                    <div className="bg-white/50 dark:bg-white/5 rounded-lg p-2 border border-primary/10">
                       <div className="flex items-start gap-2">
-                        <User className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                        <User className="w-3 h-3 text-primary mt-0.5 shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs text-muted-foreground">Industry Supervisor</p>
-                          <p className="font-medium text-sm">{activeInternship.industry_supervisor.user.name}</p>
-                          {activeInternship.industry_supervisor.user.email && (
-                            <p className="text-xs text-muted-foreground mt-1 truncate">{activeInternship.industry_supervisor.user.email}</p>
-                          )}
+                          <p className="text-xs text-muted-foreground">Industry</p>
+                          <p className="font-medium text-xs">{activeInternship.industry_supervisor.user.name}</p>
                         </div>
                       </div>
                     </div>
@@ -157,19 +144,19 @@ export function StudentDashboard() {
             )}
 
             {/* Quick Actions */}
-            <div className="pt-4 border-t border-primary/10 flex flex-wrap gap-2">
+            <div className="pt-2 border-t border-primary/10 flex flex-wrap gap-2">
               <button
                 onClick={() => navigate("/student/logbook")}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-all text-sm font-medium flex items-center gap-2"
+                className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-all text-xs font-medium flex items-center gap-1.5"
               >
-                <BookMarked className="w-4 h-4" />
-                View Logbook
+                <BookMarked className="w-3 h-3" />
+                Logbook
               </button>
               <button
-                onClick={() => navigate("/student/history")}
-                className="px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-all text-sm font-medium"
+                onClick={() => navigate("/student/attendance")}
+                className="px-3 py-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-all text-xs font-medium"
               >
-                Internship History
+                Attendance
               </button>
             </div>
           </div>
@@ -192,8 +179,8 @@ export function StudentDashboard() {
         </div>
       )}
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Key Metrics - Compact on mobile */}
+      <div className="grid grid-cols-3 gap-2">
         <StatCard
           title="Logbook Entries"
           value={recentLogbooks.length}
@@ -217,79 +204,51 @@ export function StudentDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Quick Actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="space-y-3">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quick Actions</h3>
+        <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => navigate("/student/logbook")}
-            className="bg-card border border-border rounded-xl p-4 text-left hover:border-primary/40 hover:shadow-sm transition-all group"
+            className="bg-card border border-border rounded-lg p-3 text-left hover:border-primary/40 transition-all group flex flex-col items-center text-center"
           >
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-3">
-                <div className="p-2.5 bg-blue-100 dark:bg-blue-950/40 rounded-lg group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
-                  <BookMarked className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <h4 className="font-medium">Daily Logbook</h4>
-                  <p className="text-muted-foreground text-sm mt-0.5">Record activities and skills</p>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            <div className="p-2 bg-blue-100 dark:bg-blue-950/40 rounded-lg group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors mb-2">
+              <BookMarked className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             </div>
+            <h4 className="font-medium text-xs">Logbook</h4>
+            <p className="text-muted-foreground text-xs mt-0.5 leading-tight">Activities</p>
           </button>
 
           <button
-            onClick={() => navigate("/student/grades")}
-            className="bg-card border border-border rounded-xl p-4 text-left hover:border-primary/40 hover:shadow-sm transition-all group"
+            onClick={() => navigate("/student/evaluation")}
+            className="bg-card border border-border rounded-lg p-3 text-left hover:border-primary/40 transition-all group flex flex-col items-center text-center"
           >
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-3">
-                <div className="p-2.5 bg-emerald-100 dark:bg-emerald-950/40 rounded-lg group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/50 transition-colors">
-                  <Award className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div>
-                  <h4 className="font-medium">My Grade</h4>
-                  <p className="text-muted-foreground text-sm mt-0.5">{publishedGrade ? "View your final grade" : "Check evaluation status"}</p>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            <div className="p-2 bg-emerald-100 dark:bg-emerald-950/40 rounded-lg group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/50 transition-colors mb-2">
+              <Award className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             </div>
+            <h4 className="font-medium text-xs">Grade</h4>
+            <p className="text-muted-foreground text-xs mt-0.5 leading-tight">{publishedGrade ? "View" : "Pending"}</p>
           </button>
 
           <button
             onClick={() => navigate("/student/documents")}
-            className="bg-card border border-border rounded-xl p-4 text-left hover:border-primary/40 hover:shadow-sm transition-all group"
+            className="bg-card border border-border rounded-lg p-3 text-left hover:border-primary/40 transition-all group flex flex-col items-center text-center"
           >
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-3">
-                <div className="p-2.5 bg-purple-100 dark:bg-purple-950/40 rounded-lg group-hover:bg-purple-200 dark:group-hover:bg-purple-900/50 transition-colors">
-                  <Upload className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div>
-                  <h4 className="font-medium">Documents</h4>
-                  <p className="text-muted-foreground text-sm mt-0.5">Placement letters & forms</p>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            <div className="p-2 bg-purple-100 dark:bg-purple-950/40 rounded-lg group-hover:bg-purple-200 dark:group-hover:bg-purple-900/50 transition-colors mb-2">
+              <Upload className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             </div>
+            <h4 className="font-medium text-xs">Documents</h4>
+            <p className="text-muted-foreground text-xs mt-0.5 leading-tight">Letters</p>
           </button>
 
           <button
             onClick={() => navigate("/student/applications")}
-            className="bg-card border border-border rounded-xl p-4 text-left hover:border-primary/40 hover:shadow-sm transition-all group"
+            className="bg-card border border-border rounded-lg p-3 text-left hover:border-primary/40 transition-all group flex flex-col items-center text-center"
           >
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-3">
-                <div className="p-2.5 bg-orange-100 dark:bg-orange-950/40 rounded-lg group-hover:bg-orange-200 dark:group-hover:bg-orange-900/50 transition-colors">
-                  <FileText className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-                </div>
-                <div>
-                  <h4 className="font-medium">Applications</h4>
-                  <p className="text-muted-foreground text-sm mt-0.5">View & manage your applications</p>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            <div className="p-2 bg-orange-100 dark:bg-orange-950/40 rounded-lg group-hover:bg-orange-200 dark:group-hover:bg-orange-900/50 transition-colors mb-2">
+              <FileText className="w-4 h-4 text-orange-600 dark:text-orange-400" />
             </div>
+            <h4 className="font-medium text-xs">Apply</h4>
+            <p className="text-muted-foreground text-xs mt-0.5 leading-tight">Applications</p>
           </button>
         </div>
       </div>
