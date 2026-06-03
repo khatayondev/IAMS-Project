@@ -387,7 +387,7 @@ export function CompaniesPage({ viewRole }: Props) {
                   <Building2 className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <p style={{ fontSize: "0.95rem" }} className="font-medium">{selected.name}</p>
+                  <p style={{ fontSize: "0.95rem" }} className="font-medium">{typeof selected.name === "string" ? selected.name : "Company"}</p>
                   <StatusBadge status={selected.approval_status ?? selected.status ?? ""} />
                 </div>
               </div>
@@ -415,13 +415,13 @@ export function CompaniesPage({ viewRole }: Props) {
               <div className="overflow-y-auto flex-1">
                 <Tabs.Content value="basic" className="p-5 space-y-3 m-0">
                   {([
-                    ["Industry", selected.industry],
-                    ["Address", selected.address],
-                    ["City", selected.city],
-                    ["Region", selected.region],
-                    ["Country", selected.country],
-                    ["Website", selected.website],
-                  ] as [string, string | undefined][]).filter(([, v]) => v).map(([l, v]) => (
+                    ["Industry", String(selected.industry ?? "")],
+                    ["Address", String(selected.address ?? "")],
+                    ["City", String(selected.city ?? "")],
+                    ["Region", String(selected.region ?? "")],
+                    ["Country", String(selected.country ?? "")],
+                    ["Website", String(selected.website ?? "")],
+                  ] as [string, string][]).filter(([, v]) => v).map(([l, v]) => (
                     <div key={l}>
                       <p style={{ fontSize: "0.7rem" }} className="text-muted-foreground uppercase tracking-wider">{l}</p>
                       <p style={{ fontSize: "0.85rem" }} className="font-medium">{v}</p>
@@ -430,18 +430,18 @@ export function CompaniesPage({ viewRole }: Props) {
                   {selected.max_interns && (
                     <div>
                       <p style={{ fontSize: "0.7rem" }} className="text-muted-foreground uppercase tracking-wider">Max Interns</p>
-                      <p style={{ fontSize: "0.85rem" }} className="font-medium">{selected.max_interns}</p>
+                      <p style={{ fontSize: "0.85rem" }} className="font-medium">{String(selected.max_interns)}</p>
                     </div>
                   )}
                 </Tabs.Content>
 
                 <Tabs.Content value="contact" className="p-5 space-y-3 m-0">
                   {([
-                    ["Contact Person", selected.contact_person_name ?? selected.contactPerson],
-                    ["Contact Email", selected.contact_person_email ?? selected.contactEmail],
-                    ["Company Email", selected.email],
-                    ["Phone", selected.phone ?? selected.contactPhone],
-                  ] as [string, string | undefined][]).filter(([, v]) => v).map(([l, v]) => (
+                    ["Contact Person", String(selected.contact_person_name ?? selected.contactPerson ?? "")],
+                    ["Contact Email", String(selected.contact_person_email ?? selected.contactEmail ?? "")],
+                    ["Company Email", String(selected.email ?? "")],
+                    ["Phone", String(selected.phone ?? selected.contactPhone ?? "")],
+                  ] as [string, string][]).filter(([, v]) => v).map(([l, v]) => (
                     <div key={l}>
                       <p style={{ fontSize: "0.7rem" }} className="text-muted-foreground uppercase tracking-wider">{l}</p>
                       <p style={{ fontSize: "0.85rem" }} className="font-medium break-all">{v}</p>
@@ -454,16 +454,16 @@ export function CompaniesPage({ viewRole }: Props) {
                     <div className="space-y-3">
                       {selected.industry_supervisors.map((supervisor: any) => (
                         <div key={supervisor.id} className="p-4 border border-border rounded-lg bg-secondary/10">
-                          <p style={{ fontSize: "0.85rem" }} className="font-medium">{supervisor.position}</p>
-                          <p style={{ fontSize: "0.75rem" }} className="text-muted-foreground">{supervisor.department}</p>
+                          <p style={{ fontSize: "0.85rem" }} className="font-medium">{typeof supervisor.position === "string" ? supervisor.position : "—"}</p>
+                          <p style={{ fontSize: "0.75rem" }} className="text-muted-foreground">{typeof supervisor.department === "string" ? supervisor.department : "—"}</p>
                           {supervisor.expertise_areas && (
-                            <p style={{ fontSize: "0.75rem" }} className="text-muted-foreground mt-2">{supervisor.expertise_areas}</p>
+                            <p style={{ fontSize: "0.75rem" }} className="text-muted-foreground mt-2">{typeof supervisor.expertise_areas === "string" ? supervisor.expertise_areas : "—"}</p>
                           )}
                           <div style={{ fontSize: "0.75rem" }} className="text-muted-foreground mt-3 space-y-1">
-                            {supervisor.mobile_phone && <p>📱 {supervisor.mobile_phone}</p>}
-                            {supervisor.years_of_experience && <p>⏰ {supervisor.years_of_experience} years experience</p>}
-                            <p>👥 {supervisor.current_interns} / {supervisor.max_interns} interns</p>
-                            {supervisor.last_login_at && <p>Last active: {new Date(supervisor.last_login_at).toLocaleDateString()}</p>}
+                            {supervisor.mobile_phone && <p>📱 {typeof supervisor.mobile_phone === "string" ? supervisor.mobile_phone : "—"}</p>}
+                            {supervisor.years_of_experience && <p>⏰ {typeof supervisor.years_of_experience === "string" ? supervisor.years_of_experience : String(supervisor.years_of_experience)} years experience</p>}
+                            <p>👥 {typeof supervisor.current_interns === "number" ? supervisor.current_interns : 0} / {typeof supervisor.max_interns === "number" ? supervisor.max_interns : 0} interns</p>
+                            {supervisor.last_login_at && <p>Last active: {new Date(String(supervisor.last_login_at)).toLocaleDateString()}</p>}
                           </div>
                         </div>
                       ))}
@@ -486,8 +486,8 @@ export function CompaniesPage({ viewRole }: Props) {
                       {selected.approved_by && (
                         <div>
                           <p style={{ fontSize: "0.7rem" }} className="text-muted-foreground uppercase tracking-wider">Approved By</p>
-                          <p style={{ fontSize: "0.85rem" }} className="font-medium">{selected.approved_by.name}</p>
-                          <p style={{ fontSize: "0.75rem" }} className="text-muted-foreground">{selected.approved_by.email}</p>
+                          <p style={{ fontSize: "0.85rem" }} className="font-medium">{typeof selected.approved_by?.name === "string" ? selected.approved_by.name : "—"}</p>
+                          <p style={{ fontSize: "0.75rem" }} className="text-muted-foreground">{typeof selected.approved_by?.email === "string" ? selected.approved_by.email : "—"}</p>
                         </div>
                       )}
                       {selected.approved_at && (
@@ -516,11 +516,11 @@ export function CompaniesPage({ viewRole }: Props) {
                   )}
                   {branches.map((b) => (
                     <div key={b.id} className="border border-border rounded-xl p-3 space-y-1">
-                      <p className="font-medium text-sm">{b.name}</p>
-                      {b.region && <p className="text-xs text-muted-foreground">Region: {b.region}</p>}
-                      {b.location && <p className="text-xs text-muted-foreground">Location: {b.location}</p>}
-                      {b.telephone && <p className="text-xs text-muted-foreground">Tel: {b.telephone}</p>}
-                      {b.address && <p className="text-xs text-muted-foreground">Address: {b.address}</p>}
+                      <p className="font-medium text-sm">{typeof b.name === "string" ? b.name : "Branch"}</p>
+                      {b.region && <p className="text-xs text-muted-foreground">Region: {typeof b.region === "string" ? b.region : "—"}</p>}
+                      {b.location && <p className="text-xs text-muted-foreground">Location: {typeof b.location === "string" ? b.location : "—"}</p>}
+                      {b.telephone && <p className="text-xs text-muted-foreground">Tel: {typeof b.telephone === "string" ? b.telephone : "—"}</p>}
+                      {b.address && <p className="text-xs text-muted-foreground">Address: {typeof b.address === "string" ? b.address : "—"}</p>}
                     </div>
                   ))}
 

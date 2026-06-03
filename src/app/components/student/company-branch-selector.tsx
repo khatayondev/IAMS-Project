@@ -74,8 +74,8 @@ export function CompanyBranchSelector({
   );
   // Check if new branch name already exists
   const newBranchDup = useMemo(
-    () => branchesForSelected.some(
-      (b) => b.name.toLowerCase() === form.newBranchName.trim().toLowerCase()
+    () => branchesForSelected.find(
+      (b) => typeof b.name === "string" && b.name.toLowerCase() === form.newBranchName.trim().toLowerCase()
     ),
     [branchesForSelected, form.newBranchName]
   );
@@ -168,7 +168,7 @@ export function CompanyBranchSelector({
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
                   <p className="text-amber-800" style={{ fontSize: "0.8rem" }}>
-                    <strong>"{exactDup.name}"</strong> already exists in the system. Please select it from the suggestions above and add a branch instead of creating a duplicate.
+                    <strong>"{typeof exactDup?.name === "string" ? exactDup.name : "Company"}"</strong> already exists in the system. Please select it from the suggestions above and add a branch instead of creating a duplicate.
                   </p>
                 </div>
               )}
@@ -292,7 +292,7 @@ export function CompanyBranchSelector({
                 ghanaRegions={ghanaRegions}
                 dupWarning={
                   newBranchDup
-                    ? `A branch named "${newBranchDup.name}" already exists for this company.`
+                    ? `A branch named "${typeof newBranchDup.name === "string" ? newBranchDup.name : "Branch"}" already exists for this company.`
                     : undefined
                 }
               />

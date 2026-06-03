@@ -34,14 +34,21 @@ export function TermSelector({
         <div className="space-y-3">
           {availableTerms.map((term) => {
             const today = new Date().toISOString().split("T")[0];
-            const appStart = typeof term.applicationStart === "string" ? term.applicationStart : (typeof term.application_start === "string" ? term.application_start : "");
-            const appEnd = typeof term.applicationEnd === "string" ? term.applicationEnd : (typeof term.application_end === "string" ? term.application_end : (typeof term.application_deadline === "string" ? term.application_deadline : ""));
-            const intStart = typeof term.internshipStart === "string" ? term.internshipStart : (typeof term.start_date === "string" ? term.start_date : (typeof term.internship_start === "string" ? term.internship_start : "—"));
-            const intEnd = typeof term.internshipEnd === "string" ? term.internshipEnd : (typeof term.end_date === "string" ? term.end_date : (typeof term.internship_end === "string" ? term.internship_end : "—"));
+
+            // Real API uses application_deadline; fallback to applicationStart/Start
+            const appStart = String(term.application_deadline ?? term.application_start ?? term.applicationStart ?? "");
+            const appEnd = String(term.application_deadline ?? term.application_end ?? term.applicationEnd ?? "");
+
+            // Real API uses start_date/end_date; fallback to internship variants
+            const intStart = String(term.start_date ?? term.internshipStart ?? term.internship_start ?? "—");
+            const intEnd = String(term.end_date ?? term.internshipEnd ?? term.internship_end ?? "—");
+
+            // Normalize strings
             const termName = typeof term.name === "string" ? term.name : "Term";
             const termType = typeof term.type === "string" ? term.type : "Unknown";
-            const levels = Array.isArray(term.eligibleLevels) ? term.eligibleLevels : (Array.isArray(term.eligible_levels) ? term.eligible_levels : []);
+            const levels = Array.isArray(term.eligible_levels) ? term.eligible_levels : (Array.isArray(term.eligibleLevels) ? term.eligibleLevels : []);
             const levelStr = levels.map((l: any) => typeof l === "string" ? l : String(l)).filter(Boolean).join(", ");
+
             const isOpen = appStart && appEnd && today >= appStart && today <= appEnd;
             const isSelected = selectedTermId === String(term.id);
 

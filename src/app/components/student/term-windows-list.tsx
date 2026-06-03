@@ -48,7 +48,7 @@ export function TermWindowsList({
           {availableTerms.map((term) => {
             const today = new Date().toISOString().split("T")[0];
             const appStart = term.applicationStart ?? "";
-            const appEnd   = term.applicationEnd   ?? "";
+            const appEnd = term.applicationEnd ?? "";
             const isOpen = appStart && appEnd && today >= appStart && today <= appEnd;
             const daysLeft = isOpen && appEnd
               ? Math.max(
@@ -57,9 +57,9 @@ export function TermWindowsList({
                 )
               : null;
 
-            const termName = typeof term.name === "string" ? term.name : "Term";
-            const termStatus = typeof term.status === "string" ? term.status : "Upcoming";
-            const termType = typeof term.type === "string" ? term.type : "Unknown";
+            const termName = String(term.name ?? "Term");
+            const termStatus = String(term.status ?? "Upcoming");
+            const termType = String(term.type ?? "Unknown");
 
             return (
               <div
