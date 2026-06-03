@@ -334,6 +334,9 @@ export function StudentApplicationsPage() {
           application_type: "individual",
           cover_letter: form.additionalNotes || undefined,
           proposed_start_date: form.preferredStartDate || undefined,
+          student_phone: form.phoneNumber || undefined,
+          emergency_contact_name: form.emergencyContact || undefined,
+          emergency_contact_phone: form.emergencyPhone || undefined,
         });
         if (!createRes.success || !createRes.data?.id) {
           return createRes;

@@ -258,6 +258,12 @@ export const apiClient = {
     if (startDate) payload.proposed_start_date = startDate;
     const endDate = (data as any).proposed_end_date;
     if (endDate) payload.proposed_end_date = endDate;
+    const studentPhone = (data as any).student_phone ?? (data as any).phoneNumber;
+    if (studentPhone) payload.student_phone = studentPhone;
+    const emergencyContact = (data as any).emergency_contact_name ?? (data as any).emergencyContact;
+    if (emergencyContact) payload.emergency_contact_name = emergencyContact;
+    const emergencyPhone = (data as any).emergency_contact_phone ?? (data as any).emergencyPhone;
+    if (emergencyPhone) payload.emergency_contact_phone = emergencyPhone;
 
     return requestApi<ApplicationResponse | null>(API_ENDPOINTS.APPLICATIONS, {
       method: "POST",
