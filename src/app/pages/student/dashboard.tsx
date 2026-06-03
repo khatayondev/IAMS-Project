@@ -81,7 +81,7 @@ export function StudentDashboard() {
                   <Building2 className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                   <div className="min-w-0 flex-1">
                     <p className="text-muted-foreground text-xs">Department</p>
-                    <p className="font-medium text-sm">{activeInternship.student.department}</p>
+                    <p className="font-medium text-sm">{activeInternship.student.department?.name ?? activeInternship.student.department}</p>
                   </div>
                 </div>
               )}
