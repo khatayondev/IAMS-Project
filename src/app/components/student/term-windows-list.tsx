@@ -129,8 +129,13 @@ export function TermWindowsList({
                   {(() => {
                     const intStart = term.internshipStart ??"—";
                     const intEnd = term.internshipEnd ?? "—";
-                    const levels = (term.eligibleLevels ??  []) as string[];
+                    const levels = (term.eligibleLevels ?? []) as any[];
                     const depts = (term.departments ?? []) as string[];
+                    const levelNames = levels.map((l: any) => {
+                      if (typeof l === "string") return l;
+                      if (typeof l === "object" && l !== null) return l.name || l.code || l.description || "";
+                      return "";
+                    }).filter(Boolean);
                     return (
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                         <div className="flex items-start gap-2">
@@ -168,9 +173,9 @@ export function TermWindowsList({
                               Eligible Levels
                             </p>
                             <div className="flex flex-wrap gap-1 mt-0.5">
-                              {levels.length > 0 ? levels.map((l) => (
-                                <span key={l} className="px-2 py-0.5 bg-secondary rounded font-medium" style={{ fontSize: "0.75rem" }}>
-                                  {l}
+                              {levelNames.length > 0 ? levelNames.map((l) => (
+                                <span key={String(l)} className="px-2 py-0.5 bg-secondary rounded font-medium" style={{ fontSize: "0.75rem" }}>
+                                  {String(l)}
                                 </span>
                               )) : <span className="text-muted-foreground text-xs">—</span>}
                             </div>
