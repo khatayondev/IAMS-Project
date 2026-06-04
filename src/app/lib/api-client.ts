@@ -334,6 +334,13 @@ export const apiClient = {
     );
   },
 
+  async withdrawApplication(id: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(
+      replacePathParams("/api/v1/applications/:id/withdraw", { id }),
+      { method: "DELETE" }
+    );
+  },
+
   async bulkApproveApplications(ids: string[]): Promise<ApiResponse<null>> {
     return requestApi<null>(API_ENDPOINTS.APPLICATION_BULK_APPROVE, {
       method: "POST",
