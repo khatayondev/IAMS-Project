@@ -1,13 +1,13 @@
 // Centralized constants and enums
 // Eliminates magic strings across the codebase
 
-// ── Role Constants ──
+// ── Role Constants — values must match backend User.role field exactly ──
 export const ROLES = {
   CLO: "clo",
   DLO: "dlo",
   STUDENT: "student",
-  SUPERVISOR: "supervisor",
-  ACADEMIC: "academic",
+  SUPERVISOR: "industry_supervisor",
+  ACADEMIC: "academic_supervisor",
   HOD: "hod",
 } as const;
 
@@ -15,8 +15,8 @@ export const ROLE_LABELS: Record<string, string> = {
   clo: "Central Liaison Officer",
   dlo: "Departmental Liaison Officer",
   student: "Student",
-  supervisor: "Industry Supervisor",
-  academic: "Academic Supervisor",
+  industry_supervisor: "Industry Supervisor",
+  academic_supervisor: "Academic Supervisor",
   hod: "Head of Department",
 };
 

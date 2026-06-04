@@ -49,12 +49,31 @@ export interface DepartmentGradingConfig {
   lockedAt?: string;
 }
 
-// 20 Industrial Supervisor criteria — keys map 1:1 to assessment-score-flow.md
+// Industrial Supervisor criteria — keys are actual backend field names
+// sent to POST /api/v1/assessments/industrial
 export type CriterionKey =
-  | "A1" | "A2" | "A3" | "A4"
-  | "B1" | "B2" | "B3" | "B4" | "B5" | "B6" | "B7" | "B8"
-  | "C1" | "C2" | "C3" | "C4" | "C5"
-  | "D1" | "D2" | "D3";
+  // Section A — Technical Skills (5 criteria)
+  | "tech_understanding_concepts"
+  | "tech_application_knowledge"
+  | "tech_problem_solving"
+  | "tech_practical_skills"
+  | "tech_innovation"
+  // Section B — Professional Skills (5 criteria)
+  | "prof_communication"
+  | "prof_teamwork"
+  | "prof_initiative"
+  | "prof_time_management"
+  | "prof_adaptability"
+  // Section C — Ethics & Conduct (4 criteria)
+  | "eth_punctuality"
+  | "eth_reliability"
+  | "eth_responsibility"
+  | "eth_professionalism"
+  // Section D — Overall Performance (4 criteria)
+  | "overall_quality"
+  | "overall_quantity"
+  | "overall_improvement"
+  | "overall_recommendation";
 
 export type CriterionSection = "A" | "B" | "C" | "D";
 
@@ -192,6 +211,6 @@ export interface WeeklyRubricEntry {
 export interface GradingActor {
   id: string;
   name: string;
-  role: "clo" | "dlo" | "hod" | "academic" | "supervisor" | "student";
+  role: "clo" | "dlo" | "hod" | "academic_supervisor" | "industry_supervisor" | "student";
   department?: string;
 }

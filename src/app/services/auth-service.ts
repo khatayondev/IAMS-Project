@@ -1,6 +1,6 @@
 import type { UserRole } from "../lib/mock-data";
 
-export type ExtendedRole = UserRole | "student" | "supervisor" | "academic" | "hod";
+export type ExtendedRole = UserRole | "student" | "industry_supervisor" | "academic_supervisor" | "hod";
 
 export interface AuthUser {
   id: string;
@@ -9,6 +9,7 @@ export interface AuthUser {
   role: ExtendedRole;
   department?: string;
   avatar?: string;
+  profile_photo?: string;
   studentId?: string;
   supervisorToken?: string;
 }
@@ -54,12 +55,12 @@ const rolePermissions: Record<ExtendedRole, string[]> = {
     "view:own_status",
     "view:own_logbook",
   ],
-  supervisor: [
+  industry_supervisor: [
     "view:assigned_students",
     "submit:evaluation",
     "view:logbook",
   ],
-  academic: [
+  academic_supervisor: [
     "view:assigned_students",
     "view:logbook",
     "submit:evaluation",
@@ -81,8 +82,8 @@ export function getRoutePrefix(role: ExtendedRole): string {
     case "clo": return "/clo";
     case "dlo": return "/dlo";
     case "student": return "/student";
-    case "supervisor": return "/supervisor";
-    case "academic": return "/academic";
+    case "industry_supervisor": return "/supervisor";
+    case "academic_supervisor": return "/academic";
     case "hod": return "/hod";
     default: return "/";
   }
@@ -135,7 +136,7 @@ export function getAllowedRoutes(role: ExtendedRole): string[] {
         "/student/issues",
         "/student/communications",
       ];
-    case "supervisor":
+    case "industry_supervisor":
       return [
         "/supervisor",
         "/supervisor/evaluate",
@@ -143,7 +144,7 @@ export function getAllowedRoutes(role: ExtendedRole): string[] {
         "/supervisor/attendance",
         "/supervisor/communications",
       ];
-    case "academic":
+    case "academic_supervisor":
       return [
         "/academic",
         "/academic/students",

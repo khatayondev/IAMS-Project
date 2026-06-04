@@ -59,13 +59,17 @@ export interface AuthResponse {
     id: string;
     name: string;
     email: string;
-    role: "clo" | "dlo" | "student" | "supervisor" | "academic" | "hod";
+    // Backend values: "clo" | "dlo" | "student" | "industry_supervisor" | "academic_supervisor" | "hod"
+    role: "clo" | "dlo" | "student" | "industry_supervisor" | "academic_supervisor" | "hod";
+    department_id?: number;
     department?: string;
+    profile_photo?: string;
     avatar?: string;
-    studentId?: string;
+    phone?: string;
+    studentProfile?: { student_id?: string; level?: string; program?: string };
   };
-  token: string; // JWT or session token
-  expiresAt: string;
+  token: string;
+  token_type: string;
 }
 
 // ── Applications ──
@@ -119,8 +123,8 @@ export interface ApplicationResponse {
   companyId: string;
   companyName: string;
   companyStatus: string;
-  // API status values: draft | submitted | under_review | approved | rejected
-  status: string;
+  // API status values: draft | submitted | under_review | approved | rejected | company_accepted
+  status: "draft" | "submitted" | "under_review" | "approved" | "rejected" | "company_accepted" | string;
   dateApplied: string;
   supervisorAssigned?: string;
   grade?: string;
@@ -226,14 +230,17 @@ export interface CreateBranchRequest {
 
 export interface CreateTermRequest {
   name: string;
+  // Backend requires a unique code (e.g. "2026-1ST")
+  code: string;
   // UI values: "Vacation" | "Semestrial" — api-client maps to "short_term" | "regular"
   type: "Vacation" | "Semestrial";
   applicationStart: string;
   applicationEnd: string; // sent as application_deadline
   internshipStart: string; // sent as start_date
   internshipEnd: string;   // sent as end_date
-  eligibleLevels: string[];
-  departments: string[];
+  // NOTE: eligible_levels and departments are NOT stored by the backend yet (feature gap)
+  eligibleLevels?: string[];
+  departments?: string[];
 }
 
 export interface UpdateTermRequest extends Partial<CreateTermRequest> {
@@ -267,21 +274,18 @@ export interface TermResponse {
   departments: string[];
 }
 
+// Backend returns these fields flat inside data (no nesting wrapper)
 export interface TermDashboardResponse {
-  term_id: string | number;
   total_applications: number;
+  pending_applications: number;
+  rejected_applications: number;
   active_internships: number;
   completed_internships: number;
-  pending_applications: number;
-  approved_applications: number;
-  rejected_applications: number;
-  total_students: number;
-  placement_rate?: number;
-  department_breakdown?: Array<{
+  placement_rate: number;
+  department_breakdown: Array<{
     department: string;
     total: number;
     active: number;
-    completed: number;
   }>;
 }
 
@@ -290,9 +294,12 @@ export interface TermDashboardResponse {
 export interface SubmitLogbookRequest {
   internship_id: number;
   entry_date: string;
+  time_in?: string | null;   // format: "HH:mm"
+  time_out?: string | null;  // format: "HH:mm"
   activities_description: string;
   skills_learned?: string;
   challenges_faced?: string;
+  // NOTE: backend stores attachment as attachment_path; attachment_name/url are frontend-only
   attachment_name?: string;
   attachment_url?: string;
 }
@@ -321,12 +328,20 @@ export interface LogbookEntryResponse {
   id: string;
   internship_id: number;
   entry_date: string;
+  time_in?: string;
+  time_out?: string;
   activities_description: string;
   skills_learned?: string;
   challenges_faced?: string;
-  status: "draft" | "submitted" | "approved" | "revision_requested";
+  // Backend uses "rejected" (not "revision_requested") when supervisor rejects
+  status: "draft" | "submitted" | "approved" | "rejected" | "revision_requested";
+  // Backend stores as attachment_path; attachment_name/url are frontend-only
+  attachment_path?: string;
   attachment_name?: string;
   attachment_url?: string;
+  industry_supervisor_comment?: string;
+  academic_supervisor_comment?: string;
+  submitted_at?: string;
   created_at: string;
 }
 
@@ -360,7 +375,10 @@ export interface AttendanceFilters {
 export interface AttendanceResponse {
   id: string;
   internship_id?: string | number;
-  date: string;
+  // Backend field name is attendance_date
+  attendance_date: string;
+  /** @deprecated use attendance_date — kept for backwards compat */
+  date?: string;
   check_in_time?: string;
   check_out_time?: string;
   gps_check_in_lat?: number;
@@ -370,7 +388,8 @@ export interface AttendanceResponse {
   // status: present | absent | late | half_day | excused
   status: string;
   notes?: string;
-  verified_by?: string;
+  verified_by?: number;
+  verified_at?: string;
   created_at?: string;
   updated_at?: string;
 }

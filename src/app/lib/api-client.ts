@@ -507,12 +507,8 @@ export const apiClient = {
       { method: "GET" }
     );
     if (!response.success) return { success: false, data: null, message: response.message };
-    const payload = response.data;
-    const dashboard =
-      payload && typeof payload === "object" && "data" in (payload as object)
-        ? (payload as { data: TermDashboardResponse }).data
-        : (payload as TermDashboardResponse);
-    return { success: true, data: dashboard, message: response.message };
+    // Backend returns flat stats directly in data: { total_applications, pending_applications, ... }
+    return { success: true, data: response.data as TermDashboardResponse, message: response.message };
   },
 
   async createTerm(data: CreateTermRequest): Promise<ApiResponse<TermResponse | null>> {
@@ -520,14 +516,17 @@ export const apiClient = {
     const typeMap: Record<string, string> = { Vacation: "short_term", Semestrial: "regular" };
     const payload: Record<string, unknown> = {
       name: data.name,
+      // Backend auto-generates code if not supplied (nullable in validation)
+      ...(data.code ? { code: data.code } : {}),
       type: typeMap[data.type] ?? data.type,
       // Real API: single application_deadline (use closing date)
       application_deadline: data.applicationEnd ?? data.applicationStart,
       // Real API: start_date / end_date for internship period
       start_date: data.internshipStart,
       end_date: data.internshipEnd,
-      eligible_levels: data.eligibleLevels,
-      departments: data.departments,
+      // Backend now stores eligible_levels and syncs departments
+      ...(data.eligibleLevels ? { eligible_levels: data.eligibleLevels } : {}),
+      ...(data.departments ? { departments: data.departments } : {}),
     };
     const response = await requestApi<unknown>(API_ENDPOINTS.TERMS, {
       method: "POST",
@@ -540,6 +539,7 @@ export const apiClient = {
     const typeMap: Record<string, string> = { Vacation: "short_term", Semestrial: "regular" };
     const payload: Record<string, unknown> = {};
     if (data.name !== undefined) payload.name = data.name;
+    if ((data as any).code !== undefined) payload.code = (data as any).code;
     if (data.type !== undefined) payload.type = typeMap[data.type] ?? data.type;
     // Real API: single application_deadline — use closing date if present
     if (data.applicationEnd !== undefined || data.applicationStart !== undefined)
@@ -720,6 +720,7 @@ export const apiClient = {
     });
     return {
       success: response.success,
+      // Backend returns collection key "logbooks"
       data: response.success ? extractCollection<LogbookEntryResponse>(response, "logbooks") : [],
       message: response.message,
     };
@@ -740,9 +741,11 @@ export const apiClient = {
   },
 
   async requestLogbookRevision(id: string, comment: string): Promise<ApiResponse<null>> {
+    // Backend: PATCH /logbooks/:id/approve with action:"reject" changes status to "rejected"
+    // POST /logbooks/:id/comment only adds a comment without changing status
     return requestApi<null>(
-      replacePathParams(API_ENDPOINTS.LOGBOOK_REVISION, { id }),
-      { method: "POST", body: JSON.stringify({ comment }) }
+      replacePathParams(API_ENDPOINTS.LOGBOOK_APPROVE, { id }),
+      { method: "PATCH", body: JSON.stringify({ action: "reject", comment }) }
     );
   },
 
@@ -757,6 +760,7 @@ export const apiClient = {
     });
     return {
       success: response.success,
+      // Backend returns collection key "attendance"
       data: response.success ? extractCollection<AttendanceResponse>(response, "attendance") : [],
       message: response.message,
     };
@@ -1263,7 +1267,8 @@ export const apiClient = {
 
   async getGradingConfigs(filters?: Record<string, unknown>): Promise<ApiResponse<any[]>> {
     const response = await requestApi<unknown>(API_ENDPOINTS.GRADING_CONFIG, { method: "GET", query: filters });
-    return { success: response.success, data: response.success ? extractCollection<any>(response, "configs") : [], message: response.message };
+    // Backend returns collection key "configurations" (not "configs")
+    return { success: response.success, data: response.success ? extractCollection<any>(response, "configurations") : [], message: response.message };
   },
 
   async getGradingConfig(id: string): Promise<ApiResponse<any>> {
