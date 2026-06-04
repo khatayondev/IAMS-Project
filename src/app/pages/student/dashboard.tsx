@@ -82,46 +82,28 @@ export function StudentDashboard() {
               </div>
             </div>
           ) : pendingApplication ? (
-            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl p-8">
-              <div className="flex items-start gap-4">
-                <AlertCircle className="w-6 h-6 text-amber-600 dark:text-amber-500 shrink-0 mt-1" />
-                <div className="flex-1">
-                  <h2 className="text-lg font-bold text-amber-900 dark:text-amber-400 mb-2">Application Pending Review</h2>
-                  <p className="text-sm text-amber-800 dark:text-amber-300 mb-3">
-                    Your application for an internship position is awaiting approval from the Department Liaison Officer. You'll be notified once a decision is made.
-                  </p>
-                  <div className="bg-white dark:bg-amber-950/50 rounded-lg p-4 mb-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Company</span>
-                        <span className="font-semibold text-sm">{pendingApplication?.company?.name || "N/A"}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Status</span>
-                        <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/50 text-amber-900 dark:text-amber-400 text-xs font-semibold rounded capitalize">
-                          {(pendingApplication?.status || "pending").replace(/_/g, " ")}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Applied On</span>
-                        <span className="text-sm">
-                          {pendingApplication?.created_at
-                            ? new Date(pendingApplication.created_at).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              })
-                            : "N/A"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+            <div className="bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-950/30 dark:to-orange-950/30 rounded-2xl p-8">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h1 className="text-3xl font-bold mb-2">Application Under Review</h1>
+                  <p className="text-sm mb-4">Your application for <span className="font-semibold">{pendingApplication?.company?.name || "a position"}</span> is awaiting approval from the Department Liaison Officer</p>
                   <button
                     onClick={() => navigate("/student/applications")}
-                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600 text-white rounded-lg font-semibold text-sm transition-colors"
+                    className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold text-sm transition-colors"
                   >
-                    View Application
+                    View Application <ArrowRight className="w-4 h-4 inline ml-2" />
                   </button>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <div className="text-xs font-semibold text-muted-foreground mb-2">Applied</div>
+                  <div className="text-sm font-semibold">
+                    {pendingApplication?.created_at
+                      ? new Date(pendingApplication.created_at).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })
+                      : "—"}
+                  </div>
                 </div>
               </div>
             </div>
