@@ -205,7 +205,7 @@ export function ApplicationsPage({ viewRole }: Props) {
                 {viewRole === "clo" && (
                   <p className="text-muted-foreground" style={{ fontSize: "0.78rem" }}>{deptName}</p>
                 )}
-                {(app.status === "submitted" || app.status === "approved") && (
+                {(viewRole === "dlo" && (app.status === "submitted" || app.status === "approved")) && (
                   <div className="flex gap-2 pt-2 border-t border-border" onClick={(e) => e.stopPropagation()}>
                     {app.status === "submitted" && (
                       <>
@@ -286,7 +286,7 @@ export function ApplicationsPage({ viewRole }: Props) {
                         <td className="px-4 py-3"><StatusBadge status={app.status} /></td>
                         <td className="px-4 py-3">
                           <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                            {app.status === "submitted" && (
+                            {viewRole === "dlo" && app.status === "submitted" && (
                               <>
                                 <button onClick={() => handleApprove(appId)} className="p-1.5 rounded-md hover:bg-emerald-100 text-emerald-600">
                                   <CheckCircle2 className="w-4 h-4" />
@@ -375,7 +375,7 @@ export function ApplicationsPage({ viewRole }: Props) {
                   </div>
                 </div>
                 <div className="pt-3 border-t border-border space-y-2">
-                  {detail.status === "submitted" && (
+                  {viewRole === "dlo" && detail.status === "submitted" && (
                     <>
                       <button onClick={() => { handleApprove(String(detail.id)); setSelectedApp(null); }} className="w-full py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90" style={{ fontSize: "0.85rem" }}>
                         Approve Application
