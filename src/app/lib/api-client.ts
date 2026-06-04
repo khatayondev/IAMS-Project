@@ -293,7 +293,7 @@ export const apiClient = {
   async submitApplication(id: string): Promise<ApiResponse<ApplicationResponse | null>> {
     return requestApi<ApplicationResponse | null>(
       replacePathParams(API_ENDPOINTS.APPLICATION_SUBMIT, { id }),
-      { method: "POST" }
+      { method: "POST", body: JSON.stringify({}) }
     );
   },
 
