@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAppContext } from "../../lib/context";
 import { apiClient } from "../../lib/api-client";
 import { StatusBadge } from "../../components/status-badge";
 import { BookMarked, Clock, Award, ArrowRight, Calendar, MapPin, Mail, User, AlertCircle, CheckCircle2, Zap, FileText, MessageSquare, Briefcase, RotateCcw } from "lucide-react";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
 
 export function StudentDashboard() {
   const { user } = useAppContext();
@@ -12,6 +13,7 @@ export function StudentDashboard() {
   const [visitations, setVisitations] = useState<any[]>([]);
   const [pendingApplication, setPendingApplication] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const prevStatusRef = useRef<string | null>(null);
 
   const refreshDashboard = async () => {
     setRefreshing(true);
@@ -30,6 +32,26 @@ export function StudentDashboard() {
         const pending = apps.find(
           (app) => app && ["submitted", "under_review", "approved", "rejected"].includes((app.status ?? "").toLowerCase())
         );
+
+        // Detect status change and notify student
+        const currentStatus = pending?.status?.toLowerCase() ?? null;
+        if (prevStatusRef.current && prevStatusRef.current !== currentStatus) {
+          // Status changed, show notification
+          if (currentStatus === "approved") {
+            toast.success("🎉 Your application has been approved! Download the placement letter and company acceptance form.", {
+              duration: 5000,
+            });
+          } else if (currentStatus === "rejected") {
+            toast.info("Your application was not approved. You can now apply for other internships.", {
+              duration: 5000,
+            });
+          } else if (currentStatus === "under_review") {
+            toast.info("Your application is now under review by the DLO.", {
+              duration: 4000,
+            });
+          }
+        }
+        prevStatusRef.current = currentStatus;
         setPendingApplication(pending || null);
       }
       // internshipRes is fetched to update dashboard with approved internship data
