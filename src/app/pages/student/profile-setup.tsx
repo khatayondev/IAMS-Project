@@ -58,6 +58,9 @@ export function StudentProfileSetup() {
       const draftKey = `profile_setup_draft_${user?.id}`;
       try {
         const saved = localStorage.getItem(draftKey);
+        const profileCompleteKey = `student_profile_complete_${user?.id}`;
+        const isProfileSaved = localStorage.getItem(profileCompleteKey) === "true";
+
         if (saved) {
           // Load from draft if it exists
           const draft = JSON.parse(saved);
@@ -85,6 +88,10 @@ export function StudentProfileSetup() {
           setCertifications(draft.certifications || "");
           setPastExperience(draft.pastExperience || "");
           setInterests(draft.interests || "");
+
+          // Check if profile was previously saved
+          setIsProfileComplete(isProfileSaved);
+          setIsEditMode(isProfileSaved ? false : true); // Show form if not saved, view if saved
         } else {
           // If no draft, try to fetch from backend
           if (user?.id) {
