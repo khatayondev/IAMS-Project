@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAppContext } from "../../lib/context";
 import { apiClient } from "../../lib/api-client";
 import { StatusBadge } from "../../components/status-badge";
-import { BookMarked, Clock, Award, ArrowRight, Calendar, MapPin, Mail, User, AlertCircle, CheckCircle2, Zap, FileText, MessageSquare } from "lucide-react";
+import { BookMarked, Clock, Award, ArrowRight, Calendar, MapPin, Mail, User, AlertCircle, CheckCircle2, Zap, FileText, MessageSquare, Briefcase } from "lucide-react";
 import { useNavigate } from "react-router";
 
 export function StudentDashboard() {
@@ -138,36 +138,63 @@ export function StudentDashboard() {
             </div>
           )}
 
-          {/* Key Metrics / Finance Section */}
+          {/* Key Metrics / Internship Info Section */}
           <div className="space-y-3">
-            <h2 className="text-lg font-bold">Internship Status</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <h2 className="text-lg font-bold">Internship Details</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Company Card */}
+              {activeInternship && (
+                <div className="bg-card border border-border rounded-xl p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-muted-foreground text-sm">Company</p>
+                    <Briefcase className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <h3 className="font-bold text-sm">{companyName}</h3>
+                  <p className="text-muted-foreground text-xs">{activeInternship?.company?.industry ?? "Industrial Attachment"}</p>
+                </div>
+              )}
+
+              {/* Term Name Card */}
+              {activeInternship && (
+                <div className="bg-card border border-border rounded-xl p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-muted-foreground text-sm">Term</p>
+                    <Calendar className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <h3 className="font-bold text-sm">{activeInternship?.term?.name ?? "N/A"}</h3>
+                  <p className="text-muted-foreground text-xs">{activeInternship?.term?.year ? `Year ${activeInternship.term.year}` : "Term info"}</p>
+                </div>
+              )}
+
+              {/* Current Status Card */}
               <div className="bg-card border border-border rounded-xl p-4 space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-muted-foreground text-sm">Current Status</p>
+                  <p className="text-muted-foreground text-sm">Status</p>
                   <Zap className="w-4 h-4 text-primary" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-xl font-bold capitalize">{appStatus}</h3>
+                  <h3 className="text-sm font-bold capitalize">{appStatus}</h3>
                   <StatusBadge status={appStatus} />
                 </div>
               </div>
 
+              {/* Logbook Entries Card */}
               <div className="bg-card border border-border rounded-xl p-4 space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-muted-foreground text-sm">Logbook Entries</p>
+                  <p className="text-muted-foreground text-sm">Logbook</p>
                   <BookMarked className="w-4 h-4 text-blue-600" />
                 </div>
-                <h3 className="text-3xl font-bold">{recentLogbooks.length}</h3>
+                <h3 className="text-2xl font-bold">{recentLogbooks.length}</h3>
                 <p className="text-muted-foreground text-xs">{recentLogbooks.length > 0 ? "Latest: " + new Date(recentLogbooks[0].entry_date).toLocaleDateString() : "Start logging"}</p>
               </div>
 
+              {/* Attendance Card */}
               <div className="bg-card border border-border rounded-xl p-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-muted-foreground text-sm">Attendance</p>
                   <Clock className="w-4 h-4 text-teal-600" />
                 </div>
-                <h3 className="text-3xl font-bold">{attendanceSummary?.attendance_rate ?? "—"}%</h3>
+                <h3 className="text-2xl font-bold">{attendanceSummary?.attendance_rate ?? "—"}%</h3>
                 <p className="text-muted-foreground text-xs">{attendanceSummary ? attendanceSummary.present + " present" : "No data"}</p>
               </div>
             </div>
