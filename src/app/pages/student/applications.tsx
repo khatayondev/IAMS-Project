@@ -498,6 +498,7 @@ export function StudentApplicationsPage() {
             availableTerms={availableTerms}
             onSelectTerm={handleSelectTerm}
             onViewChange={setView}
+            isBlocked={hasPendingApplication}
           />
         </div>
       )}
