@@ -271,10 +271,13 @@ export const apiClient = {
     const endDate = (data as any).proposed_end_date;
     if (endDate) payload.proposed_end_date = endDate;
 
-    return requestApi<ApplicationResponse | null>(API_ENDPOINTS.APPLICATIONS, {
+    const response = await requestApi<any>(API_ENDPOINTS.APPLICATIONS, {
       method: "POST",
       body: JSON.stringify(payload),
     });
+    // Backend wraps the application under data.application — unwrap to top level
+    const application = response.data?.application ?? response.data;
+    return { ...response, data: application };
   },
 
   async updateApplication(id: string, data: Partial<CreateApplicationRequest>): Promise<ApiResponse<ApplicationResponse | null>> {
