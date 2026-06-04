@@ -263,6 +263,7 @@ export const apiClient = {
       company_id: Number((data as any).company_id ?? (data as any).companyId),
       academic_term_id: Number((data as any).academic_term_id ?? (data as any).termId),
       application_type: (data as any).application_type ?? "individual",
+      status: (data as any).status ?? "submitted", // Default to "submitted" (draft only used locally)
     };
     const coverLetter = (data as any).cover_letter ?? (data as any).coverLetter ?? (data as any).additionalNotes;
     if (coverLetter) payload.cover_letter = coverLetter;

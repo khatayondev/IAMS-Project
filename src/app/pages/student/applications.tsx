@@ -364,6 +364,7 @@ export function StudentApplicationsPage() {
           application_type: "individual",
           cover_letter: form.additionalNotes || undefined,
           proposed_start_date: form.preferredStartDate || undefined,
+          status: "submitted", // Create directly as submitted, not draft
         });
         if (!createRes.success || !createRes.data?.id) {
           // If student profile not found, provide helpful message
@@ -376,15 +377,6 @@ export function StudentApplicationsPage() {
           return createRes;
         }
 
-        const submitRes = await apiClient.submitApplication(String(createRes.data.id));
-        if (!submitRes.success) {
-          return {
-            success: false,
-            data: null,
-            message: submitRes.message || "Failed to submit application. Please try again."
-          };
-        }
-
         clearDraft();
         // Refresh applications data to show the new submission
         const appsRes = await apiClient.getApplications();
@@ -395,7 +387,7 @@ export function StudentApplicationsPage() {
           setMyApp(sorted[0]);
         }
         setView("tracker");
-        return submitRes;
+        return createRes;
       },
       {
         successMessage: "Application submitted successfully!",
