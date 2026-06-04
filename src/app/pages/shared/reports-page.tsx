@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { apiClient } from "../../lib/api-client";
-import { Download, FileText, TrendingUp, BarChart3, GraduationCap, Building2, RefreshCw } from "lucide-react";
+import { Download, FileText, TrendingUp, BarChart3, Users, GraduationCap, Building2, RefreshCw } from "lucide-react";
 import { exportToCSV } from "../../lib/csv-export";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend,
@@ -27,26 +27,32 @@ export function ReportsPage({ viewRole }: Props) {
   const [companies, setCompanies] = useState<any[]>([]);
   const [supervisors, setSupervisors] = useState<any[]>([]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
-    const [ovRes, progRes, deptRes, perfRes, coRes, supRes] = await Promise.all([
-      apiClient.getAnalyticsOverview(),
-      apiClient.getInternshipProgress(),
-      apiClient.getDepartmentStatistics(),
-      apiClient.getStudentPerformance(),
-      apiClient.getCompanies({ per_page: 200 }),
-      apiClient.getAvailableSupervisors(),
-    ]);
-    if (ovRes.success)   setOverview(ovRes.data);
-    if (progRes.success) setProgress(progRes.data);
-    if (deptRes.success) setDeptStats((deptRes.data as any)?.departments ?? []);
-    if (perfRes.success) setPerformance(perfRes.data);
-    if (coRes.success)   setCompanies(coRes.data);
-    if (supRes.success)  setSupervisors(supRes.data);
-    setLoading(false);
-  };
+    try {
+      const [ovRes, progRes, deptRes, perfRes, coRes, supRes] = await Promise.all([
+        apiClient.getAnalyticsOverview(),
+        apiClient.getInternshipProgress(),
+        apiClient.getDepartmentStatistics(),
+        apiClient.getStudentPerformance(),
+        apiClient.getCompanies({ per_page: 200 }),
+        // Graceful: CLO/DLO only — HOD will get 403 and supRes.success=false
+        apiClient.getAvailableSupervisors().catch(() => ({ success: false, data: [] })),
+      ]);
+      if (ovRes.success)   setOverview(ovRes.data);
+      if (progRes.success) setProgress(progRes.data);
+      if (deptRes.success) setDeptStats((deptRes.data as any)?.departments ?? []);
+      if (perfRes.success) setPerformance(perfRes.data);
+      if (coRes.success)   setCompanies(coRes.data);
+      if ((supRes as any).success) setSupervisors((supRes as any).data ?? []);
+    } catch (e) {
+      console.error("Reports load error:", e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
   const sys = overview?.system_overview ?? {};
   const deptBreakdown: any[] = overview?.department_breakdown ?? [];
