@@ -117,7 +117,7 @@ export function StudentApplicationsPage() {
       const [appsRes, termsRes, companiesRes] = await Promise.all([
         apiClient.getApplications(),
         apiClient.getTerms(),
-        apiClient.getCompanies({ status: "approved" }),
+        apiClient.getCompanies({ approval_status: "approved", per_page: 200 }),
       ]);
       if (appsRes.success && appsRes.data.length > 0) {
         const sorted = [...appsRes.data].sort((a, b) =>
@@ -275,6 +275,9 @@ export function StudentApplicationsPage() {
       case 2: {
         if (form.companyChoice === "existing") {
           if (!form.selectedCompanyId) return false;
+          // Company must be approved by DLO/CLO before an application can be submitted
+          const selectedCo = companies.find((c: any) => String(c.id) === form.selectedCompanyId);
+          if (selectedCo && selectedCo.approval_status !== "approved") return false;
           if (form.branchChoice === "existing") return !!form.selectedBranchId;
           if (form.branchChoice === "new") {
             return !!(
@@ -375,6 +378,17 @@ export function StudentApplicationsPage() {
             return { success: false, data: null, message: companyRes.message || "Failed to register company." };
           }
           companyId = companyRes.data.company.id;
+
+          // New company is pending DLO approval — cannot submit application yet.
+          // Show a success message explaining next steps and exit without creating an application.
+          clearDraft();
+          await refreshApplications(); // refresh company list
+          setView("windows");
+          return {
+            success: true,
+            data: null,
+            message: `"${form.newCompanyName}" has been submitted for DLO approval. Once approved it will appear in the company search and you can submit your application.`,
+          };
         }
 
         const createRes = await apiClient.createApplication({
