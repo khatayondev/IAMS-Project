@@ -49,6 +49,8 @@ export function StudentProfileSetup() {
   // Form completion tracking
   const [completionPercentage, setCompletionPercentage] = useState(0);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isProfileComplete, setIsProfileComplete] = useState(false);
 
   // Load draft from localStorage and saved profile from backend on mount
   useEffect(() => {
@@ -119,6 +121,8 @@ export function StudentProfileSetup() {
                 setInterests(pd.interests || "");
               }
               setLastSaved(new Date());
+              setIsProfileComplete(profile.profile_completed || false);
+              setIsEditMode(false); // Start in view mode
             }
           }
 
@@ -267,12 +271,12 @@ export function StudentProfileSetup() {
         // Clear draft after successful save
         clearDraft();
 
-        toast.success("Profile completed successfully! Redirecting to dashboard...");
+        // Update UI state
+        setIsEditMode(false);
+        setIsProfileComplete(true);
+        setLastSaved(new Date());
 
-        // Redirect to dashboard after a short delay
-        setTimeout(() => {
-          navigate("/student", { replace: true });
-        }, 1500);
+        toast.success("Profile saved successfully!");
       } else {
         // Show detailed error from backend
         const errorMsg = res.message || "Failed to save profile. Please try again.";
@@ -295,18 +299,112 @@ export function StudentProfileSetup() {
     { id: "skills", label: "Skills & Experience", icon: Award },
   ];
 
+  if (!isEditMode && isProfileComplete) {
+    // View mode - show read-only profile
+    return (
+      <div className="space-y-4">
+        {/* Header with Edit Button */}
+        <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">My Profile</h1>
+              <p className="text-muted-foreground text-xs mt-2">
+                Your profile information is complete
+              </p>
+            </div>
+            <button
+              onClick={() => setIsEditMode(true)}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-semibold text-sm transition-colors flex items-center gap-2 whitespace-nowrap"
+            >
+              <FileText className="w-4 h-4" />
+              Edit Profile
+            </button>
+          </div>
+        </div>
+
+        {/* Profile Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Personal Info Card */}
+          <div className="bg-card border border-border rounded-lg p-4">
+            <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+              <User className="w-4 h-4 text-primary" />
+              Personal Information
+            </h3>
+            <div className="space-y-2 text-sm">
+              <div><span className="text-muted-foreground">Name:</span> <span className="font-medium">{fullName}</span></div>
+              <div><span className="text-muted-foreground">Email:</span> <span className="font-medium">{email}</span></div>
+              <div><span className="text-muted-foreground">Phone:</span> <span className="font-medium">{phone || "—"}</span></div>
+              <div><span className="text-muted-foreground">Emergency Contact:</span> <span className="font-medium">{emergencyContact || "—"}</span></div>
+              <div><span className="text-muted-foreground">Emergency Phone:</span> <span className="font-medium">{emergencyPhone || "—"}</span></div>
+            </div>
+          </div>
+
+          {/* Academic Info Card */}
+          <div className="bg-card border border-border rounded-lg p-4">
+            <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+              <Book className="w-4 h-4 text-primary" />
+              Academic Information
+            </h3>
+            <div className="space-y-2 text-sm">
+              <div><span className="text-muted-foreground">Student ID:</span> <span className="font-medium">{studentId}</span></div>
+              <div><span className="text-muted-foreground">Department:</span> <span className="font-medium">{department || "—"}</span></div>
+              <div><span className="text-muted-foreground">Program:</span> <span className="font-medium">{program || "—"}</span></div>
+              <div><span className="text-muted-foreground">Level:</span> <span className="font-medium">{level} Level</span></div>
+              <div><span className="text-muted-foreground">CGPA:</span> <span className="font-medium">{cgpa || "—"}</span></div>
+            </div>
+          </div>
+
+          {/* Skills Card */}
+          <div className="bg-card border border-border rounded-lg p-4">
+            <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+              <Award className="w-4 h-4 text-primary" />
+              Skills & Experience
+            </h3>
+            <div className="space-y-2 text-sm">
+              <div><span className="text-muted-foreground">Technical Skills:</span> <span className="font-medium">{technicalSkills || "—"}</span></div>
+              <div><span className="text-muted-foreground">Soft Skills:</span> <span className="font-medium">{softSkills || "—"}</span></div>
+              <div><span className="text-muted-foreground">Languages:</span> <span className="font-medium">{languages || "—"}</span></div>
+              <div><span className="text-muted-foreground">Certifications:</span> <span className="font-medium">{certifications || "—"}</span></div>
+            </div>
+          </div>
+
+          {/* Internship Preferences Card */}
+          <div className="bg-card border border-border rounded-lg p-4">
+            <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+              <Briefcase className="w-4 h-4 text-primary" />
+              Internship Preferences
+            </h3>
+            <div className="space-y-2 text-sm">
+              <div><span className="text-muted-foreground">Preferred Industries:</span> <span className="font-medium">{preferredIndustries || "—"}</span></div>
+              <div><span className="text-muted-foreground">Desired Roles:</span> <span className="font-medium">{desiredRoles || "—"}</span></div>
+              <div><span className="text-muted-foreground">Career Goals:</span> <span className="font-medium">{careerGoals || "—"}</span></div>
+              <div><span className="text-muted-foreground">Salary Expectations:</span> <span className="font-medium">${salaryExpectations || "—"}</span></div>
+            </div>
+          </div>
+        </div>
+
+        {lastSaved && (
+          <div className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            Last saved {Math.round((Date.now() - lastSaved.getTime()) / 1000) === 0 ? 'now' : 'just now'}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Complete Profile</h1>
+            <h1 className="text-2xl font-bold">{isEditMode ? "Edit Profile" : "Complete Profile"}</h1>
             <p className="text-muted-foreground text-xs mt-2">
-              Complete all sections to apply for internships.
+              {isEditMode ? "Update your profile information" : "Complete all sections to apply for internships."}
             </p>
           </div>
-          {lastSaved && (
+          {lastSaved && !isEditMode && (
             <div className="text-xs text-emerald-600 dark:text-emerald-400 whitespace-nowrap ml-4">
               <CheckCircle2 className="w-3.5 h-3.5 inline mr-1" />
               Saved {Math.round((Date.now() - lastSaved.getTime()) / 1000) === 0 ? 'now' : 'just now'}
@@ -681,8 +779,17 @@ export function StudentProfileSetup() {
         )}
       </div>
 
-      {/* Save Button */}
+      {/* Save and Cancel Buttons */}
       <div className="flex gap-2 sticky bottom-4 z-40">
+        {isEditMode && (
+          <button
+            onClick={() => setIsEditMode(false)}
+            disabled={isSaving}
+            className="flex-1 px-4 py-2.5 border border-border rounded-lg hover:bg-accent disabled:opacity-50 transition-all flex items-center justify-center gap-2 font-medium text-sm"
+          >
+            Cancel
+          </button>
+        )}
         <button
           onClick={handleSaveProfile}
           disabled={isSaving}
@@ -696,7 +803,7 @@ export function StudentProfileSetup() {
           ) : (
             <>
               <Save className="w-4 h-4" />
-              Save
+              {isEditMode ? "Save Changes" : "Save"}
             </>
           )}
         </button>
