@@ -10,6 +10,7 @@ export function StudentDashboard() {
   const navigate = useNavigate();
   const [dashboard, setDashboard] = useState<any>(null);
   const [visitations, setVisitations] = useState<any[]>([]);
+  const [pendingApplication, setPendingApplication] = useState<any>(null);
 
   useEffect(() => {
     apiClient.getDashboard("student").then((res) => {
@@ -17,6 +18,15 @@ export function StudentDashboard() {
     });
     apiClient.getSiteVisitations().then((res) => {
       if (res.success) setVisitations(res.data);
+    });
+    apiClient.getApplications().then((res) => {
+      if (res.success && res.data) {
+        const apps = Array.isArray(res.data) ? res.data : res.data.applications || [];
+        const pending = apps.find(
+          (app) => app && !["rejected", "completed"].includes((app.status ?? "").toLowerCase())
+        );
+        setPendingApplication(pending || null);
+      }
     });
   }, []);
 
@@ -69,6 +79,50 @@ export function StudentDashboard() {
               </div>
               <div className="absolute right-0 top-0 bottom-0 w-1/3 opacity-10 flex items-center justify-center">
                 <Award className="w-40 h-40" />
+              </div>
+            </div>
+          ) : pendingApplication ? (
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl p-8">
+              <div className="flex items-start gap-4">
+                <AlertCircle className="w-6 h-6 text-amber-600 dark:text-amber-500 shrink-0 mt-1" />
+                <div className="flex-1">
+                  <h2 className="text-lg font-bold text-amber-900 dark:text-amber-400 mb-2">Application Pending Review</h2>
+                  <p className="text-sm text-amber-800 dark:text-amber-300 mb-3">
+                    Your application for an internship position is awaiting approval from the Department Liaison Officer. You'll be notified once a decision is made.
+                  </p>
+                  <div className="bg-white dark:bg-amber-950/50 rounded-lg p-4 mb-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Company</span>
+                        <span className="font-semibold text-sm">{pendingApplication?.company?.name || "N/A"}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Status</span>
+                        <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/50 text-amber-900 dark:text-amber-400 text-xs font-semibold rounded capitalize">
+                          {(pendingApplication?.status || "pending").replace(/_/g, " ")}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Applied On</span>
+                        <span className="text-sm">
+                          {pendingApplication?.created_at
+                            ? new Date(pendingApplication.created_at).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })
+                            : "N/A"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => navigate("/student/applications")}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600 text-white rounded-lg font-semibold text-sm transition-colors"
+                  >
+                    View Application
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
