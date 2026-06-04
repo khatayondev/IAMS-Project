@@ -476,31 +476,17 @@ export function StudentApplicationsPage() {
         <div className="space-y-4">
           {/* Pending Application Block */}
           {hasPendingApplication && (
-            <div className="bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-start gap-3">
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-amber-900 dark:text-amber-100" style={{ fontSize: "0.95rem" }}>
-                  You cannot apply for another internship yet
+                <p className="font-semibold text-amber-900 dark:text-amber-100 text-sm">
+                  {myApp.status?.toLowerCase() === "approved" ? "Application Approved" : "Application Pending"}
                 </p>
-                <p className="text-amber-800 dark:text-amber-200 mt-1" style={{ fontSize: "0.85rem" }}>
-                  Current application status: <span className="font-semibold capitalize">{myApp.status}</span>
+                <p className="text-amber-800 dark:text-amber-200 mt-1 text-xs">
+                  {myApp.status?.toLowerCase() === "approved"
+                    ? "Visit Documents to complete your company acceptance form to activate your internship"
+                    : "Your application is being reviewed. You can't apply for other internships yet."}
                 </p>
-                {myApp.status?.toLowerCase() === "approved" ? (
-                  <p className="text-amber-700 dark:text-amber-300 mt-2 text-xs">
-                    Your application has been approved! Go to <span className="font-semibold">Documents</span> to:
-                    <ul className="list-decimal list-inside mt-1 space-y-0.5">
-                      <li>Download the Placement Letter</li>
-                      <li>Download the Company Acceptance Form</li>
-                      <li>Have the company sign it</li>
-                      <li>Upload the signed form</li>
-                    </ul>
-                    Only then can you apply for another internship.
-                  </p>
-                ) : (
-                  <p className="text-amber-700 dark:text-amber-300 mt-2 text-xs">
-                    You can apply for another internship only if your current application is <span className="font-semibold">rejected</span> or you've <span className="font-semibold">submitted the company acceptance form</span> and your internship is active.
-                  </p>
-                )}
               </div>
             </div>
           )}
