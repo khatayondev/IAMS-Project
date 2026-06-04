@@ -24,6 +24,7 @@ export function StudentProfileSetup() {
   // Academic Information
   const [studentId, setStudentId] = useState(user?.studentId || "");
   const [department, setDepartment] = useState(user?.department || "");
+  const [program, setProgram] = useState("");
   const [level, setLevel] = useState("200");
   const [currentCourses, setCurrentCourses] = useState("");
   const [cgpa, setCgpa] = useState("");
@@ -63,6 +64,7 @@ export function StudentProfileSetup() {
         setEmergencyPhone(draft.emergencyPhone || "");
         setStudentId(draft.studentId || (user?.email ? user.email.split("@")[0] : ""));
         setDepartment(draft.department || "");
+        setProgram(draft.program || "");
         setLevel(draft.level || "200");
         setCurrentCourses(draft.currentCourses || "");
         setCgpa(draft.cgpa || "");
@@ -95,7 +97,7 @@ export function StudentProfileSetup() {
     const draftKey = `profile_setup_draft_${user?.id}`;
     const draft = {
       fullName, email, phone, emergencyContact, emergencyPhone,
-      studentId, department, level, currentCourses, cgpa, majorSubjects,
+      studentId, department, program, level, currentCourses, cgpa, majorSubjects,
       preferredStartDate, preferredEndDate, preferredIndustries, desiredRoles, careerGoals, salaryExpectations,
       technicalSkills, softSkills, languages, certifications, pastExperience, interests,
     };
@@ -109,7 +111,7 @@ export function StudentProfileSetup() {
 
   useEffect(() => {
     calculateCompletion();
-  }, [fullName, email, phone, emergencyContact, studentId, department, level, currentCourses, preferredStartDate, preferredIndustries, technicalSkills, softSkills]);
+  }, [fullName, email, phone, emergencyContact, studentId, department, program, level, currentCourses, preferredStartDate, preferredIndustries, technicalSkills, softSkills]);
 
   const calculateCompletion = () => {
     let filled = 0;
@@ -120,9 +122,9 @@ export function StudentProfileSetup() {
     total += 5;
     filled += personalFields.filter(f => f.trim()).length;
 
-    // Academic Info (6 fields)
-    const academicFields = [studentId, department, level, currentCourses, cgpa, majorSubjects];
-    total += 6;
+    // Academic Info (7 fields)
+    const academicFields = [studentId, department, program, level, currentCourses, cgpa, majorSubjects];
+    total += 7;
     filled += academicFields.filter(f => f.trim()).length;
 
     // Internship Preferences (5 fields)
@@ -156,7 +158,7 @@ export function StudentProfileSetup() {
       return;
     }
 
-    if (!studentId.trim() || !department || !level) {
+    if (!studentId.trim() || !department || !level || !program.trim()) {
       toast.error("Please fill in all academic information fields");
       setActiveTab("academic");
       return;
@@ -183,6 +185,7 @@ export function StudentProfileSetup() {
         emergency_phone: emergencyPhone || undefined,
         student_id: studentId || undefined,
         department: department || undefined,
+        program: program || undefined,
         level: level || undefined,
       };
 
@@ -409,6 +412,17 @@ export function StudentProfileSetup() {
                   <option value="Civil Engineering">Civil Engineering</option>
                   <option value="Business Administration">Business Administration</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium">Program/Degree *</label>
+                <input
+                  type="text"
+                  value={program}
+                  onChange={(e) => setProgram(e.target.value)}
+                  placeholder="e.g., Bachelor of Science in Computer Science"
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                />
               </div>
 
               <div>
