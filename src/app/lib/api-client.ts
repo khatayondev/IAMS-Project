@@ -684,6 +684,22 @@ export const apiClient = {
     });
   },
 
+  async getUser(id: string): Promise<ApiResponse<any | null>> {
+    return requestApi<any | null>(
+      replacePathParams(API_ENDPOINTS.USER_BY_ID, { id }),
+      { method: "GET" }
+    );
+  },
+
+  async getStudentProfile(userId: string): Promise<ApiResponse<any | null>> {
+    // Fetch student profile by user ID
+    const res = await requestApi<any[]>(API_ENDPOINTS.STUDENTS, { query: { user_id: userId } });
+    if (res.success && res.data && res.data.length > 0) {
+      return { success: true, data: res.data[0], message: res.message };
+    }
+    return { success: false, data: null, message: "Student profile not found" };
+  },
+
   async updateUser(id: string, data: Record<string, any>): Promise<ApiResponse<any | null>> {
     return requestApi<any | null>(
       replacePathParams(API_ENDPOINTS.USER_BY_ID, { id }),

@@ -50,46 +50,93 @@ export function StudentProfileSetup() {
   const [completionPercentage, setCompletionPercentage] = useState(0);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
-  // Load draft from localStorage on mount and auto-fill student ID from email
+  // Load draft from localStorage and saved profile from backend on mount
   useEffect(() => {
-    const draftKey = `profile_setup_draft_${user?.id}`;
-    try {
-      const saved = localStorage.getItem(draftKey);
-      if (saved) {
-        const draft = JSON.parse(saved);
-        setFullName(draft.fullName || "");
-        setEmail(draft.email || user?.email || "");
-        setPhone(draft.phone || "");
-        setEmergencyContact(draft.emergencyContact || "");
-        setEmergencyPhone(draft.emergencyPhone || "");
-        setStudentId(draft.studentId || (user?.email ? user.email.split("@")[0] : ""));
-        setDepartment(draft.department || "");
-        setProgram(draft.program || "");
-        setLevel(draft.level || "200");
-        setCurrentCourses(draft.currentCourses || "");
-        setCgpa(draft.cgpa || "");
-        setMajorSubjects(draft.majorSubjects || "");
-        setPreferredStartDate(draft.preferredStartDate || "");
-        setPreferredEndDate(draft.preferredEndDate || "");
-        setPreferredIndustries(draft.preferredIndustries || "");
-        setDesiredRoles(draft.desiredRoles || "");
-        setCareerGoals(draft.careerGoals || "");
-        setSalaryExpectations(draft.salaryExpectations || "");
-        setTechnicalSkills(draft.technicalSkills || "");
-        setSoftSkills(draft.softSkills || "");
-        setLanguages(draft.languages || "");
-        setCertifications(draft.certifications || "");
-        setPastExperience(draft.pastExperience || "");
-        setInterests(draft.interests || "");
-      } else {
-        // If no draft, still auto-fill student ID from email
+    const loadProfileData = async () => {
+      const draftKey = `profile_setup_draft_${user?.id}`;
+      try {
+        const saved = localStorage.getItem(draftKey);
+        if (saved) {
+          // Load from draft if it exists
+          const draft = JSON.parse(saved);
+          setFullName(draft.fullName || "");
+          setEmail(draft.email || user?.email || "");
+          setPhone(draft.phone || "");
+          setEmergencyContact(draft.emergencyContact || "");
+          setEmergencyPhone(draft.emergencyPhone || "");
+          setStudentId(draft.studentId || (user?.email ? user.email.split("@")[0] : ""));
+          setDepartment(draft.department || "");
+          setProgram(draft.program || "");
+          setLevel(draft.level || "200");
+          setCurrentCourses(draft.currentCourses || "");
+          setCgpa(draft.cgpa || "");
+          setMajorSubjects(draft.majorSubjects || "");
+          setPreferredStartDate(draft.preferredStartDate || "");
+          setPreferredEndDate(draft.preferredEndDate || "");
+          setPreferredIndustries(draft.preferredIndustries || "");
+          setDesiredRoles(draft.desiredRoles || "");
+          setCareerGoals(draft.careerGoals || "");
+          setSalaryExpectations(draft.salaryExpectations || "");
+          setTechnicalSkills(draft.technicalSkills || "");
+          setSoftSkills(draft.softSkills || "");
+          setLanguages(draft.languages || "");
+          setCertifications(draft.certifications || "");
+          setPastExperience(draft.pastExperience || "");
+          setInterests(draft.interests || "");
+        } else {
+          // If no draft, try to fetch from backend
+          if (user?.id) {
+            const res = await apiClient.getStudentProfile(String(user.id));
+            if (res.success && res.data) {
+              const profile = res.data;
+              setFullName(profile.name || user?.name || "");
+              setEmail(profile.email || user?.email || "");
+              setPhone(profile.phone || "");
+              setEmergencyContact(profile.emergency_contact || "");
+              setEmergencyPhone(profile.emergency_contact_phone || "");
+              setStudentId(profile.student_id || (user?.email ? user.email.split("@")[0] : ""));
+              setDepartment(profile.department || "");
+              setProgram(profile.program || "");
+              setLevel(String(profile.level || "200"));
+              setCgpa(profile.cgpa ? String(profile.cgpa) : "");
+
+              // Load profile_data fields from JSON if available
+              if (profile.profile_data && typeof profile.profile_data === "object") {
+                const pd = profile.profile_data;
+                setCurrentCourses(pd.current_courses || "");
+                setMajorSubjects(pd.major_subjects || "");
+                setPreferredStartDate(pd.preferred_start_date || "");
+                setPreferredEndDate(pd.preferred_end_date || "");
+                setPreferredIndustries(pd.preferred_industries || "");
+                setDesiredRoles(pd.desired_roles || "");
+                setCareerGoals(pd.career_goals || "");
+                setSalaryExpectations(pd.salary_expectations || "");
+                setTechnicalSkills(pd.technical_skills || "");
+                setSoftSkills(pd.soft_skills || "");
+                setLanguages(pd.languages || "");
+                setCertifications(pd.certifications || "");
+                setPastExperience(pd.past_experience || "");
+                setInterests(pd.interests || "");
+              }
+              setLastSaved(new Date());
+            }
+          }
+
+          // If no draft and no backend data, auto-fill student ID from email
+          if (user?.email) {
+            setStudentId(user.email.split("@")[0]);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load profile data:", err);
+        // Fallback: auto-fill student ID from email
         if (user?.email) {
           setStudentId(user.email.split("@")[0]);
         }
       }
-    } catch (err) {
-      console.error("Failed to load draft:", err);
-    }
+    };
+
+    loadProfileData();
   }, [user?.id, user?.email]);
 
   // Auto-save draft to localStorage
