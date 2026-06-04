@@ -50,7 +50,10 @@ export function ApplicationsPage({ viewRole }: Props) {
     return matchSearch && matchStatus;
   });
 
-  const statuses = ["All", "draft", "submitted", "under_review", "approved", "rejected"];
+  // Students can filter their own drafts; staff never see drafts (backend excludes them)
+  const statuses = viewRole === "student"
+    ? ["All", "draft", "submitted", "under_review", "approved", "rejected"]
+    : ["All", "submitted", "under_review", "approved", "rejected", "company_accepted"];
 
   const handleApprove = async (id: string) => {
     const res = await apiClient.approveApplication(id);
