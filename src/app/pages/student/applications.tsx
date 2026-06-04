@@ -375,6 +375,14 @@ export function StudentApplicationsPage() {
         const submitRes = await apiClient.submitApplication(String(createRes.data.id));
         if (submitRes.success) {
           clearDraft();
+          // Refresh applications data to show the new submission
+          const appsRes = await apiClient.getApplications();
+          if (appsRes.success && appsRes.data.length > 0) {
+            const sorted = [...appsRes.data].sort((a, b) =>
+              (b.created_at ?? "") > (a.created_at ?? "") ? 1 : -1
+            );
+            setMyApp(sorted[0]);
+          }
           setView("tracker");
         }
         return submitRes;
