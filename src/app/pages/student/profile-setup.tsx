@@ -47,6 +47,60 @@ export function StudentProfileSetup() {
 
   // Form completion tracking
   const [completionPercentage, setCompletionPercentage] = useState(0);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
+  // Load draft from localStorage on mount
+  useEffect(() => {
+    const draftKey = `profile_setup_draft_${user?.id}`;
+    try {
+      const saved = localStorage.getItem(draftKey);
+      if (saved) {
+        const draft = JSON.parse(saved);
+        setFullName(draft.fullName || "");
+        setEmail(draft.email || "");
+        setPhone(draft.phone || "");
+        setEmergencyContact(draft.emergencyContact || "");
+        setEmergencyPhone(draft.emergencyPhone || "");
+        setStudentId(draft.studentId || "");
+        setDepartment(draft.department || "");
+        setLevel(draft.level || "200");
+        setCurrentCourses(draft.currentCourses || "");
+        setCgpa(draft.cgpa || "");
+        setMajorSubjects(draft.majorSubjects || "");
+        setPreferredStartDate(draft.preferredStartDate || "");
+        setPreferredEndDate(draft.preferredEndDate || "");
+        setPreferredIndustries(draft.preferredIndustries || "");
+        setDesiredRoles(draft.desiredRoles || "");
+        setCareerGoals(draft.careerGoals || "");
+        setSalaryExpectations(draft.salaryExpectations || "");
+        setTechnicalSkills(draft.technicalSkills || "");
+        setSoftSkills(draft.softSkills || "");
+        setLanguages(draft.languages || "");
+        setCertifications(draft.certifications || "");
+        setPastExperience(draft.pastExperience || "");
+        setInterests(draft.interests || "");
+      }
+    } catch (err) {
+      console.error("Failed to load draft:", err);
+    }
+  }, [user?.id]);
+
+  // Auto-save draft to localStorage
+  useEffect(() => {
+    const draftKey = `profile_setup_draft_${user?.id}`;
+    const draft = {
+      fullName, email, phone, emergencyContact, emergencyPhone,
+      studentId, department, level, currentCourses, cgpa, majorSubjects,
+      preferredStartDate, preferredEndDate, preferredIndustries, desiredRoles, careerGoals, salaryExpectations,
+      technicalSkills, softSkills, languages, certifications, pastExperience, interests,
+    };
+    try {
+      localStorage.setItem(draftKey, JSON.stringify(draft));
+      setLastSaved(new Date());
+    } catch (err) {
+      console.error("Failed to save draft:", err);
+    }
+  }, [fullName, email, phone, emergencyContact, emergencyPhone, studentId, department, level, currentCourses, cgpa, majorSubjects, preferredStartDate, preferredEndDate, preferredIndustries, desiredRoles, careerGoals, salaryExpectations, technicalSkills, softSkills, languages, certifications, pastExperience, interests, user?.id]);
 
   useEffect(() => {
     calculateCompletion();
@@ -77,6 +131,16 @@ export function StudentProfileSetup() {
     filled += skillsFields.filter(f => f.trim()).length;
 
     setCompletionPercentage(Math.round((filled / total) * 100));
+  };
+
+  const clearDraft = () => {
+    const draftKey = `profile_setup_draft_${user?.id}`;
+    try {
+      localStorage.removeItem(draftKey);
+      setLastSaved(null);
+    } catch (err) {
+      console.error("Failed to clear draft:", err);
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -138,6 +202,9 @@ export function StudentProfileSetup() {
         // Mark profile as complete in localStorage
         localStorage.setItem(`student_profile_complete_${user?.id}`, "true");
 
+        // Clear draft after successful save
+        clearDraft();
+
         toast.success("Profile completed successfully! Redirecting to dashboard...");
 
         // Redirect to dashboard after a short delay
@@ -165,10 +232,20 @@ export function StudentProfileSetup() {
     <div className="space-y-4">
       {/* Header */}
       <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <h1 className="text-2xl font-bold">Complete Profile</h1>
-        <p className="text-muted-foreground text-xs mt-2">
-          Complete all sections to apply for internships.
-        </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Complete Profile</h1>
+            <p className="text-muted-foreground text-xs mt-2">
+              Complete all sections to apply for internships.
+            </p>
+          </div>
+          {lastSaved && (
+            <div className="text-xs text-emerald-600 dark:text-emerald-400 whitespace-nowrap ml-4">
+              <CheckCircle2 className="w-3.5 h-3.5 inline mr-1" />
+              Saved {Math.round((Date.now() - lastSaved.getTime()) / 1000) === 0 ? 'now' : 'just now'}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Completion Progress */}
