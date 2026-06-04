@@ -143,28 +143,24 @@ export function StudentDashboard() {
             <h2 className="text-lg font-bold">Internship Details</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Company Card */}
-              {activeInternship && (
-                <div className="bg-card border border-border rounded-xl p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-muted-foreground text-sm">Company</p>
-                    <Briefcase className="w-4 h-4 text-purple-600" />
-                  </div>
-                  <h3 className="font-bold text-sm">{companyName}</h3>
-                  <p className="text-muted-foreground text-xs">{activeInternship?.company?.industry ?? "Industrial Attachment"}</p>
+              <div className="bg-card border border-border rounded-xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-muted-foreground text-sm">Company</p>
+                  <Briefcase className="w-4 h-4 text-purple-600" />
                 </div>
-              )}
+                <h3 className="font-bold text-sm">{activeInternship ? companyName : "N/A"}</h3>
+                <p className="text-muted-foreground text-xs">{activeInternship?.company?.industry ?? "No assignment"}</p>
+              </div>
 
               {/* Term Name Card */}
-              {activeInternship && (
-                <div className="bg-card border border-border rounded-xl p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-muted-foreground text-sm">Term</p>
-                    <Calendar className="w-4 h-4 text-orange-600" />
-                  </div>
-                  <h3 className="font-bold text-sm">{activeInternship?.term?.name ?? "N/A"}</h3>
-                  <p className="text-muted-foreground text-xs">{activeInternship?.term?.year ? `Year ${activeInternship.term.year}` : "Term info"}</p>
+              <div className="bg-card border border-border rounded-xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-muted-foreground text-sm">Term</p>
+                  <Calendar className="w-4 h-4 text-orange-600" />
                 </div>
-              )}
+                <h3 className="font-bold text-sm">{activeInternship?.term?.name ?? "N/A"}</h3>
+                <p className="text-muted-foreground text-xs">{activeInternship?.term?.year ? `Year ${activeInternship.term.year}` : "Pending approval"}</p>
+              </div>
 
               {/* Current Status Card */}
               <div className="bg-card border border-border rounded-xl p-4 space-y-2">
