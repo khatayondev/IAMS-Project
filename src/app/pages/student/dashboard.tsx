@@ -38,7 +38,7 @@ export function StudentDashboard() {
         if (prevStatusRef.current && prevStatusRef.current !== currentStatus) {
           // Status changed, show notification
           if (currentStatus === "approved") {
-            toast.success("🎉 Your application has been approved! Download the placement letter and company acceptance form.", {
+            toast.success("🎉 Application Approved! Download documents and submit company form to activate.", {
               duration: 5000,
             });
           } else if (currentStatus === "rejected") {
@@ -138,14 +138,19 @@ export function StudentDashboard() {
                 <div>
                   <h1 className="text-3xl font-bold mb-2">🎉 Application Approved!</h1>
                   <p className="text-sm mb-4">Congratulations! Your application for <span className="font-semibold">{pendingApplication?.company?.name || "a position"}</span> has been approved by the DLO.</p>
-                  <div className="space-y-2 mb-4 text-sm">
-                    <p>📋 <strong>Next Steps:</strong></p>
-                    <ul className="list-disc list-inside text-sm space-y-1">
-                      <li>Download your Placement Letter from Applications</li>
-                      <li>Get the Company Acceptance Form from your DLO</li>
-                      <li>Have the company/supervisor sign the form</li>
-                      <li>Submit the completed form to activate your internship</li>
-                    </ul>
+                  <div className="space-y-3 mb-4">
+                    <div>
+                      <p className="text-sm font-semibold mb-2">📋 <strong>Required Actions (to activate internship):</strong></p>
+                      <ul className="list-decimal list-inside text-sm space-y-1">
+                        <li>Download Placement Letter from Applications tab</li>
+                        <li>Get Company Acceptance Form from your DLO</li>
+                        <li>Have company/supervisor sign the form</li>
+                        <li>Submit the signed form to activate your internship</li>
+                      </ul>
+                    </div>
+                    <p className="text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-100/50 dark:bg-emerald-900/30 p-2 rounded">
+                      ⚠️ You cannot apply for another internship until you submit the company acceptance form and this internship becomes active.
+                    </p>
                   </div>
                   <button
                     onClick={() => navigate("/student/applications")}

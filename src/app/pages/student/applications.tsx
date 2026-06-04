@@ -153,9 +153,11 @@ export function StudentApplicationsPage() {
   const draftKey  = `application_form_${user?.id ?? "anon"}`;
   const stepKey   = `application_step_${user?.id ?? "anon"}`;
 
-  // Only block new applications when truly pending (submitted or under_review)
-  // Approved, rejected, or completed applications don't block new submissions
-  const hasPendingApplication = myApp && ["submitted", "under_review"].includes((myApp.status ?? "").toLowerCase());
+  // Block new applications when:
+  // 1. Application is submitted/under_review (awaiting DLO decision)
+  // 2. Application is approved (student must submit company acceptance form first)
+  // Can apply again only if rejected or form is submitted and internship is active
+  const hasPendingApplication = myApp && ["submitted", "under_review", "approved"].includes((myApp.status ?? "").toLowerCase());
 
   const hasMeaningfulDraft = useCallback((f: FormData, s: number) =>
     s > 1 || !!f.termId || !!f.selectedCompanyId || !!f.newCompanyName, []);
@@ -478,14 +480,20 @@ export function StudentApplicationsPage() {
               <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-amber-900 dark:text-amber-100" style={{ fontSize: "0.95rem" }}>
-                  You have a pending internship application
+                  You cannot apply for another internship yet
                 </p>
                 <p className="text-amber-800 dark:text-amber-200 mt-1" style={{ fontSize: "0.85rem" }}>
-                  You cannot submit a new application while waiting for approval on your current one. Your application status is: <span className="font-semibold capitalize">{myApp.status}</span>
+                  Current application status: <span className="font-semibold capitalize">{myApp.status}</span>
                 </p>
-                <p className="text-amber-700 dark:text-amber-300 mt-2 text-xs">
-                  Once your current application is either <span className="font-semibold">approved</span>, <span className="font-semibold">rejected</span>, or <span className="font-semibold">completed</span>, you'll be able to submit a new application.
-                </p>
+                {myApp.status?.toLowerCase() === "approved" ? (
+                  <p className="text-amber-700 dark:text-amber-300 mt-2 text-xs">
+                    Your application has been approved! You must <span className="font-semibold">download the placement letter and company acceptance form</span>, have the company sign it, and <span className="font-semibold">submit it</span> to activate your internship. Only then can you apply for another internship.
+                  </p>
+                ) : (
+                  <p className="text-amber-700 dark:text-amber-300 mt-2 text-xs">
+                    You can apply for another internship only if your current application is <span className="font-semibold">rejected</span> or the company acceptance form is <span className="font-semibold">submitted</span> and your internship becomes active.
+                  </p>
+                )}
               </div>
             </div>
           )}
