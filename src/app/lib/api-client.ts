@@ -684,13 +684,7 @@ export const apiClient = {
     });
   },
 
-  async updateUser(id: string, data: {
-    name?: string;
-    email?: string;
-    phone?: string;
-    department_id?: number;
-    role?: string;
-  }): Promise<ApiResponse<any | null>> {
+  async updateUser(id: string, data: Record<string, any>): Promise<ApiResponse<any | null>> {
     return requestApi<any | null>(
       replacePathParams(API_ENDPOINTS.USER_BY_ID, { id }),
       { method: "PUT", body: JSON.stringify(data) }
