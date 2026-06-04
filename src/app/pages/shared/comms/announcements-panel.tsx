@@ -136,7 +136,7 @@ export function AnnouncementsPanel({ viewRole, canCompose }: Props) {
       const res = await apiClient.broadcastNotification({
         title: data.title,
         message: data.message,
-        type: "system",
+        type: "system_announcement",
         priority: data.priority === "Urgent" ? "urgent" : "normal",
         roles: isEveryone ? undefined : (roles.length > 0 ? roles : undefined),
         // Use department_id from user object (set for DLO users)
