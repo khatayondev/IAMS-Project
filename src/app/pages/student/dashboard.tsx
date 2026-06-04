@@ -54,19 +54,23 @@ export function StudentDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">Welcome back, {user?.name?.split(" ")[0]}</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          {user?.studentId} · {user?.department}
-        </p>
+      {/* Header with Hero Section */}
+      <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-2xl p-6 space-y-4">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold">Welcome back, {user?.name?.split(" ")[0]}</h1>
+            <p className="text-muted-foreground text-sm mt-2">
+              {user?.studentId} · {user?.department}
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Main Grid Container */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main Grid Container - Better Desktop Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
         {/* Left Side: Internship Info, Metrics, and Actions */}
-        <div className="space-y-6 lg:col-span-2">
+        <div className="space-y-6 lg:col-span-3">
           
           {/* Internship Spotlight */}
           {activeInternship ? (
@@ -207,8 +211,8 @@ export function StudentDashboard() {
 
           {/* Key Metrics */}
           <div className="space-y-3">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">My Progress Metrics</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Progress Metrics</h3>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <StatCard
                 title="Logbook Entries"
                 value={recentLogbooks.length}
@@ -234,50 +238,50 @@ export function StudentDashboard() {
 
           {/* Quick Actions */}
           <div className="space-y-3">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quick Actions</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quick Navigation</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <button
                 onClick={() => navigate("/student/logbook")}
-                className="bg-card border border-border rounded-xl p-4 text-center hover:border-primary/40 hover:shadow-sm transition-all group flex flex-col items-center"
+                className="bg-gradient-to-br from-blue-50 to-blue-50/50 dark:from-blue-950/30 dark:to-blue-950/10 border border-blue-200/50 dark:border-blue-800/30 rounded-xl p-4 text-center hover:shadow-md hover:border-blue-300/70 dark:hover:border-blue-700 transition-all group flex flex-col items-center"
               >
-                <div className="p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors mb-2.5">
-                  <BookMarked className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-xl group-hover:scale-110 transition-transform mb-2.5">
+                  <BookMarked className="w-5 h-5 text-blue-600 dark:text-blue-300" />
                 </div>
-                <h4 className="font-semibold text-xs text-foreground">Logbook</h4>
-                <p className="text-muted-foreground text-[10px] mt-0.5">Add Daily Activities</p>
+                <h4 className="font-semibold text-xs text-foreground">Daily Logbook</h4>
+                <p className="text-muted-foreground text-[10px] mt-1">Record activities</p>
+              </button>
+
+              <button
+                onClick={() => navigate("/student/attendance")}
+                className="bg-gradient-to-br from-teal-50 to-teal-50/50 dark:from-teal-950/30 dark:to-teal-950/10 border border-teal-200/50 dark:border-teal-800/30 rounded-xl p-4 text-center hover:shadow-md hover:border-teal-300/70 dark:hover:border-teal-700 transition-all group flex flex-col items-center"
+              >
+                <div className="p-3 bg-teal-100 dark:bg-teal-900/50 rounded-xl group-hover:scale-110 transition-transform mb-2.5">
+                  <Clock className="w-5 h-5 text-teal-600 dark:text-teal-300" />
+                </div>
+                <h4 className="font-semibold text-xs text-foreground">Attendance</h4>
+                <p className="text-muted-foreground text-[10px] mt-1">Check in status</p>
               </button>
 
               <button
                 onClick={() => navigate("/student/grades")}
-                className="bg-card border border-border rounded-xl p-4 text-center hover:border-primary/40 hover:shadow-sm transition-all group flex flex-col items-center"
+                className="bg-gradient-to-br from-emerald-50 to-emerald-50/50 dark:from-emerald-950/30 dark:to-emerald-950/10 border border-emerald-200/50 dark:border-emerald-800/30 rounded-xl p-4 text-center hover:shadow-md hover:border-emerald-300/70 dark:hover:border-emerald-700 transition-all group flex flex-col items-center"
               >
-                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/50 transition-colors mb-2.5">
-                  <Award className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                <div className="p-3 bg-emerald-100 dark:bg-emerald-900/50 rounded-xl group-hover:scale-110 transition-transform mb-2.5">
+                  <Award className="w-5 h-5 text-emerald-600 dark:text-emerald-300" />
                 </div>
-                <h4 className="font-semibold text-xs text-foreground">Grade Evaluation</h4>
-                <p className="text-muted-foreground text-[10px] mt-0.5">{publishedGrade ? "View Grade" : "Grade Pending"}</p>
-              </button>
-
-              <button
-                onClick={() => navigate("/student/documents")}
-                className="bg-card border border-border rounded-xl p-4 text-center hover:border-primary/40 hover:shadow-sm transition-all group flex flex-col items-center"
-              >
-                <div className="p-3 bg-purple-50 dark:bg-purple-950/40 rounded-xl group-hover:bg-purple-100 dark:group-hover:bg-purple-900/50 transition-colors mb-2.5">
-                  <Upload className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                </div>
-                <h4 className="font-semibold text-xs text-foreground">My Documents</h4>
-                <p className="text-muted-foreground text-[10px] mt-0.5">Upload Letters / Forms</p>
+                <h4 className="font-semibold text-xs text-foreground">Grades</h4>
+                <p className="text-muted-foreground text-[10px] mt-1">{publishedGrade ? "View scores" : "Pending"}</p>
               </button>
 
               <button
                 onClick={() => navigate("/student/applications")}
-                className="bg-card border border-border rounded-xl p-4 text-center hover:border-primary/40 hover:shadow-sm transition-all group flex flex-col items-center"
+                className="bg-gradient-to-br from-purple-50 to-purple-50/50 dark:from-purple-950/30 dark:to-purple-950/10 border border-purple-200/50 dark:border-purple-800/30 rounded-xl p-4 text-center hover:shadow-md hover:border-purple-300/70 dark:hover:border-purple-700 transition-all group flex flex-col items-center"
               >
-                <div className="p-3 bg-orange-50 dark:bg-orange-950/40 rounded-xl group-hover:bg-orange-100 dark:group-hover:bg-orange-900/50 transition-colors mb-2.5">
-                  <FileText className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                <div className="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-xl group-hover:scale-110 transition-transform mb-2.5">
+                  <FileText className="w-5 h-5 text-purple-600 dark:text-purple-300" />
                 </div>
-                <h4 className="font-semibold text-xs text-foreground">Apply Window</h4>
-                <p className="text-muted-foreground text-[10px] mt-0.5">Attachment Windows</p>
+                <h4 className="font-semibold text-xs text-foreground">Applications</h4>
+                <p className="text-muted-foreground text-[10px] mt-1">Apply to windows</p>
               </button>
             </div>
           </div>
