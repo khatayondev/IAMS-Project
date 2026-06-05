@@ -271,10 +271,13 @@ export const apiClient = {
     const endDate = (data as any).proposed_end_date;
     if (endDate) payload.proposed_end_date = endDate;
 
-    return requestApi<ApplicationResponse | null>(API_ENDPOINTS.APPLICATIONS, {
+    const response = await requestApi<any>(API_ENDPOINTS.APPLICATIONS, {
       method: "POST",
       body: JSON.stringify(payload),
     });
+    // Backend wraps the application under data.application — unwrap to top level
+    const application = response.data?.application ?? response.data;
+    return { ...response, data: application };
   },
 
   async updateApplication(id: string, data: Partial<CreateApplicationRequest>): Promise<ApiResponse<ApplicationResponse | null>> {
@@ -293,7 +296,7 @@ export const apiClient = {
   async submitApplication(id: string): Promise<ApiResponse<ApplicationResponse | null>> {
     return requestApi<ApplicationResponse | null>(
       replacePathParams(API_ENDPOINTS.APPLICATION_SUBMIT, { id }),
-      { method: "POST" }
+      { method: "POST", body: JSON.stringify({}) }
     );
   },
 
@@ -323,14 +326,37 @@ export const apiClient = {
       student_role?: string;
       placement_department?: string;
       acceptance_notes?: string;
+      acceptance_form_url?: string;
     }
   ): Promise<ApiResponse<ApplicationResponse | null>> {
     return requestApi<ApplicationResponse | null>(
       replacePathParams("/api/v1/applications/:id/accept", { id }),
-      {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      }
+      { method: "PATCH", body: JSON.stringify(data) }
+    );
+  },
+
+  async uploadFile(file: File, folder = "iams"): Promise<ApiResponse<{ url: string; public_id: string } | null>> {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", folder);
+    const requestHeaders = new Headers();
+    requestHeaders.set("Accept", "application/json");
+    const currentToken = getApiAuthToken();
+    if (currentToken) requestHeaders.set("Authorization", `Bearer ${currentToken}`);
+    const response = await fetch(buildApiUrl("/api/v1/upload"), {
+      method: "POST",
+      headers: requestHeaders,
+      body: formData,
+    });
+    const body = await response.json().catch(() => null);
+    if (!response.ok) return { success: false, data: null, message: body?.message ?? "Upload failed" };
+    return { success: true, data: body?.data ?? null, message: body?.message };
+  },
+
+  async withdrawApplication(id: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(
+      replacePathParams("/api/v1/applications/:id/withdraw", { id }),
+      { method: "DELETE" }
     );
   },
 
@@ -684,13 +710,31 @@ export const apiClient = {
     });
   },
 
-  async updateUser(id: string, data: {
-    name?: string;
-    email?: string;
-    phone?: string;
-    department_id?: number;
-    role?: string;
-  }): Promise<ApiResponse<any | null>> {
+  async getUser(id: string): Promise<ApiResponse<any | null>> {
+    return requestApi<any | null>(
+      replacePathParams(API_ENDPOINTS.USER_BY_ID, { id }),
+      { method: "GET" }
+    );
+  },
+
+  async getStudentProfile(userId: string): Promise<ApiResponse<any | null>> {
+    // NOTE: Backend GET /students does not support user_id filter.
+    // For student callers the server auto-filters to the current user's profile.
+    // For admin/CLO/DLO callers this cannot resolve a profile by user_id — use
+    // GET /api/v1/students/{profileId} when the profile ID is known instead.
+    const res = await requestApi<any>(API_ENDPOINTS.STUDENTS, { query: {} });
+    if (!res.success) return { success: false, data: null, message: res.message };
+    const payload = res.data as any;
+    // Student role: server returns { data: { student: {...} } }
+    // Admin/DLO/CLO: server returns { data: { students: paginated } }
+    const profile =
+      payload?.student ??
+      (Array.isArray(payload?.students?.data) ? payload.students.data.find((s: any) => String(s.user_id) === String(userId)) ?? null : null);
+    if (!profile) return { success: false, data: null, message: "Student profile not found" };
+    return { success: true, data: profile, message: res.message };
+  },
+
+  async updateUser(id: string, data: Record<string, any>): Promise<ApiResponse<any | null>> {
     return requestApi<any | null>(
       replacePathParams(API_ENDPOINTS.USER_BY_ID, { id }),
       { method: "PUT", body: JSON.stringify(data) }

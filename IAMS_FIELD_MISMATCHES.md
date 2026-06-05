@@ -1,6 +1,6 @@
 # IAMS Frontend ↔ Backend Key/Value Pair Mismatches
 
-> Audited: 2026-06-04  
+> Audited: 2026-06-05 (updated — 55 new origin/main commits re-audited)  
 > Backend ref: `origin/main` @ `11e8b26`  
 > Frontend: `IAMS-Project/src/app/`
 
@@ -299,6 +299,90 @@ This caused a silent TypeScript type mismatch — the type did not enforce corre
 
 ---
 
+## Mismatch 21 — `createApplication` Response: Missing `data.application` Unwrap
+
+**File**: `src/app/lib/api-client.ts`
+
+Backend `POST /applications` returns:
+```json
+{ "success": true, "data": { "application": { ...fields } } }
+```
+
+The previous `createApplication()` returned `response` directly — callers received `{ application: {...} }` as the data object, not the application itself.
+
+**Fix applied**: Added unwrap — `response.data?.application ?? response.data` so callers receive the application object directly.
+
+---
+
+## Mismatch 22 — `createApplication` Sends `status: "submitted"` — Backend Always Creates Draft
+
+**Files**: `src/app/types/api.ts`, `src/app/lib/api-client.ts`
+
+| | Behaviour |
+|-|-----------|
+| **Backend** `ApplicationController.store()` | Line 444: `$validated['status'] = 'draft'` — always overrides to `"draft"`, ignores any passed value |
+| **Frontend** (origin/main) | Sent `status: (data.status ?? "submitted")` in payload; added `status?: "draft" \| "submitted"` to `CreateApplicationRequest` |
+
+**Impact**: The `status` field is silently ignored. The comment "draft only used locally" was misleading — the backend *only* ever creates drafts via this endpoint. Sending `status: "submitted"` creates a false expectation that the backend creates a submitted application.
+
+**Fix applied**:
+- Removed `status` from `createApplication()` payload (field ignored server-side)
+- Removed `status?: "draft" | "submitted"` from `CreateApplicationRequest` interface
+
+---
+
+## Mismatch 23 — `uploadFile()` → `POST /api/v1/upload` — Endpoint Does Not Exist
+
+**File**: `src/app/lib/api-client.ts`
+
+| | |
+|-|-|
+| **Frontend** `uploadFile(file, folder)` | `POST /api/v1/upload` with `FormData` |
+| **Backend** `routes/api.php` | No `/upload` route registered |
+
+**Impact**: Any call to `uploadFile()` will receive a 404 response. Currently used by the company acceptance modal for PDF upload (commit `514efdc`). This feature is non-functional until the backend route is added.
+
+**Status**: Documented only. Frontend code retained — backend needs to implement `POST /api/v1/upload` returning `{ data: { url: string, public_id: string } }`.
+
+---
+
+## Mismatch 24 — `withdrawApplication()` → `DELETE /api/v1/applications/:id/withdraw` — Route Does Not Exist
+
+**File**: `src/app/lib/api-client.ts`
+
+| | |
+|-|-|
+| **Frontend** `withdrawApplication(id)` | `DELETE /api/v1/applications/:id/withdraw` |
+| **Backend** `routes/api.php` | No `/applications/{id}/withdraw` route; only `DELETE /applications/{id}` (hard delete) |
+
+**Impact**: Any call to `withdrawApplication()` will 404. The backend `DELETE /applications/{id}` (hard-delete) exists but has different semantics (destroys the record vs. setting status to withdrawn).
+
+**Status**: Documented only. Frontend code retained. Backend needs to implement a dedicated withdraw endpoint (soft-status change, not hard delete).
+
+---
+
+## Mismatch 25 — `getStudentProfile(userId)` Uses Unsupported `user_id` Query Parameter
+
+**File**: `src/app/lib/api-client.ts`
+
+| | |
+|-|-|
+| **Frontend** (origin/main) | `GET /api/v1/students?user_id={userId}` |
+| **Backend** `StudentProfileController.index()` | Accepts: `department_id`, `status`, `level`, `search`, `per_page` — **no `user_id` filter** |
+
+**Behaviour by caller role**:
+- **Student**: Works by accident — server auto-filters to `WHERE user_id = auth_user.id` regardless of query params
+- **Admin/CLO/DLO**: `user_id` param silently ignored → returns full paginated list → previous code returned `students[0]` (first student, not the requested user)
+
+**Fix applied**:
+- Removed unsupported `user_id: userId` query param
+- Student path: `payload?.student` (still works — server-side auto-filter applies)
+- Admin path: `payload?.students?.data.find(s => s.user_id === userId)` — now filters client-side on the paginated first page; correct for typical page sizes but may miss the user if they are beyond page 1
+
+> Full fix requires backend to support `GET /api/v1/students?user_id={id}` or a dedicated `GET /api/v1/users/{id}/student-profile` route.
+
+---
+
 ## Summary
 
 | # | Area | Root Cause | Fix |
@@ -323,3 +407,8 @@ This caused a silent TypeScript type mismatch — the type did not enforce corre
 | 18 | Term `eligible_levels`/`departments` | Incorrectly removed | Restored; backend now supports both |
 | 19 | CriterionKey abstract notation | Type mismatched constants | Rewritten to use real backend field names |
 | 20 | Settings API structure | Frontend sends bulk; backend is per-key | Documented; full fix deferred |
+| 21 | `createApplication` response unwrap | Backend nests under `data.application` | Unwrap added; callers now receive flat application object |
+| 22 | `createApplication` sends `status` | Backend overrides to `"draft"`, field ignored | Removed from payload and type |
+| 23 | `uploadFile()` endpoint missing | `POST /api/v1/upload` not in backend routes | Documented; backend needs to implement |
+| 24 | `withdrawApplication()` endpoint missing | `DELETE /applications/:id/withdraw` not in backend routes | Documented; backend needs to implement |
+| 25 | `getStudentProfile` uses invalid param | `user_id` query param not supported by backend | Removed param; client-side filter added for admin path |
