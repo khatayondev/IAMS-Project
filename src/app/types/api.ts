@@ -82,6 +82,7 @@ export interface CreateApplicationRequest {
   cover_letter?: string | null;
   proposed_start_date?: string | null;
   proposed_end_date?: string | null;
+  status?: "draft" | "submitted";
 }
 
 export interface ApproveApplicationRequest {
@@ -299,7 +300,6 @@ export interface SubmitLogbookRequest {
   activities_description: string;
   skills_learned?: string;
   challenges_faced?: string;
-  // NOTE: backend stores attachment as attachment_path; attachment_name/url are frontend-only
   attachment_name?: string;
   attachment_url?: string;
 }
@@ -335,7 +335,6 @@ export interface LogbookEntryResponse {
   challenges_faced?: string;
   // Backend uses "rejected" (not "revision_requested") when supervisor rejects
   status: "draft" | "submitted" | "approved" | "rejected" | "revision_requested";
-  // Backend stores as attachment_path; attachment_name/url are frontend-only
   attachment_path?: string;
   attachment_name?: string;
   attachment_url?: string;

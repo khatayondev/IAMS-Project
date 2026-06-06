@@ -1,7 +1,7 @@
 # IAMS Frontend ↔ Backend Key/Value Pair Mismatches
 
-> Audited: 2026-06-05 (updated — 55 new origin/main commits re-audited)  
-> Backend ref: `origin/main` @ `11e8b26`  
+> Audited: 2026-06-06 (updated — backend commits `11e8b26`→`8e6c326` re-audited)  
+> Backend ref: `origin/main` @ `8e6c326`  
 > Frontend: `IAMS-Project/src/app/`
 
 All mismatches were identified by reading actual controller source and comparing against frontend type definitions and `api-client.ts`. Fixes were applied to the frontend only — the backend is treated as the source of truth.
@@ -183,10 +183,11 @@ Backend `POST /logbooks` validates and stores `time_in` and `time_out` (format `
 
 | | Field |
 |-|-------|
-| **Backend** `LogbookEntry` model | `attachment_path` (single path string) |
+| **Backend** `LogbookEntry` model (original) | `attachment_path` (single path string) |
+| **Backend** `LogbookEntry` model (updated `8d33d2f`) | `attachment_path`, `attachment_name`, `attachment_url` (all three stored) |
 | **Frontend** `LogbookEntryResponse` (before) | `attachment_name`, `attachment_url` (two fields) |
 
-**Fix applied**: `attachment_path?: string` added to `LogbookEntryResponse`. Legacy fields retained for backwards compat.
+**Fix applied**: `attachment_path?: string` added to `LogbookEntryResponse`. `attachment_name` and `attachment_url` retained — confirmed real backend fields as of commit `8d33d2f`.
 
 ---
 
@@ -314,50 +315,53 @@ The previous `createApplication()` returned `response` directly — callers rece
 
 ---
 
-## Mismatch 22 — `createApplication` Sends `status: "submitted"` — Backend Always Creates Draft
+## Mismatch 22 — `createApplication` `status` Field *(Corrected)*
 
 **Files**: `src/app/types/api.ts`, `src/app/lib/api-client.ts`
 
+**History**:
+- The original backend (`11e8b26`) always forced `status = 'draft'` regardless of what the frontend sent — frontend's `status` field was silently ignored.
+- Fix pass 1 (this branch) removed `status` from the payload and type to reflect that.
+- Backend commit `0eb5ab1` updated `store()` to **accept** `status: 'draft' | 'submitted'` — allowing a one-step create-and-submit flow.
+
 | | Behaviour |
 |-|-----------|
-| **Backend** `ApplicationController.store()` | Line 444: `$validated['status'] = 'draft'` — always overrides to `"draft"`, ignores any passed value |
-| **Frontend** (origin/main) | Sent `status: (data.status ?? "submitted")` in payload; added `status?: "draft" \| "submitted"` to `CreateApplicationRequest` |
+| **Backend now** | Validates `status` as `nullable\|in:draft,submitted`; defaults to `'draft'`; sets `submitted_at` when `'submitted'` |
+| **Frontend (restored)** | Sends `status: data.status ?? "submitted"`; `CreateApplicationRequest.status?: "draft" \| "submitted"` |
 
-**Impact**: The `status` field is silently ignored. The comment "draft only used locally" was misleading — the backend *only* ever creates drafts via this endpoint. Sending `status: "submitted"` creates a false expectation that the backend creates a submitted application.
-
-**Fix applied**:
-- Removed `status` from `createApplication()` payload (field ignored server-side)
-- Removed `status?: "draft" | "submitted"` from `CreateApplicationRequest` interface
+**Fix applied**: Restored `status` to payload and interface — the backend now honors it for single-step submission flow.
 
 ---
 
-## Mismatch 23 — `uploadFile()` → `POST /api/v1/upload` — Endpoint Does Not Exist
+## Mismatch 23 — `uploadFile()` → `POST /api/v1/upload` ✅ Resolved
 
 **File**: `src/app/lib/api-client.ts`
 
-| | |
-|-|-|
-| **Frontend** `uploadFile(file, folder)` | `POST /api/v1/upload` with `FormData` |
-| **Backend** `routes/api.php` | No `/upload` route registered |
+Backend commit `8a90587` added `UploadController` at `POST /api/v1/upload` (Cloudinary proxy).
 
-**Impact**: Any call to `uploadFile()` will receive a 404 response. Currently used by the company acceptance modal for PDF upload (commit `514efdc`). This feature is non-functional until the backend route is added.
+| Field | Frontend expects | Backend returns |
+|-------|-----------------|----------------|
+| `url` | `string` | `data.url` (Cloudinary `secure_url`) ✅ |
+| `public_id` | `string` | `data.public_id` ✅ |
+| `format` | — | `data.format` (extra, ignored) |
+| `size` | — | `data.size` (extra, ignored) |
 
-**Status**: Documented only. Frontend code retained — backend needs to implement `POST /api/v1/upload` returning `{ data: { url: string, public_id: string } }`.
+**Status**: ✅ Backend implemented. No frontend changes needed — response shape matches.
 
 ---
 
-## Mismatch 24 — `withdrawApplication()` → `DELETE /api/v1/applications/:id/withdraw` — Route Does Not Exist
+## Mismatch 24 — `withdrawApplication()` → `DELETE /api/v1/applications/:id/withdraw` ✅ Resolved
 
 **File**: `src/app/lib/api-client.ts`
 
-| | |
-|-|-|
-| **Frontend** `withdrawApplication(id)` | `DELETE /api/v1/applications/:id/withdraw` |
-| **Backend** `routes/api.php` | No `/applications/{id}/withdraw` route; only `DELETE /applications/{id}` (hard delete) |
+Backend commit `d183a0f` added `ApplicationController.withdraw()`. Route moved under `role:student` by commit `fa1f0a0`.
 
-**Impact**: Any call to `withdrawApplication()` will 404. The backend `DELETE /applications/{id}` (hard-delete) exists but has different semantics (destroys the record vs. setting status to withdrawn).
+- Only the owning student can call it (403 otherwise)
+- Withdrawable statuses: `draft`, `submitted`, `under_review`, `approved`
+- Calls `$application->delete()` (soft delete via `SoftDeletes`)
+- Returns `{ success: true, message: "..." }` — matches frontend's `ApiResponse<null>`
 
-**Status**: Documented only. Frontend code retained. Backend needs to implement a dedicated withdraw endpoint (soft-status change, not hard delete).
+**Status**: ✅ Backend implemented. Frontend `withdrawApplication()` works correctly.
 
 ---
 
@@ -380,6 +384,45 @@ The previous `createApplication()` returned `response` directly — callers rece
 - Admin path: `payload?.students?.data.find(s => s.user_id === userId)` — now filters client-side on the paginated first page; correct for typical page sizes but may miss the user if they are beyond page 1
 
 > Full fix requires backend to support `GET /api/v1/students?user_id={id}` or a dedicated `GET /api/v1/users/{id}/student-profile` route.
+
+---
+
+## Mismatch 26 — Announcements System: No Frontend API Coverage
+
+**File**: `src/app/lib/api-client.ts` (missing methods), `src/app/lib/constants.ts` (missing endpoints)
+
+Backend commit `9729efa` introduced a full announcements system. No frontend methods exist for any of these routes:
+
+| Endpoint | Who can call | Purpose |
+|----------|-------------|---------|
+| `GET /api/v1/announcements` | All roles | List announcements scoped to user (role + dept + level + placement filter) |
+| `GET /api/v1/announcements/unread-count` | All roles | Returns `{ data: { unread_count: N } }` |
+| `POST /api/v1/announcements/{id}/read` | All roles | Mark an announcement as read |
+| `POST /api/v1/announcements` | CLO/DLO | Create announcement |
+| `PATCH /api/v1/announcements/{id}/pin` | CLO/DLO | Pin/unpin |
+| `DELETE /api/v1/announcements/{id}` | CLO/DLO | Soft-delete |
+
+Response shape for `GET /announcements`:
+```json
+{ "data": { "announcements": { paginated, each with: id, title, message, priority, pinned, is_read, sender, created_at } } }
+```
+
+**Status**: Frontend has no calls for this feature. Adding these methods to `apiClient` is needed before any announcement UI can be built.
+
+---
+
+## Mismatch 27 — Broadcast Notification Endpoint: No Frontend API Coverage
+
+**File**: `src/app/lib/api-client.ts` (missing method)
+
+Backend commit `0716c54` added `POST /api/v1/notifications/broadcast` (CLO/DLO only). The frontend has `SendAnnouncementRequest` in `api.ts` and `NOTIFICATIONS` endpoint constant, but no `broadcastNotification()` or equivalent method in `apiClient`.
+
+Backend expects:
+```json
+{ "title": "...", "message": "...", "target_roles": ["student", ...], "department_id": null }
+```
+
+**Status**: Frontend type `SendAnnouncementRequest` has a compatible shape (`title`, `message`, `targets` array) but no `apiClient` method calls this endpoint. Missing: `POST /api/v1/notifications/broadcast`.
 
 ---
 
@@ -408,7 +451,9 @@ The previous `createApplication()` returned `response` directly — callers rece
 | 19 | CriterionKey abstract notation | Type mismatched constants | Rewritten to use real backend field names |
 | 20 | Settings API structure | Frontend sends bulk; backend is per-key | Documented; full fix deferred |
 | 21 | `createApplication` response unwrap | Backend nests under `data.application` | Unwrap added; callers now receive flat application object |
-| 22 | `createApplication` sends `status` | Backend overrides to `"draft"`, field ignored | Removed from payload and type |
-| 23 | `uploadFile()` endpoint missing | `POST /api/v1/upload` not in backend routes | Documented; backend needs to implement |
-| 24 | `withdrawApplication()` endpoint missing | `DELETE /applications/:id/withdraw` not in backend routes | Documented; backend needs to implement |
+| 22 | `createApplication` `status` field | Initially ignored by backend; backend now accepts it | Restored after backend commit `0eb5ab1` |
+| 23 | `uploadFile()` endpoint missing | Was missing; backend commit `8a90587` added it | ✅ Resolved — shapes match |
+| 24 | `withdrawApplication()` endpoint missing | Was missing; backend commit `d183a0f` added it | ✅ Resolved |
 | 25 | `getStudentProfile` uses invalid param | `user_id` query param not supported by backend | Removed param; client-side filter added for admin path |
+| 26 | Announcements system missing from frontend | Backend has full CRUD; frontend has no API methods | Documented; `apiClient` methods need adding |
+| 27 | Broadcast notification endpoint missing | `POST /notifications/broadcast` has no frontend method | Documented; `apiClient` method needs adding |
