@@ -22,6 +22,9 @@ export function DocumentsPage() {
   const [isAcceptanceOpen, setIsAcceptanceOpen] = useState(false);
   const [isReportUploadOpen, setIsReportUploadOpen] = useState(false);
 
+  // Loading state for download button feedback
+  const [isDownloadingForm, setIsDownloadingForm] = useState(false);
+
   // Simulated local state for uploaded final report name (survives reload)
   const [finalReportName, setFinalReportName] = useState<string | null>(() => {
     try {
@@ -89,23 +92,42 @@ export function DocumentsPage() {
     });
   };
 
-  const handleDownloadAcceptanceForm = () => {
-    if (!myApp) return;
-    const companyName = typeof myApp.company?.name === "string" ? myApp.company.name : (typeof myApp.companyName === "string" ? myApp.companyName : "Company");
-    const companyAddress = typeof myApp.company?.address === "string" ? myApp.company.address : undefined;
-    const opened = downloadCompanyAcceptanceFormPDF({
-      studentName: myApp.student?.user?.name ?? myApp.studentName ?? user?.name ?? "Student",
-      studentId: myApp.student?.student_id ?? myApp.studentId ?? user?.studentId ?? "____________________",
-      department: myApp.student?.department?.name ?? myApp.student?.department ?? myApp.department ?? user?.department ?? "____________________",
-      level: myApp.student?.level ?? myApp.level ?? "____________________",
-      companyName,
-      companyAddress,
-      startDate: myApp.proposed_start_date,
-      endDate: myApp.proposed_end_date,
-    });
+  // FIXED: Removed popup constraint check and wrapped parameter parser safely
+  const handleDownloadAcceptanceForm = async () => {
+    if (!myApp) {
+      toast.error("No active application data found to generate form.");
+      return;
+    }
 
-    if (!opened) {
-      toast.error("Please allow popups to download the company acceptance form.");
+    setIsDownloadingForm(true);
+    const toastId = toast.loading("Preparing your acceptance form download...");
+
+    try {
+      const companyName = typeof myApp.company?.name === "string" ? myApp.company.name : (typeof myApp.companyName === "string" ? myApp.companyName : "Company");
+      const companyAddress = typeof myApp.company?.address === "string" ? myApp.company.address : undefined;
+      
+      // Safe resolution for department object or string variants
+      const deptRaw = myApp.student?.department?.name ?? myApp.student?.department ?? myApp.department ?? user?.department ?? "____________________";
+      const departmentString = typeof deptRaw === "object" && deptRaw !== null ? deptRaw.name : String(deptRaw);
+
+      // Fire down the generator utility
+      await downloadCompanyAcceptanceFormPDF({
+        studentName: myApp.student?.user?.name ?? myApp.studentName ?? user?.name ?? "Student",
+        studentId: myApp.student?.student_id ?? myApp.studentId ?? user?.studentId ?? "____________________",
+        department: departmentString,
+        level: myApp.student?.level ?? myApp.level ?? "____________________",
+        companyName,
+        companyAddress,
+        startDate: myApp.proposed_start_date,
+        endDate: myApp.proposed_end_date,
+      });
+
+      toast.success("Acceptance Form downloaded successfully!", { id: toastId });
+    } catch (error) {
+      console.error("Download pipeline error:", error);
+      toast.error("Could not complete document export. Please check application data.", { id: toastId });
+    } finally {
+      setIsDownloadingForm(false);
     }
   };
 
@@ -304,9 +326,10 @@ export function DocumentsPage() {
               {doc.id === "acceptance-form" && doc.canDownload ? (
                 <button
                   onClick={handleDownloadAcceptanceForm}
-                  className="px-2.5 py-1.5 border border-primary text-primary hover:bg-primary/5 rounded text-xs font-medium flex items-center justify-center gap-1 transition-colors"
+                  disabled={isDownloadingForm}
+                  className="px-2.5 py-1.5 border border-primary text-primary hover:bg-primary/5 rounded text-xs font-medium flex items-center justify-center gap-1 transition-colors disabled:opacity-50"
                 >
-                  <Download className="w-3 h-3" /> Download Blank Form
+                  <Download className="w-3 h-3" /> {isDownloadingForm ? "Downloading..." : "Download Blank Form"}
                 </button>
               ) : doc.canDownload ? (
                 <button
