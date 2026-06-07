@@ -5,7 +5,7 @@ import { useToastAction } from "../../lib/hooks";
 import {
   Plus, BookMarked, Calendar, CheckCircle2, Clock, AlertTriangle,
   X, AlertCircle, Upload, Eye, FileText, ChevronDown, ChevronUp, Check, ExternalLink,
-  Edit2, Trash2
+  Edit2, Trash2, ZoomIn
 } from "lucide-react";
 import { CheckInModal } from "../../components/check-in-modal";
 import { toast } from "sonner";
@@ -23,6 +23,7 @@ export function LogbookPage() {
   const [showForm, setShowForm] = useState(false);
   const [checkInModalOpen, setCheckInModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<any | null>(null);
+  const [viewingEntry, setViewingEntry] = useState<any | null>(null);
 
   // Weekly collapsible state
   const [collapsedWeeks, setCollapsedWeeks] = useState<Record<number, boolean>>({});
@@ -120,7 +121,6 @@ export function LogbookPage() {
   const handleNewEntry = () => {
     if (!isLogbookActive) return;
     if (!internshipId) return;
-    if (!checkedInToday) { setCheckInModalOpen(true); return; }
     setEditingEntry(null);
     setForm({
       entry_date: new Date().toISOString().split("T")[0],
@@ -130,7 +130,12 @@ export function LogbookPage() {
     });
     setAttachedFileName("");
     setAttachedFileUrl("");
-    setShowForm(true);
+    // If not checked in, open check-in modal. Otherwise open form directly
+    if (!checkedInToday) {
+      setCheckInModalOpen(true);
+    } else {
+      setShowForm(true);
+    }
   };
 
   const handleEditEntry = (entry: any) => {
@@ -294,23 +299,6 @@ export function LogbookPage() {
         </div>
       )}
 
-      {/* Check-in Warning */}
-      {!checkedInToday && internshipId && isLogbookActive && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-amber-800 font-semibold text-sm">Check-in Required</p>
-            <p className="text-amber-700 text-xs mt-0.5">Check in before creating logbook entries.</p>
-            <button
-              type="button"
-              onClick={() => setCheckInModalOpen(true)}
-              className="mt-2.5 px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-xs font-semibold"
-            >
-              Check In
-            </button>
-          </div>
-        </div>
-      )}
 
       {!internshipId && (
         <div className="bg-card border border-border rounded-xl p-12 text-center">
@@ -384,6 +372,13 @@ export function LogbookPage() {
                             </span>
                             {(!entry.status || entry.status === "draft") && (
                               <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => setViewingEntry(entry)}
+                                  className="p-1 rounded hover:bg-blue-100 text-muted-foreground hover:text-blue-600 transition-colors"
+                                  title="View entry"
+                                >
+                                  <ZoomIn className="w-3.5 h-3.5" />
+                                </button>
                                 <button
                                   onClick={() => handleEditEntry(entry)}
                                   className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
@@ -599,6 +594,95 @@ export function LogbookPage() {
         >
           <Plus className="w-6 h-6" />
         </button>
+      )}
+
+      {/* View Entry Modal */}
+      {viewingEntry && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setViewingEntry(null)}>
+          <div className="bg-card border border-border rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-card border-b border-border p-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold">Logbook Entry</h2>
+                <p className="text-muted-foreground text-sm mt-1">
+                  {new Date(viewingEntry.entry_date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+                </p>
+              </div>
+              <button onClick={() => setViewingEntry(null)} className="p-1 rounded-md hover:bg-accent text-muted-foreground">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Status */}
+              <div className="flex items-center gap-3">
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  viewingEntry.status === "approved"  ? "bg-emerald-100 text-emerald-700" :
+                  viewingEntry.status === "rejected"  ? "bg-red-100 text-red-700" :
+                  viewingEntry.status === "submitted" ? "bg-blue-100 text-blue-700" :
+                                                       "bg-amber-100 text-amber-700"
+                }`}>
+                  {viewingEntry.status || "draft"}
+                </span>
+              </div>
+
+              {/* Activities */}
+              <div>
+                <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Activities Performed</p>
+                <p className="text-foreground whitespace-pre-line">{viewingEntry.activities_description}</p>
+              </div>
+
+              {/* Skills */}
+              {viewingEntry.skills_learned && (
+                <div>
+                  <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Skills Acquired</p>
+                  <div className="flex flex-wrap gap-2">
+                    {String(viewingEntry.skills_learned).split(",").map((s: string, i: number) => (
+                      <span key={i} className="px-3 py-1.5 bg-secondary text-secondary-foreground border border-border rounded text-sm font-medium">
+                        {s.trim()}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Challenges */}
+              {viewingEntry.challenges_faced && (
+                <div>
+                  <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Challenges Faced</p>
+                  <p className="text-muted-foreground">{viewingEntry.challenges_faced}</p>
+                </div>
+              )}
+
+              {/* Supervisor Comments */}
+              {(viewingEntry.industry_supervisor_comment || viewingEntry.academic_supervisor_comment) && (
+                <div className={`rounded-lg p-4 border text-sm ${
+                  viewingEntry.status === "rejected" ? "bg-red-50/50 border-red-200 text-red-700" : "bg-emerald-50/50 border-emerald-200 text-emerald-700"
+                }`}>
+                  <p className="font-semibold mb-1">Supervisor Comment:</p>
+                  {viewingEntry.industry_supervisor_comment ?? viewingEntry.academic_supervisor_comment}
+                </div>
+              )}
+
+              {/* Attachment */}
+              {(viewingEntry.attachment_url || viewingEntry.attachmentName) && (
+                <div>
+                  <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Attachment</p>
+                  <button
+                    onClick={() => {
+                      setViewingEntry(null);
+                      setPreviewUrl(viewingEntry.attachment_url || viewingEntry.attachmentUrl);
+                      setPreviewName(viewingEntry.attachment_name || viewingEntry.attachmentName || "Logbook Attachment");
+                    }}
+                    className="inline-flex items-center gap-2 px-3 py-2 border border-border rounded-lg bg-card text-primary hover:bg-primary/5 transition-colors font-medium text-sm"
+                  >
+                    <FileText className="w-4 h-4" />
+                    {viewingEntry.attachment_name || viewingEntry.attachmentName || "View Attachment"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       <CheckInModal
