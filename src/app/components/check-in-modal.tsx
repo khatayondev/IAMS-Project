@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { MapPin, X, CheckCircle2, Clock, AlertCircle, Loader2 } from "lucide-react";
 import { apiClient } from "../lib/api-client";
 import { toast } from "sonner";
+import { isCheckedInAttendanceRecord } from "../hooks/use-student-check-in";
 
 interface CheckInModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId, interns
   const [checkInTime, setCheckInTime] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
+  const [isLoadingExisting, setIsLoadingExisting] = useState(false);
   const inFlightRef = useRef(false);
 
   // Check if internship is active for check-in
@@ -89,6 +91,54 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId, interns
     setGpsError(null);
     onClose();
   };
+
+  useEffect(() => {
+    const hydrateExistingCheckIn = async () => {
+      if (!isOpen || !canCheckIn || !internshipId) return;
+
+      setIsLoadingExisting(true);
+      try {
+        const today = new Date().toISOString().split("T")[0];
+        const res = await apiClient.getInternshipAttendance(String(internshipId), {
+          from_date: today,
+          to_date: today,
+        });
+
+        const records = Array.isArray(res.data) ? res.data : res.data?.attendance ?? [];
+        const existing = records.find(isCheckedInAttendanceRecord);
+
+        if (!existing) return;
+
+        setCheckInType(existing.gps_check_in_lat != null && existing.gps_check_in_lng != null ? "gps" : "manual");
+        setLat(existing.gps_check_in_lat ?? null);
+        setLng(existing.gps_check_in_lng ?? null);
+        setCheckInTime(
+          existing.check_in_time
+            ? existing.check_in_time.includes("T")
+              ? new Date(existing.check_in_time).toLocaleTimeString("en-US", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                  hour12: true,
+                })
+              : existing.check_in_time
+            : ""
+        );
+        setLocationDetails(existing.notes ?? "");
+        setLocationData(
+          existing.gps_check_in_lat != null && existing.gps_check_in_lng != null
+            ? {
+                address: existing.notes ?? "Location retrieved via GPS",
+              }
+            : null
+        );
+      } finally {
+        setIsLoadingExisting(false);
+      }
+    };
+
+    hydrateExistingCheckIn();
+  }, [canCheckIn, internshipId, isOpen]);
 
   if (!isOpen) return null;
 
@@ -201,9 +251,8 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId, interns
     }
   };
 
-  const hasLocationData = !!(locationDetails && lat && lng);
-  // Check if already checked in by looking for location data (set after successful check-in)
-  const alreadyCheckedIn = hasLocationData && checkInTime;
+  const hasLocationData = !!(locationDetails && lat != null && lng != null);
+  const alreadyCheckedIn = hasLocationData && !!checkInTime;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center p-4" onClick={handleClose}>
@@ -222,29 +271,50 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId, interns
         </div>
 
         <div className="p-4 space-y-3">
-          {/* Checked In Status */}
-          {alreadyCheckedIn && (
-            <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4 flex items-center justify-center gap-3 animate-in fade-in duration-300">
-              <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-              <div className="text-center">
-                <p className="font-semibold text-emerald-700 dark:text-emerald-300">Checked In</p>
-                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">You're all set for today</p>
+          {alreadyCheckedIn ? (
+            <div className="space-y-3">
+              <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4 flex items-center justify-center gap-3 animate-in fade-in duration-300">
+                <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                <div className="text-center">
+                  <p className="font-semibold text-emerald-700 dark:text-emerald-300">Checked In</p>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">
+                    {checkInTime ? `Recorded at ${checkInTime}` : "You're all set for today"}
+                  </p>
+                </div>
               </div>
+
+              <div className="rounded-lg border border-border bg-background p-3 text-sm space-y-2">
+                <p className="font-medium text-foreground">Captured location</p>
+                <p className="text-muted-foreground">{locationDetails || "No location details available"}</p>
+                {lat != null && lng != null && (
+                  <p className="text-xs text-muted-foreground">
+                    {lat.toFixed(4)}, {lng.toFixed(4)}
+                  </p>
+                )}
+              </div>
+
+              <button
+                onClick={handleClose}
+                className="w-full py-2.5 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                <CheckCircle2 className="w-4 h-4" /> Close
+              </button>
             </div>
-          )}
-          {!alreadyCheckedIn ? (
+          ) : (
             <>
               {/* GPS Capture Button */}
               <button
                 onClick={handleGetLocation}
-                disabled={isGettingLocation || !canCheckIn || hasLocationData}
+                disabled={isGettingLocation || isLoadingExisting || !canCheckIn || hasLocationData}
                 className={`w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all ${
                   hasLocationData
                     ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
                     : "bg-primary text-primary-foreground hover:opacity-90"
-                } ${isGettingLocation ? "opacity-75" : ""} ${!canCheckIn ? "opacity-50 cursor-not-allowed" : ""}`}
+                } ${(isGettingLocation || isLoadingExisting) ? "opacity-75" : ""} ${!canCheckIn ? "opacity-50 cursor-not-allowed" : ""}`}
               >
-                {isGettingLocation ? (
+                {isLoadingExisting ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Loading check-in...</>
+                ) : isGettingLocation ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Getting location...</>
                 ) : hasLocationData ? (
                   <><CheckCircle2 className="w-4 h-4" /> Location captured</>
@@ -277,12 +347,12 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId, interns
               )}
 
               {/* Check-in Button */}
-              <button
-                onClick={handleCheckIn}
-                disabled={isSubmitting || !locationDetails || !canCheckIn}
-                className={`w-full py-2.5 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-sm ${
-                  isSubmitting || !locationDetails || !canCheckIn
-                    ? "bg-muted text-muted-foreground cursor-not-allowed opacity-50"
+                <button
+                  onClick={handleCheckIn}
+                  disabled={isSubmitting || !locationDetails || !canCheckIn}
+                  className={`w-full py-2.5 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-sm ${
+                    isSubmitting || !locationDetails || !canCheckIn
+                      ? "bg-muted text-muted-foreground cursor-not-allowed opacity-50"
                     : "bg-primary text-primary-foreground hover:opacity-90"
                 }`}
               >
@@ -300,13 +370,6 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId, interns
                 Cancel
               </button>
             </>
-          ) : (
-            <button
-              onClick={handleClose}
-              className="w-full py-2.5 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white"
-            >
-              <CheckCircle2 className="w-4 h-4" /> Close
-            </button>
           )}
         </div>
       </div>
