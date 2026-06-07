@@ -46,13 +46,16 @@ export function StudentAttendancePage() {
 
       setInternshipInfo(activeInternship);
 
-      // Fetch attendance records
-      const attRes = await apiClient.getInternshipAttendance(String(activeInternship.id), {
-        per_page: 100,
-      });
+      // Fetch attendance records with date filters
+      const filters: any = { per_page: 100 };
+      if (activeInternship.start_date) filters.from_date = activeInternship.start_date;
+      if (activeInternship.end_date) filters.to_date = activeInternship.end_date;
+
+      const attRes = await apiClient.getInternshipAttendance(String(activeInternship.id), filters);
 
       if (attRes.success) {
         const records = Array.isArray(attRes.data) ? attRes.data : attRes.data?.attendance ?? [];
+        console.log(`Loaded ${records.length} attendance records:`, records);
         setAttendanceRecords(records);
 
         // Calculate stats
@@ -218,12 +221,18 @@ export function StudentAttendancePage() {
             ) : (
               <div className="space-y-2">
                 {attendanceRecords
-                  .sort((a: any, b: any) => new Date(b.attendance_date).getTime() - new Date(a.attendance_date).getTime())
-                  .map((record: any) => (
+                  .sort((a: any, b: any) => {
+                    const dateA = new Date(a.date || a.attendance_date || a.check_in_time || "").getTime();
+                    const dateB = new Date(b.date || b.attendance_date || b.check_in_time || "").getTime();
+                    return dateB - dateA;
+                  })
+                  .map((record: any) => {
+                    const recordDate = record.date || record.attendance_date || record.check_in_time;
+                    return (
                     <div key={record.id} className="bg-card border border-border rounded-lg p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <p className="font-medium text-sm">
-                          {new Date(record.attendance_date).toLocaleDateString("en-US", {
+                          {new Date(recordDate).toLocaleDateString("en-US", {
                             weekday: "short",
                             month: "short",
                             day: "numeric",
@@ -263,7 +272,8 @@ export function StudentAttendancePage() {
                         )}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
               </div>
             )}
           </div>

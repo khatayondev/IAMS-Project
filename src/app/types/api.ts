@@ -336,7 +336,8 @@ export interface LogbookEntryResponse {
 
 export interface CheckInRequest {
   internship_id: number;
-  check_in_time?: string | null;
+  date?: string | null; // YYYY-MM-DD format
+  check_in_time?: string | null; // HH:MM format
   gps_check_in_lat?: number | null;
   gps_check_in_lng?: number | null;
   // status: present | late | half_day (defaults to "present")

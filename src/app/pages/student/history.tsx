@@ -115,12 +115,23 @@ export function StudentHistoryPage() {
       [internshipId]: { ...prev[internshipId], attendance: true }
     }));
     try {
-      const res = await apiClient.getInternshipAttendance(internshipId);
+      // Get the internship to use its date range
+      const internship = internships.find(i => String(i.id) === internshipId);
+      const filters: any = { per_page: 100 };
+
+      if (internship?.start_date) filters.from_date = internship.start_date;
+      if (internship?.end_date) filters.to_date = internship.end_date;
+
+      const res = await apiClient.getInternshipAttendance(internshipId, filters);
       if (res.success) {
         const records = Array.isArray(res.data) ? res.data : res.data?.attendance ?? [];
+        console.log(`Loaded ${records.length} attendance records for internship ${internshipId}:`, records);
         setAttendanceMap((prev) => ({ ...prev, [internshipId]: records }));
+      } else {
+        console.warn("Failed to load attendance:", res.message);
       }
     } catch (error) {
+      console.error("Attendance load error:", error);
       toast.error("Failed to load attendance records");
     } finally {
       setLoadingMap(prev => ({

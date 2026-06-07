@@ -137,9 +137,10 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId, interns
         detail: { internshipId, today, time: timeStr }
       }));
 
-      // Call API
+      // Call API with date
       const res = await apiClient.checkIn({
         internship_id: internshipId!,
+        date: today,
         check_in_time: timeStr,
         gps_check_in_lat: lat ?? undefined,
         gps_check_in_lng: lng ?? undefined,
