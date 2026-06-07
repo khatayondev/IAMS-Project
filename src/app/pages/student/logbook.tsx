@@ -83,9 +83,55 @@ export function LogbookPage() {
     }
   }, []);
 
+  // Auto-submit draft entries from previous days
+  const autoSubmitPreviousDayDrafts = useCallback(async () => {
+    if (!internshipId) return;
+
+    try {
+      const today = new Date().toISOString().split("T")[0];
+
+      // Find all draft entries that are NOT from today
+      const previousDayDrafts = entries.filter(
+        (e) => (e.status === "draft" || !e.status) && e.entry_date < today
+      );
+
+      if (previousDayDrafts.length === 0) return;
+
+      console.log(`Auto-submitting ${previousDayDrafts.length} draft entries from previous days`);
+
+      // Auto-submit each previous day's draft
+      for (const entry of previousDayDrafts) {
+        try {
+          await apiClient.submitLogbookEntry(entry.id);
+          console.log(`Auto-submitted entry ${entry.id} from ${entry.entry_date}`);
+        } catch (error) {
+          console.error(`Failed to auto-submit entry ${entry.id}:`, error);
+        }
+      }
+
+      // Reload data after auto-submission
+      loadData();
+      toast.info(`${previousDayDrafts.length} previous day draft(s) auto-submitted for review`);
+    } catch (error) {
+      console.error("Error auto-submitting previous day drafts:", error);
+    }
+  }, [internshipId, entries, loadData]);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Check for previous day drafts on mount and periodically
+  useEffect(() => {
+    autoSubmitPreviousDayDrafts();
+
+    // Check every minute for day changes
+    const interval = setInterval(() => {
+      autoSubmitPreviousDayDrafts();
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [autoSubmitPreviousDayDrafts]);
 
   // Listen for check-in updates from modal
   useEffect(() => {
