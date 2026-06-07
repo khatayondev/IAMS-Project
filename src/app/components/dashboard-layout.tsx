@@ -545,7 +545,11 @@ export function DashboardLayout() {
       {user.role === "student" && (
         <CheckInModal
           isOpen={checkInModalOpen}
-          onClose={() => setCheckInModalOpen(false)}
+          onClose={() => {
+            setCheckInModalOpen(false);
+            // Refresh check-in status after modal closes
+            refreshCheckInStatus();
+          }}
           onSuccess={refreshCheckInStatus}
           internshipId={activeInternship?.id}
           internshipStatus={activeInternship?.status}

@@ -77,6 +77,17 @@ export function useStudentCheckIn(enabled = true) {
     refresh();
   }, [refresh]);
 
+  // Listen for check-in updates from modal
+  useEffect(() => {
+    const handleCheckInUpdate = () => {
+      console.log("Check-in updated, refreshing...");
+      refresh();
+    };
+
+    window.addEventListener("checkInUpdated", handleCheckInUpdate);
+    return () => window.removeEventListener("checkInUpdated", handleCheckInUpdate);
+  }, [refresh]);
+
   return {
     activeInternship,
     checkedInToday,

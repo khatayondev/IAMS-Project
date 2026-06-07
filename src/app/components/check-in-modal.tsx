@@ -132,6 +132,11 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId, interns
         timestamp: new Date().toISOString(),
       }));
 
+      // Dispatch custom event to notify header
+      window.dispatchEvent(new CustomEvent("checkInUpdated", {
+        detail: { internshipId, today, time: timeStr }
+      }));
+
       // Call API
       const res = await apiClient.checkIn({
         internship_id: internshipId!,
@@ -151,15 +156,20 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId, interns
 
       setCheckedInTime(timeStr);
       toast.success("Checked in successfully!");
-      onSuccess?.();
 
-      // Close after a brief delay to show success
+      // Call onSuccess callback FIRST to refresh header state
+      if (onSuccess) {
+        await onSuccess();
+      }
+
+      // Close after success callback completes
       setTimeout(() => {
         onClose();
-      }, 500);
+      }, 300);
     } catch (error) {
       console.error("Check-in error:", error);
       toast.error("An error occurred during check-in");
+    } finally {
       inFlightRef.current = false;
       setIsSubmitting(false);
     }
