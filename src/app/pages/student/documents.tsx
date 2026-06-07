@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAppContext } from "../../lib/context";
 import { apiClient } from "../../lib/api-client";
 import { openPlacementLetter } from "../../lib/generate-placement-letter";
+import { openCompanyAcceptanceForm } from "../../lib/generate-company-acceptance-form";
 import { exportLogbookToPDF } from "../../lib/logbook-export";
 import { CompanyAcceptanceModal } from "../../components/student/company-acceptance-modal";
 import { DocumentUploadModal } from "../../components/student/document-upload-modal";
@@ -79,6 +80,26 @@ export function DocumentsPage() {
       startDate: myApp.proposed_start_date,
       endDate: myApp.proposed_end_date,
     });
+  };
+
+  const handleDownloadAcceptanceForm = () => {
+    if (!myApp) return;
+    const companyName = typeof myApp.company?.name === "string" ? myApp.company.name : (typeof myApp.companyName === "string" ? myApp.companyName : "Company");
+    const companyAddress = typeof myApp.company?.address === "string" ? myApp.company.address : undefined;
+    const opened = openCompanyAcceptanceForm({
+      studentName: myApp.student?.user?.name ?? myApp.studentName ?? user?.name ?? "Student",
+      studentId: myApp.student?.student_id ?? myApp.studentId ?? user?.studentId ?? "____________________",
+      department: myApp.student?.department?.name ?? myApp.student?.department ?? myApp.department ?? user?.department ?? "____________________",
+      level: myApp.student?.level ?? myApp.level ?? "____________________",
+      companyName,
+      companyAddress,
+      startDate: myApp.proposed_start_date,
+      endDate: myApp.proposed_end_date,
+    });
+
+    if (!opened) {
+      toast.error("Please allow popups to download the company acceptance form.");
+    }
   };
 
   const handleDownloadLogbookPDF = async () => {
@@ -269,6 +290,8 @@ export function DocumentsPage() {
                   onClick={() => {
                     if (doc.id === "placement-letter") {
                       handleDownloadPlacementLetter();
+                    } else if (doc.id === "acceptance-form") {
+                      handleDownloadAcceptanceForm();
                     } else if (doc.id === "logbook-export") {
                       handleDownloadLogbookPDF();
                     } else if (doc.id === "final-report") {
