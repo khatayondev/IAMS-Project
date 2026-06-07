@@ -70,10 +70,21 @@ export function LogbookPage() {
       setEntries(sorted);
     }
 
-    // Check today's attendance via API
+    // Check today's attendance via API and local storage
     if (isActiveInternshipStatus(status)) {
       const today = new Date().toISOString().split("T")[0];
       try {
+        // Check local storage first for immediate feedback
+        const localCheckIns = JSON.parse(localStorage.getItem("local_check_ins") || "{}");
+        const localCheckIn = localCheckIns[`internship_${id}_${today}`];
+
+        if (localCheckIn) {
+          console.log("Using locally stored check-in data");
+          setCheckedInToday(true);
+          return;
+        }
+
+        // Fall back to API
         const attRes = await apiClient.getInternshipAttendance(String(id), { from_date: today, to_date: today });
         if (attRes.success) {
           const records = Array.isArray(attRes.data) ? attRes.data : attRes.data?.attendance ?? [];

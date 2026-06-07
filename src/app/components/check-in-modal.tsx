@@ -99,6 +99,39 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId, interns
       setIsLoadingExisting(true);
       try {
         const today = new Date().toISOString().split("T")[0];
+
+        // Check local storage first for faster feedback
+        const localCheckIns = JSON.parse(localStorage.getItem("local_check_ins") || "{}");
+        const localCheckIn = localCheckIns[`internship_${internshipId}_${today}`];
+
+        if (localCheckIn) {
+          console.log("Loading check-in from local storage:", localCheckIn);
+          setCheckInType(localCheckIn.gps_check_in_lat != null ? "gps" : "manual");
+          setLat(localCheckIn.gps_check_in_lat ?? null);
+          setLng(localCheckIn.gps_check_in_lng ?? null);
+          // Display time in HH:MM AM/PM format for local storage data
+          setCheckInTime(
+            localCheckIn.check_in_time
+              ? (() => {
+                  const [hours, minutes] = localCheckIn.check_in_time.split(":");
+                  const hour = parseInt(hours, 10);
+                  const ampm = hour >= 12 ? "PM" : "AM";
+                  const displayHour = hour % 12 || 12;
+                  return `${String(displayHour).padStart(2, "0")}:${minutes} ${ampm}`;
+                })()
+              : ""
+          );
+          setLocationDetails(localCheckIn.notes ?? "");
+          setLocationData(
+            localCheckIn.gps_check_in_lat != null
+              ? { address: localCheckIn.notes ?? "Location retrieved via GPS" }
+              : null
+          );
+          setIsLoadingExisting(false);
+          return;
+        }
+
+        // Fall back to API if not in local storage
         const res = await apiClient.getInternshipAttendance(String(internshipId), {
           from_date: today,
           to_date: today,
@@ -121,16 +154,23 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId, interns
         setCheckInType(existing.gps_check_in_lat != null && existing.gps_check_in_lng != null ? "gps" : "manual");
         setLat(existing.gps_check_in_lat ?? null);
         setLng(existing.gps_check_in_lng ?? null);
+        // Handle both ISO datetime and HH:MM time formats
         setCheckInTime(
           existing.check_in_time
             ? existing.check_in_time.includes("T")
               ? new Date(existing.check_in_time).toLocaleTimeString("en-US", {
                   hour: "2-digit",
                   minute: "2-digit",
-                  second: "2-digit",
                   hour12: true,
                 })
-              : existing.check_in_time
+              : (() => {
+                  // Convert HH:MM to HH:MM AM/PM
+                  const [hours, minutes] = existing.check_in_time.split(":");
+                  const hour = parseInt(hours, 10);
+                  const ampm = hour >= 12 ? "PM" : "AM";
+                  const displayHour = hour % 12 || 12;
+                  return `${String(displayHour).padStart(2, "0")}:${minutes} ${ampm}`;
+                })()
             : ""
         );
         setLocationDetails(existing.notes ?? "");
@@ -231,24 +271,33 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId, interns
     setIsSubmitting(true);
     const now = new Date();
     const today = now.toISOString().split("T")[0];
-    const timeStr = now.toTimeString().slice(0, 8);
-    const checkInDateTime = `${today}T${timeStr}`;
+    // API expects time in HH:MM format (e.g., "08:30")
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const checkInTime = `${hours}:${minutes}`;
+
+    const checkInData = {
+      internship_id: internshipId!,
+      check_in_time: checkInTime,
+      gps_check_in_lat: lat ?? undefined,
+      gps_check_in_lng: lng ?? undefined,
+      notes: locationDetails || undefined,
+      status: "present" as const,
+    };
 
     try {
-      const res = await apiClient.checkIn({
-        internship_id: internshipId!,
-        check_in_time: checkInDateTime,
-        gps_check_in_lat: lat ?? undefined,
-        gps_check_in_lng: lng ?? undefined,
-        notes: locationDetails || undefined,
-        status: "present",
-      });
+      // Store locally immediately for instant UI feedback
+      const localCheckIns = JSON.parse(localStorage.getItem("local_check_ins") || "{}");
+      localCheckIns[`internship_${internshipId}_${today}`] = {
+        ...checkInData,
+        local_id: `${internshipId}_${today}_${Date.now()}`,
+        synced: false,
+        created_at: new Date().toISOString(),
+      };
+      localStorage.setItem("local_check_ins", JSON.stringify(localCheckIns));
+      console.log("Check-in data stored locally:", checkInData);
 
-      if (!res.success) {
-        toast.error(res.message ?? "Check-in failed.");
-        return;
-      }
-
+      // Show success immediately
       toast.success("Checked in successfully!");
       setLocationDetails("");
       setLat(null);
@@ -257,10 +306,31 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId, interns
       setLocationData(null);
       onSuccess?.();
       onClose();
+
+      // Push to backend asynchronously
+      setTimeout(async () => {
+        try {
+          const res = await apiClient.checkIn(checkInData);
+          if (res.success) {
+            // Mark as synced in localStorage
+            const updated = JSON.parse(localStorage.getItem("local_check_ins") || "{}");
+            if (updated[`internship_${internshipId}_${today}`]) {
+              updated[`internship_${internshipId}_${today}`].synced = true;
+            }
+            localStorage.setItem("local_check_ins", JSON.stringify(updated));
+            console.log("Check-in synced with backend successfully");
+          } else {
+            console.warn("Failed to sync check-in with backend:", res.message);
+            toast.error("Check-in stored locally but failed to sync with server: " + (res.message ?? "Unknown error"));
+          }
+        } catch (error) {
+          console.error("Background sync error:", error);
+          toast.error("Check-in stored locally but failed to sync: Network error");
+        }
+      }, 100);
     } catch (error) {
       console.error("Check-in error:", error);
       toast.error("An unexpected error occurred during check-in");
-    } finally {
       inFlightRef.current = false;
       setIsSubmitting(false);
     }

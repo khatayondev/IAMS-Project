@@ -50,6 +50,22 @@ export function useStudentCheckIn(enabled = true) {
       }
 
       const today = todayDateString();
+
+      // Check local storage first for immediate feedback
+      try {
+        const localCheckIns = JSON.parse(localStorage.getItem("local_check_ins") || "{}");
+        const localCheckIn = localCheckIns[`internship_${internship.id}_${today}`];
+        if (localCheckIn) {
+          console.log("Using locally stored check-in for header");
+          setCheckedInToday(true);
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        console.warn("Error reading local check-ins:", e);
+      }
+
+      // Fall back to API
       const attendanceRes = await apiClient.getInternshipAttendance(String(internship.id), {
         from_date: today,
         to_date: today,
