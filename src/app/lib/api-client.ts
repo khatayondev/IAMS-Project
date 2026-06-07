@@ -1221,11 +1221,41 @@ export const apiClient = {
   },
 
   async getInternshipLogbooks(internshipId: string, filters?: Record<string, unknown>): Promise<ApiResponse<any[]>> {
+    // Try the internship-specific endpoint first
     const response = await requestApi<unknown>(
       replacePathParams(API_ENDPOINTS.INTERNSHIP_LOGBOOKS, { internshipId }),
       { method: "GET", query: filters }
     );
-    return { success: response.success, data: response.success ? extractCollection<any>(response, "logbooks") : [], message: response.message };
+
+    let logbooks = response.success ? extractCollection<any>(response, "logbooks") : [];
+
+    console.log(`[API] getInternshipLogbooks(${internshipId}):`, {
+      endpoint: replacePathParams(API_ENDPOINTS.INTERNSHIP_LOGBOOKS, { internshipId }),
+      success: response.success,
+      message: response.message,
+      rawResponse: response.data,
+      extractedLogbooks: logbooks
+    });
+
+    // If internship endpoint returns nothing, try general logbooks endpoint with filter
+    if (logbooks.length === 0 && response.success) {
+      console.log(`[API] Trying fallback endpoint /api/v1/logbooks with internship_id filter...`);
+      const fallbackResponse = await requestApi<unknown>(
+        "/api/v1/logbooks",
+        { method: "GET", query: { ...filters, internship_id: internshipId } }
+      );
+      const fallbackLogbooks = fallbackResponse.success ? extractCollection<any>(fallbackResponse, "logbooks") : [];
+      console.log(`[API] Fallback result:`, {
+        success: fallbackResponse.success,
+        logbooksFound: fallbackLogbooks.length,
+        data: fallbackLogbooks
+      });
+      if (fallbackLogbooks.length > 0) {
+        logbooks = fallbackLogbooks;
+      }
+    }
+
+    return { success: response.success, data: logbooks, message: response.message };
   },
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
