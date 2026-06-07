@@ -425,7 +425,15 @@ export function LogbookPage() {
 
                         <div>
                           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">Activities</p>
-                          <p className="text-sm text-foreground whitespace-pre-line">{entry.activities_description}</p>
+                          <p className="text-sm text-foreground whitespace-pre-line line-clamp-3">{entry.activities_description}</p>
+                          {entry.activities_description && entry.activities_description.length > 200 && (
+                            <button
+                              onClick={() => setViewingEntry(entry)}
+                              className="text-xs text-primary hover:underline mt-1"
+                            >
+                              Read full entry →
+                            </button>
+                          )}
                         </div>
 
                         {entry.skills_learned && (
