@@ -541,6 +541,8 @@ export function LogbookPage() {
         onSuccess={() => {
           setCheckInModalOpen(false);
           setCheckedInToday(true);
+          setShowForm(true);
+          loadData();
         }}
         internshipId={internshipId ?? undefined}
         internshipStatus={internshipStatus ?? undefined}
