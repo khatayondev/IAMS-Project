@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { CheckInModal } from "../../components/check-in-modal";
 import { toast } from "sonner";
+import { isActiveInternshipStatus, isCheckedInAttendanceRecord } from "../../hooks/use-student-check-in";
 
 export function LogbookPage() {
   const { user } = useAppContext();
@@ -69,19 +70,19 @@ export function LogbookPage() {
     }
 
     // Check today's attendance
-    if (status === "active" || status === "approved") {
+    if (isActiveInternshipStatus(status)) {
       const today = new Date().toISOString().split("T")[0];
       const attRes = await apiClient.getInternshipAttendance(String(id), { from_date: today, to_date: today });
       if (attRes.success) {
         const records = Array.isArray(attRes.data) ? attRes.data : attRes.data?.attendance ?? [];
-        setCheckedInToday(records.some((r: any) => ["present", "late", "half_day"].includes(r.status)));
+        setCheckedInToday(records.some(isCheckedInAttendanceRecord));
       }
     }
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const isLogbookActive = internshipStatus === "active" || internshipStatus === "approved";
+  const isLogbookActive = isActiveInternshipStatus(internshipStatus);
 
   // Dynamic weekly grouping
   const getWeekNumber = (entryDate: string, internshipStart: string) => {

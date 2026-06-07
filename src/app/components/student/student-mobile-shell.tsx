@@ -1,39 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Menu, Bell } from "lucide-react";
 import { Outlet, useNavigate } from "react-router";
 import { useAppContext } from "../../lib/context";
 import { apiClient } from "../../lib/api-client";
 import { CheckInModal } from "../check-in-modal";
 import { MobileNavDrawer } from "./mobile-nav-drawer";
-import { hasCheckedInToday, subscribeAttendance } from "../../services/attendance-service";
+import { useStudentCheckIn } from "../../hooks/use-student-check-in";
 
 export function StudentMobileShell() {
   const { user, store } = useAppContext();
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [checkedInToday, setCheckedInToday] = useState(false);
   const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
-  const [activeInternship, setActiveInternship] = useState<any | null>(null);
-
-  // Load active internship info for check-in modal
-  useEffect(() => {
-    apiClient.getInternships().then((res) => {
-      if (res.success && res.data.length > 0) {
-        const active = res.data.find((i: any) => i.status === "active" || i.status === "approved");
-        setActiveInternship(active || res.data[0]);
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!user?.studentId) return;
-    const updateCheckInStatus = () => {
-      setCheckedInToday(hasCheckedInToday(user.studentId || ""));
-    };
-    updateCheckInStatus();
-    const unsubscribe = subscribeAttendance(updateCheckInStatus);
-    return unsubscribe;
-  }, [user?.studentId]);
+  const {
+    activeInternship,
+    checkedInToday,
+    refresh: refreshCheckInStatus,
+  } = useStudentCheckIn(!!user);
 
   const handleLogout = async () => {
     await apiClient.logout();
@@ -106,7 +89,7 @@ export function StudentMobileShell() {
         onClose={() => setIsCheckInModalOpen(false)}
         onSuccess={() => {
           setIsCheckInModalOpen(false);
-          setCheckedInToday(hasCheckedInToday(user?.studentId || ""));
+          refreshCheckInStatus();
         }}
         internshipId={activeInternship?.id}
         internshipStatus={activeInternship?.status}

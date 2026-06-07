@@ -173,32 +173,31 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId, interns
     const timeStr = now.toTimeString().slice(0, 8);
     const checkInDateTime = `${today}T${timeStr}`;
 
-    const res = await apiClient.checkIn({
-      internship_id: internshipId,
-      check_in_time: checkInDateTime,
-      attendance_date: today,
-      latitude: lat ?? undefined,
-      longitude: lng ?? undefined,
-      gps_check_in_lat: lat ?? undefined,
-      gps_check_in_lng: lng ?? undefined,
-      location_details: locationDetails || undefined,
-      notes: locationDetails || undefined,
-      status: "present",
-    });
-    inFlightRef.current = false;
-    setIsSubmitting(false);
+    try {
+      const res = await apiClient.checkIn({
+        internship_id: internshipId,
+        check_in_time: checkInDateTime,
+        gps_check_in_lat: lat ?? undefined,
+        gps_check_in_lng: lng ?? undefined,
+        notes: locationDetails || undefined,
+        status: "present",
+      });
 
-    if (res.success) {
-      toast.success("Checked in successfully!");
-      setLocationDetails("");
-      setLat(null);
-      setLng(null);
-      setCheckInTime("");
-      setLocationData(null);
-      onSuccess?.();
-      onClose();
-    } else {
-      toast.error(res.message ?? "Check-in failed.");
+      if (res.success) {
+        toast.success("Checked in successfully!");
+        setLocationDetails("");
+        setLat(null);
+        setLng(null);
+        setCheckInTime("");
+        setLocationData(null);
+        onSuccess?.();
+        onClose();
+      } else {
+        toast.error(res.message ?? "Check-in failed.");
+      }
+    } finally {
+      inFlightRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -259,7 +258,10 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId, interns
                 <input
                   type="text"
                   value={locationDetails}
-                  onChange={(e) => setLocationDetails(e.target.value)}
+                  onChange={(e) => {
+                    setCheckInType("manual");
+                    setLocationDetails(e.target.value);
+                  }}
                   placeholder="Or enter location manually"
                   disabled={!canCheckIn}
                   className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"

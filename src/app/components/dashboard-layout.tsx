@@ -13,8 +13,8 @@ import { getSettings, updateSettings, subscribeSettings } from "../lib/settings-
 import { setNotifications } from "../lib/store";
 import { getOverdueWeeklyRubrics } from "../services/grading-service";
 import { CheckInModal } from "./check-in-modal";
-import { hasCheckedInToday, subscribeAttendance } from "../services/attendance-service";
 import { StudentMobileShell } from "./student/student-mobile-shell";
+import { useStudentCheckIn } from "../hooks/use-student-check-in";
 
 interface NavItem {
   to: string;
@@ -129,30 +129,11 @@ export function DashboardLayout() {
   const navigate = useNavigate();
   const profileRef = useRef<HTMLDivElement>(null);
 
-  // Subscribe to attendance changes for reactivity
-  const [checkedInToday, setCheckedInToday] = useState(false);
-  const [activeInternship, setActiveInternship] = useState<any | null>(null);
-
-  useEffect(() => {
-    if (user?.role === "student" && user.studentId) {
-      const updateCheckInStatus = () => {
-        setCheckedInToday(hasCheckedInToday(user.studentId || ""));
-      };
-      updateCheckInStatus();
-      const unsubscribe = subscribeAttendance(updateCheckInStatus);
-
-      apiClient.getInternships().then((res) => {
-        if (res.success && res.data.length > 0) {
-          const active = res.data.find((i: any) => i.status === "active" || i.status === "approved");
-          setActiveInternship(active || res.data[0]);
-        }
-      });
-
-      return () => {
-        unsubscribe();
-      };
-    }
-  }, [user]);
+  const {
+    activeInternship,
+    checkedInToday,
+    refresh: refreshCheckInStatus,
+  } = useStudentCheckIn(user?.role === "student");
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -565,6 +546,7 @@ export function DashboardLayout() {
         <CheckInModal
           isOpen={checkInModalOpen}
           onClose={() => setCheckInModalOpen(false)}
+          onSuccess={refreshCheckInStatus}
           internshipId={activeInternship?.id}
           internshipStatus={activeInternship?.status}
         />
