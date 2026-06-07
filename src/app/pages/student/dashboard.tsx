@@ -12,6 +12,7 @@ export function StudentDashboard() {
   const [dashboard, setDashboard] = useState<any>(null);
   const [visitations, setVisitations] = useState<any[]>([]);
   const [pendingApplication, setPendingApplication] = useState<any>(null);
+  const [attendanceData, setAttendanceData] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
   const prevStatusRef = useRef<string | null>(null);
 
@@ -24,7 +25,24 @@ export function StudentDashboard() {
         apiClient.getApplications(),
         apiClient.getInternships(), // Fetch internship data to get approved applications
       ]);
-      if (dashRes.success) setDashboard(dashRes.data);
+      if (dashRes.success) {
+        setDashboard(dashRes.data);
+
+        // Fetch real attendance data for active internship
+        const activeInternship = dashRes.data?.active_internship;
+        if (activeInternship?.id) {
+          // Fetch without date filters to show all attendance records
+          const attRes = await apiClient.getInternshipAttendance(String(activeInternship.id), { per_page: 100 });
+          if (attRes.success) {
+            const records = Array.isArray(attRes.data) ? attRes.data : [];
+            const present = records.filter((r: any) => r.status === "present").length;
+            const total = records.length;
+            const rate = total > 0 ? Math.round((present / total) * 100) : 0;
+            setAttendanceData({ present, total, rate });
+            console.log(`Dashboard attendance: ${present}/${total} (${rate}%)`);
+          }
+        }
+      }
       if (visRes.success) setVisitations(visRes.data);
       if (appsRes.success && appsRes.data) {
         const apps = Array.isArray(appsRes.data) ? appsRes.data : appsRes.data.applications || [];
@@ -73,7 +91,6 @@ export function StudentDashboard() {
 
   const activeInternship = dashboard?.active_internship;
   const recentLogbooks: any[] = dashboard?.recent_logbooks ?? [];
-  const attendanceSummary = dashboard?.attendance_summary;
   const publishedGrade = dashboard?.published_grade;
 
   const companyName = activeInternship?.company?.name ?? "N/A";
@@ -218,8 +235,17 @@ export function StudentDashboard() {
                   <p className="text-muted-foreground text-sm">Term</p>
                   <Calendar className="w-4 h-4 text-orange-600" />
                 </div>
-                <h3 className="font-bold text-sm">{activeInternship?.term?.name ?? "N/A"}</h3>
-                <p className="text-muted-foreground text-xs">{activeInternship?.term?.year ? `Year ${activeInternship.term.year}` : "Pending approval"}</p>
+                <h3 className="font-bold text-sm">
+                  {activeInternship?.term?.name ??
+                   activeInternship?.term_id ??
+                   activeInternship?.termName ??
+                   "N/A"}
+                </h3>
+                <p className="text-muted-foreground text-xs">
+                  {activeInternship?.term?.year ? `Year ${activeInternship.term.year}` :
+                   activeInternship?.start_date ? `Started ${new Date(activeInternship.start_date).toLocaleDateString()}` :
+                   "Pending approval"}
+                </p>
               </div>
 
               {/* Current Status Card */}
@@ -250,8 +276,10 @@ export function StudentDashboard() {
                   <p className="text-muted-foreground text-sm">Attendance</p>
                   <Clock className="w-4 h-4 text-teal-600" />
                 </div>
-                <h3 className="text-2xl font-bold">{attendanceSummary?.attendance_rate ?? "—"}%</h3>
-                <p className="text-muted-foreground text-xs">{attendanceSummary ? attendanceSummary.present + " present" : "No data"}</p>
+                <h3 className="text-2xl font-bold">{attendanceData?.rate ?? "—"}%</h3>
+                <p className="text-muted-foreground text-xs">
+                  {attendanceData ? `${attendanceData.present}/${attendanceData.total} present` : "No data"}
+                </p>
               </div>
             </div>
           </div>
