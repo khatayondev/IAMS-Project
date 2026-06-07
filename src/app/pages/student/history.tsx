@@ -151,13 +151,11 @@ export function StudentHistoryPage() {
     try {
       const res = await apiClient.getGrade(internshipId);
       if (res.success && res.data) {
-        console.log(`Loaded grades for internship ${internshipId}:`, res.data);
         setGradeMap((prev) => ({ ...prev, [internshipId]: res.data }));
-      } else {
-        console.warn("No grades data:", res.message);
       }
+      // Grades are only available after internship completes - this is normal
     } catch (error) {
-      console.error("Failed to load grades:", error);
+      // Silently handle 404 errors (grades not yet available)
     } finally {
       setLoadingMap(prev => ({
         ...prev,
@@ -174,22 +172,18 @@ export function StudentHistoryPage() {
       [internshipId]: { ...prev[internshipId], evaluation: true }
     }));
     try {
-      // Try fetching without filter first (permission issue with filters)
+      // Fetch assessments without filters to avoid permission issues
       const res = await apiClient.getIndustrialAssessments();
       if (res.success && res.data && res.data.length > 0) {
         // Filter client-side for this internship
         const filtered = res.data.filter((a: any) => String(a.internship_id) === internshipId);
         if (filtered.length > 0) {
-          console.log(`Loaded ${filtered.length} assessments for internship ${internshipId}:`, filtered[0]);
           setAssessmentMap((prev) => ({ ...prev, [internshipId]: filtered[0] }));
-        } else {
-          console.log(`No assessments found for internship ${internshipId}`);
         }
-      } else {
-        console.warn("No assessments data:", res.message);
       }
+      // Evaluations are only available after supervisor review - this is normal
     } catch (error) {
-      console.error("Failed to load assessment:", error);
+      // Silently handle errors (evaluations not yet available)
     } finally {
       setLoadingMap(prev => ({
         ...prev,
