@@ -3,9 +3,10 @@ import { StatusBadge } from "../status-badge";
 interface ApplicationStatusProps {
   status: string;
   createdAt: string;
+  internshipStartDate?: string;
 }
 
-export function ApplicationStatus({ status, createdAt }: ApplicationStatusProps) {
+export function ApplicationStatus({ status, createdAt, internshipStartDate }: ApplicationStatusProps) {
   return (
     <div
       className={`rounded-xl p-5 border ${
@@ -29,6 +30,11 @@ export function ApplicationStatus({ status, createdAt }: ApplicationStatusProps)
               since {createdAt}
             </span>
           </div>
+          {internshipStartDate && (
+            <p className="text-muted-foreground mt-2" style={{ fontSize: "0.8rem" }}>
+              Internship begins: <span className="font-medium text-foreground">{internshipStartDate}</span>
+            </p>
+          )}
         </div>
         {(status === "submitted" || status === "under_review" || status === "Pending") && (
           <p className="text-amber-700 dark:text-amber-400" style={{ fontSize: "0.8rem" }}>

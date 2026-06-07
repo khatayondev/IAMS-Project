@@ -202,10 +202,21 @@ export const apiClient = {
     return response;
   },
 
-  async requestMagicLink(email: string): Promise<ApiResponse<{ expires_in?: string; magic_link?: string } | null>> {
+  async requestMagicLink(
+    email: string,
+    context?: {
+      role?: "industry_supervisor" | "supervisor";
+      name?: string;
+      phone?: string;
+      job_title?: string;
+      application_id?: string | number;
+      company_name?: string;
+      student_name?: string;
+    }
+  ): Promise<ApiResponse<{ expires_in?: string; magic_link?: string } | null>> {
     return requestApi(API_ENDPOINTS.AUTH_MAGIC_LINK, {
       method: "POST",
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, ...context }),
     });
   },
 

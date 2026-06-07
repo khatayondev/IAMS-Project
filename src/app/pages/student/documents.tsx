@@ -58,6 +58,13 @@ export function DocumentsPage() {
   const [supervisorPhone, setSupervisorPhone] = useState("");
   const [magicLinkSent, setMagicLinkSent] = useState(false);
 
+  useEffect(() => {
+    if (!myApp) return;
+    setSupervisorName((current) => current || myApp.industry_supervisor_name || "");
+    setSupervisorEmail((current) => current || myApp.industry_supervisor_email || "");
+    setSupervisorPhone((current) => current || myApp.industry_supervisor_phone || "");
+  }, [myApp]);
+
   const isApproved = !!(myApp?.status && ["approved", "active", "completed", "company accepted", "company_accepted"].includes(myApp.status.toLowerCase()));
   const isActive = myApp?.status?.toLowerCase() === "active";
   const isCompleted = myApp?.status?.toLowerCase() === "completed";
@@ -153,9 +160,8 @@ export function DocumentsPage() {
           : isApproved 
             ? "Available" 
             : "Pending",
-      canDownload: !!isApproved,
-      // Active "Upload" button when Acceptance form status is Action Required or Pending
-      canUpload: needsAcceptance || !!(myApp?.status && myApp.status.toLowerCase() === "pending"),
+      canDownload: !!myApp,
+      canUpload: needsAcceptance,
       icon: File,
     },
     {
@@ -185,7 +191,17 @@ export function DocumentsPage() {
       toast.error("Please provide supervisor name and email.");
       return;
     }
-    const res = await apiClient.requestMagicLink(supervisorEmail);
+    const companyName = typeof myApp?.company?.name === "string" ? myApp.company.name : (typeof myApp?.companyName === "string" ? myApp.companyName : undefined);
+    const studentName = myApp?.student?.user?.name ?? myApp?.studentName ?? user?.name;
+    const res = await apiClient.requestMagicLink(supervisorEmail, {
+      role: "industry_supervisor",
+      name: supervisorName,
+      phone: supervisorPhone || undefined,
+      job_title: myApp?.industry_supervisor_title || undefined,
+      application_id: myApp?.id,
+      company_name: companyName,
+      student_name: studentName,
+    });
     if (res.success) {
       setMagicLinkSent(true);
       toast.success(`Magic link sent to ${supervisorEmail}. Your supervisor can now access the system.`);
@@ -284,25 +300,30 @@ export function DocumentsPage() {
             <p className="text-xs text-muted-foreground line-clamp-2 ml-11">{doc.desc}</p>
             
             {/* Action buttons */}
-            <div className="flex gap-2 ml-11">
-              {doc.canDownload && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 ml-11">
+              {doc.id === "acceptance-form" && doc.canDownload ? (
+                <button
+                  onClick={handleDownloadAcceptanceForm}
+                  className="px-2.5 py-1.5 border border-primary text-primary hover:bg-primary/5 rounded text-xs font-medium flex items-center justify-center gap-1 transition-colors"
+                >
+                  <Download className="w-3 h-3" /> Download Blank Form
+                </button>
+              ) : doc.canDownload ? (
                 <button
                   onClick={() => {
                     if (doc.id === "placement-letter") {
                       handleDownloadPlacementLetter();
-                    } else if (doc.id === "acceptance-form") {
-                      handleDownloadAcceptanceForm();
                     } else if (doc.id === "logbook-export") {
                       handleDownloadLogbookPDF();
                     } else if (doc.id === "final-report") {
                       toast.success(`Downloaded simulated copy of ${finalReportName}`);
                     }
                   }}
-                  className="px-2.5 py-1 border border-primary text-primary hover:bg-primary/5 rounded text-xs font-medium flex items-center gap-1 transition-colors"
+                  className="px-2.5 py-1.5 border border-primary text-primary hover:bg-primary/5 rounded text-xs font-medium flex items-center justify-center gap-1 transition-colors"
                 >
                   <Download className="w-3 h-3" /> Download
                 </button>
-              )}
+              ) : null}
               {doc.canUpload && (
                 <button
                   onClick={() => {
@@ -316,15 +337,15 @@ export function DocumentsPage() {
                       setIsReportUploadOpen(true);
                     }
                   }}
-                  className="px-2.5 py-1 bg-primary text-primary-foreground hover:opacity-90 rounded text-xs font-medium flex items-center gap-1 transition-opacity"
+                  className="px-2.5 py-1.5 bg-primary text-primary-foreground hover:opacity-90 rounded text-xs font-medium flex items-center justify-center gap-1 transition-opacity"
                 >
-                  <Upload className="w-3 h-3" /> Upload
+                  <Upload className="w-3 h-3" /> {doc.id === "acceptance-form" ? "Upload Signed Form" : "Upload"}
                 </button>
               )}
               {!doc.canDownload && !doc.canUpload && (
                 <button
                   disabled
-                  className="px-2.5 py-1 bg-secondary text-muted-foreground rounded text-xs opacity-50 cursor-not-allowed flex items-center gap-1"
+                  className="px-2.5 py-1.5 bg-secondary text-muted-foreground rounded text-xs opacity-50 cursor-not-allowed flex items-center justify-center gap-1"
                 >
                   Not Available
                 </button>

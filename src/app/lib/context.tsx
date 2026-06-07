@@ -21,8 +21,8 @@ const AppContext = createContext<AppContextType>({
 const USER_KEY = "iams_user";
 
 function normalizeRole(role: string): ExtendedRole {
-  if (role === "academic_supervisor") return "academic";
-  if (role === "industry_supervisor") return "supervisor";
+  if (role === "academic_supervisor" || role === "academic-supervisor") return "academic";
+  if (role === "industry_supervisor" || role === "industry-supervisor") return "supervisor";
   return role as ExtendedRole;
 }
 

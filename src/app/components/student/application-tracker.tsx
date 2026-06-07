@@ -22,6 +22,7 @@ function getStatusHistory(app: any) {
   const createdAt = app.created_at ?? app.dateApplied ?? "";
   const supervisorName = app.academic_supervisor?.name ?? app.supervisorAssigned ?? "Academic Supervisor";
   const companyStatus = app.company?.approval_status ?? app.companyStatus;
+  const internshipStartDate = getInternshipStartDate(app);
 
   history.push({
     status: "Submitted",
@@ -55,6 +56,14 @@ function getStatusHistory(app: any) {
       actor: "Company / Student",
     });
   }
+  if (internshipStartDate && ["approved", "company_accepted", "active", "completed"].includes(s)) {
+    history.push({
+      status: "Internship Begins",
+      timestamp: formatDisplayDate(internshipStartDate) ?? internshipStartDate,
+      description: `Internship start date tracked for ${app.company?.name ?? app.companyName ?? "the selected company"}.`,
+      actor: "System",
+    });
+  }
   if (supervisorName && supervisorName !== "Academic Supervisor") {
     history.push({
       status: "Supervisor Assigned",
@@ -80,6 +89,22 @@ function getStatusHistory(app: any) {
     });
   }
   return history;
+}
+
+function getInternshipStartDate(app: any): string | undefined {
+  return app.confirmed_start_date
+    ?? app.internship?.confirmed_start_date
+    ?? app.internship?.start_date
+    ?? app.start_date
+    ?? app.proposed_start_date
+    ?? undefined;
+}
+
+function formatDisplayDate(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString();
 }
 
 export function ApplicationTracker({
@@ -112,6 +137,7 @@ export function ApplicationTracker({
   }
 
   const statusHistory = getStatusHistory(myApp);
+  const internshipStartDate = formatDisplayDate(getInternshipStartDate(myApp));
   const dateApplied = myApp.created_at ? new Date(myApp.created_at).toLocaleDateString() : (myApp.dateApplied ?? "—");
 
   const handleDownloadLetter = () => {
@@ -174,7 +200,7 @@ export function ApplicationTracker({
 
   return (
     <div className="space-y-5">
-      <ApplicationStatus status={myApp.status} createdAt={dateApplied} />
+      <ApplicationStatus status={myApp.status} createdAt={dateApplied} internshipStartDate={internshipStartDate} />
 
       <ApplicationActions
         status={myApp.status}
