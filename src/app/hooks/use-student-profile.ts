@@ -66,48 +66,7 @@ export function useStudentProfile(userId?: string | number, enabled = true) {
     setError(null);
 
     try {
-      // Try to load from localStorage first
-      const cached = loadFromLocalStorage();
-      if (cached) {
-        setProfile(cached);
-        setLoading(false);
-
-        // Sync with API in background
-        try {
-          const res = await apiClient.getStudentProfile(String(userId));
-          if (res.success && res.data) {
-            const apiProfile: StudentProfileData = {
-              id: res.data.id,
-              userId: res.data.user_id || userId,
-              name: res.data.name || res.data.user?.name,
-              email: res.data.user?.email,
-              phone: res.data.phone,
-              studentId: res.data.student_id,
-              department: res.data.department,
-              departmentName: res.data.department_name,
-              program: res.data.program,
-              level: String(res.data.level || "200"),
-              languages: res.data.languages,
-              emergencyContact: res.data.emergency_contact_name || res.data.emergency_contact,
-              emergencyContactName: res.data.emergency_contact_name,
-              emergencyContactPhone: res.data.emergency_contact_phone,
-              emergencyPhone: res.data.emergency_contact_phone,
-              preferredIndustries: res.data.preferred_industries,
-              desiredRoles: res.data.desired_roles,
-              profileCompleted: res.data.profile_completed,
-              lastUpdated: new Date().toISOString(),
-            };
-            setProfile(apiProfile);
-            saveToLocalStorage(apiProfile);
-          }
-        } catch (apiError) {
-          console.warn("Background API sync failed, using cached data:", apiError);
-          // Don't set error if we already have cached data
-        }
-        return;
-      }
-
-      // No cache, fetch from API
+      // Always fetch from API first (API is source of truth for multi-device persistence)
       const res = await apiClient.getStudentProfile(String(userId));
       if (res.success && res.data) {
         const apiProfile: StudentProfileData = {
@@ -134,10 +93,23 @@ export function useStudentProfile(userId?: string | number, enabled = true) {
         setProfile(apiProfile);
         saveToLocalStorage(apiProfile);
       } else {
-        setError(res.message || "Failed to load profile");
+        // API failed, try to load from cache as fallback
+        const cached = loadFromLocalStorage();
+        if (cached) {
+          setProfile(cached);
+        } else {
+          setError(res.message || "Failed to load profile");
+        }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error loading profile");
+      // API error, try fallback to cache
+      const cached = loadFromLocalStorage();
+      if (cached) {
+        setProfile(cached);
+        console.warn("Using cached profile due to API error:", err);
+      } else {
+        setError(err instanceof Error ? err.message : "Error loading profile");
+      }
     } finally {
       setLoading(false);
     }

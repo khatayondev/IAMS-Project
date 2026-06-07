@@ -45,11 +45,24 @@ export function StudentDashboard() {
         }
       }
       if (appsRes.success && appsRes.data) {
-        const apps = Array.isArray(appsRes.data) ? appsRes.data : appsRes.data.applications || [];
-        // Show pending, approved, or rejected applications (don't show completed)
+        
+        const apps = (() => {
+          const data: any = appsRes.data;   
+          return Array.isArray(data) ? data : data.applications ?? [];
+        })();
+
+        type DashboardApp = {
+          status?: string | null;
+          [key: string]: any;
+        };
+
         const pending = apps.find(
-          (app) => app && ["submitted", "under_review", "approved", "rejected"].includes((app.status ?? "").toLowerCase())
+          (app: DashboardApp) =>
+            app && ["submitted", "under_review", "approved", "rejected"].includes(
+              (app.status ?? "").toLowerCase()
+            )
         );
+
 
         // Detect status change and notify student
         const currentStatus = pending?.status?.toLowerCase() ?? null;
@@ -117,17 +130,7 @@ export function StudentDashboard() {
           >
             <RotateCcw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
           </button>
-          <div className="flex items-center gap-3 px-4 py-2 bg-card border border-border rounded-lg">
-            <img
-              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`}
-              alt={user?.name}
-              className="w-8 h-8 rounded-full"
-            />
-            <div className="min-w-0">
-              <p className="font-semibold text-sm">{user?.name}</p>
-              <p className="text-muted-foreground text-xs">3rd year</p>
-            </div>
-          </div>
+          
         </div>
       </div>
 
