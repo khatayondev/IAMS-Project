@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import { useAppContext } from "../../lib/context";
 import { apiClient } from "../../lib/api-client";
 import { 
-  Calendar, MapPin, Clock, TrendingUp, AlertCircle, CheckCircle2, 
-  User, BarChart3, RefreshCw, Award, Target, Building2, 
-  XCircle, Clock3, Sun, Moon, Smartphone 
+  Calendar, MapPin, Clock, AlertCircle, CheckCircle2, 
+  RefreshCw, Award, Target, Building2, XCircle 
 } from "lucide-react";
 import { Card } from "../../components/ui/card";
 
@@ -14,8 +13,6 @@ export function StudentAttendancePage() {
   const [stats, setStats] = useState({
     present: 0,
     absent: 0,
-    late: 0,
-    halfDay: 0,
     total: 0,
   });
   const [internshipInfo, setInternshipInfo] = useState<any>(null);
@@ -54,19 +51,20 @@ export function StudentAttendancePage() {
       const attRes = await apiClient.getInternshipAttendance(String(activeInternship.id), filters);
 
       if (attRes.success) {
-        // ✅ Fix: Use 'as any' to avoid TypeScript 'never' error
         const data = attRes.data as any;
         const records = Array.isArray(data) ? data : (data?.attendance ?? []);
         
-        console.log(`Loaded ${records.length} attendance records:`, records);
-        setAttendanceRecords(records);
+        // Filter only present/absent (ignore late/half_day if any)
+        const filteredRecords = records.filter((r: any) => 
+          r.status === "present" || r.status === "absent"
+        );
+        
+        setAttendanceRecords(filteredRecords);
 
         const statsCounts = {
-          present: records.filter((r: any) => r.status === "present").length,
-          absent: records.filter((r: any) => r.status === "absent").length,
-          late: records.filter((r: any) => r.status === "late").length,
-          halfDay: records.filter((r: any) => r.status === "half_day").length,
-          total: records.length,
+          present: filteredRecords.filter((r: any) => r.status === "present").length,
+          absent: filteredRecords.filter((r: any) => r.status === "absent").length,
+          total: filteredRecords.length,
         };
         setStats(statsCounts);
       }
@@ -79,27 +77,28 @@ export function StudentAttendancePage() {
 
   const calculateAttendanceRate = () => {
     if (stats.total === 0) return 0;
-    const presentDays = stats.present + stats.late + stats.halfDay;
-    return Math.round((presentDays / stats.total) * 100);
+    return Math.round((stats.present / stats.total) * 100);
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "present": return "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700";
-      case "absent": return "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700";
-      case "late": return "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700";
-      case "half_day": return "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700";
-      default: return "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700";
+      case "present":
+        return "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700";
+      case "absent":
+        return "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700";
+      default:
+        return "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700";
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "present": return <CheckCircle2 className="w-3.5 h-3.5" />;
-      case "late": return <Clock3 className="w-3.5 h-3.5" />;
-      case "half_day": return <Sun className="w-3.5 h-3.5" />;
-      case "absent": return <XCircle className="w-3.5 h-3.5" />;
-      default: return null;
+      case "present":
+        return <CheckCircle2 className="w-3.5 h-3.5" />;
+      case "absent":
+        return <XCircle className="w-3.5 h-3.5" />;
+      default:
+        return null;
     }
   };
 
@@ -112,10 +111,9 @@ export function StudentAttendancePage() {
           <div className="h-8 w-48 bg-muted rounded mb-2"></div>
           <div className="h-4 w-72 bg-muted rounded"></div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-pulse">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-24 bg-muted rounded-lg"></div>
-          ))}
+        <div className="grid grid-cols-2 gap-3 animate-pulse">
+          <div className="h-24 bg-muted rounded-lg"></div>
+          <div className="h-24 bg-muted rounded-lg"></div>
         </div>
         <div className="h-64 bg-muted rounded-lg animate-pulse"></div>
       </div>
@@ -158,10 +156,10 @@ export function StudentAttendancePage() {
         </button>
       </div>
 
-      {/* Main stats grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Attendance Rate Card - spans full width on mobile */}
-        <div className="lg:col-span-1 col-span-2 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-primary/20 rounded-2xl p-4 shadow-sm">
+      {/* Stats grid – 3 cards: Rate, Present, Absent */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Attendance Rate Card */}
+        <div className="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-primary/20 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-primary uppercase tracking-wider">Rate</span>
             <Award className="w-4 h-4 text-primary/70" />
@@ -181,28 +179,6 @@ export function StudentAttendancePage() {
               <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Present</p>
             </div>
             <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-          </div>
-        </div>
-
-        {/* Late */}
-        <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 shadow-sm">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">{stats.late}</p>
-              <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">Late</p>
-            </div>
-            <Clock3 className="w-5 h-5 text-amber-500" />
-          </div>
-        </div>
-
-        {/* Half Day */}
-        <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-2xl p-4 shadow-sm">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{stats.halfDay}</p>
-              <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Half Day</p>
-            </div>
-            <Sun className="w-5 h-5 text-blue-500" />
           </div>
         </div>
 
@@ -309,7 +285,7 @@ export function StudentAttendancePage() {
                       </div>
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border shadow-sm ${getStatusColor(record.status)}`}>
                         {getStatusIcon(record.status)}
-                        {record.status?.replace("_", " ").charAt(0).toUpperCase() + record.status?.slice(1).replace("_", " ")}
+                        {record.status?.charAt(0).toUpperCase() + record.status?.slice(1)}
                       </span>
                     </div>
 
@@ -338,17 +314,15 @@ export function StudentAttendancePage() {
         )}
       </div>
 
-      {/* Guidelines card with better icons */}
+      {/* Guidelines – simplified */}
       <div className="bg-secondary/30 rounded-xl p-4 border border-border/40">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
           <Target className="w-4 h-4" />
-          How status is determined
+          Attendance Definitions
         </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-          <div className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /><span>Present – full day on time</span></div>
-          <div className="flex items-center gap-2"><Clock3 className="w-3.5 h-3.5 text-amber-500" /><span>Late – after start, full day</span></div>
-          <div className="flex items-center gap-2"><Sun className="w-3.5 h-3.5 text-blue-500" /><span>Half Day – partial attendance</span></div>
-          <div className="flex items-center gap-2"><XCircle className="w-3.5 h-3.5 text-red-500" /><span>Absent – no check‑in</span></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          <div className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /><span>Present – Checked in and completed the day</span></div>
+          <div className="flex items-center gap-2"><XCircle className="w-3.5 h-3.5 text-red-500" /><span>Absent – No check‑in recorded</span></div>
         </div>
       </div>
     </div>
