@@ -2,7 +2,7 @@ import * as React from "react";
 
 import { cn } from "./utils";
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+function Card({ className, children, ...props }: React.PropsWithChildren<React.ComponentProps<"div">>) {
   return (
     <div
       data-slot="card"
@@ -11,7 +11,9 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
         className,
       )}
       {...props}
-    />
+    >
+      {children}
+    </div>
   );
 }
 
