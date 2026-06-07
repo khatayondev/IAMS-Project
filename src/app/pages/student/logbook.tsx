@@ -203,7 +203,7 @@ export function LogbookPage() {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSave = async () => {
     if (!isLogbookActive) return;
     if (!internshipId) return;
 
@@ -216,6 +216,7 @@ export function LogbookPage() {
         challenges_faced: form.challenges_faced || undefined,
         attachment_name: attachedFileName || undefined,
         attachment_url: attachedFileUrl || undefined,
+        status: "draft",
       } as any;
 
       let res;
@@ -240,8 +241,21 @@ export function LogbookPage() {
       }
       return res;
     }, {
-      successMessage: editingEntry ? "Entry updated successfully!" : "Logbook entry submitted successfully!",
-      errorMessage: "Failed to submit logbook entry.",
+      successMessage: "Entry saved as draft!",
+      errorMessage: "Failed to save logbook entry.",
+    });
+  };
+
+  const handleSubmitForReview = async (entryId: string) => {
+    await submitLogEntry(async () => {
+      const res = await apiClient.submitLogbookEntry(entryId);
+      if (res.success) {
+        loadData();
+      }
+      return res;
+    }, {
+      successMessage: "Entry submitted for review!",
+      errorMessage: "Failed to submit entry for review.",
     });
   };
 
@@ -409,6 +423,18 @@ export function LogbookPage() {
                             {entry.industry_supervisor_comment ?? entry.academic_supervisor_comment}
                           </div>
                         )}
+
+                        {(!entry.status || entry.status === "draft") && (
+                          <div className="pt-2">
+                            <button
+                              onClick={() => handleSubmitForReview(entry.id)}
+                              className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg font-semibold text-xs hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              Submit for Review
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -502,9 +528,9 @@ export function LogbookPage() {
                   className="px-4 py-2 border border-border rounded-lg hover:bg-accent font-semibold text-sm text-foreground transition-colors">
                   Cancel
                 </button>
-                <button type="button" onClick={handleSubmit} disabled={isSubmitting || !form.activities_description.trim()}
+                <button type="button" onClick={handleSave} disabled={isSubmitting || !form.activities_description.trim()}
                   className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 font-semibold text-sm transition-opacity disabled:opacity-50">
-                  Submit
+                  Save as Draft
                 </button>
               </div>
             </div>
