@@ -124,15 +124,11 @@ export function StudentHistoryPage() {
 
       const res = await apiClient.getInternshipAttendance(internshipId, filters);
       if (res.success) {
-        const records = Array.isArray(res.data) ? res.data : res.data?.attendance ?? [];
-        console.log(`Loaded ${records.length} attendance records for internship ${internshipId}:`, records);
+        const records = Array.isArray(res.data) ? res.data : [];
         setAttendanceMap((prev) => ({ ...prev, [internshipId]: records }));
-      } else {
-        console.warn("Failed to load attendance:", res.message);
       }
     } catch (error) {
       console.error("Attendance load error:", error);
-      toast.error("Failed to load attendance records");
     } finally {
       setLoadingMap(prev => ({
         ...prev,
@@ -353,15 +349,15 @@ export function StudentHistoryPage() {
 
               {/* Attendance Tab */}
               {currentTab === "attendance" && (
-                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                <div className="space-y-2">
                   {loadingMap[id]?.attendance ? (
                     <p className="text-muted-foreground text-xs text-center py-3">Loading...</p>
                   ) : attendanceMap[id] && attendanceMap[id].length > 0 ? (
-                    <>
+                    <div className="max-h-[300px] overflow-y-auto">
                       <div className="text-xs space-y-1">
                         {attendanceMap[id].map((record) => (
                           <div key={record.id} className="p-2 bg-card rounded border border-border/50 flex items-center justify-between">
-                            <span className="font-medium">{new Date(record.date).toLocaleDateString()}</span>
+                            <span className="font-medium">{new Date(record.date || record.attendance_date || record.check_in_time).toLocaleDateString()}</span>
                             <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
                               record.status === "present" ? "bg-emerald-100 text-emerald-700" :
                               record.status === "late" ? "bg-amber-100 text-amber-700" :
@@ -373,9 +369,17 @@ export function StudentHistoryPage() {
                           </div>
                         ))}
                       </div>
-                    </>
+                    </div>
                   ) : (
-                    <p className="text-muted-foreground text-xs text-center py-3">No attendance records</p>
+                    <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                      <p className="text-muted-foreground text-xs font-semibold mb-2">ℹ️ No Attendance Records</p>
+                      <p className="text-xs text-blue-700 dark:text-blue-300">
+                        Attendance records only appear within the internship active period ({new Date(internships.find((i) => String(i.id) === id)?.start_date || "").toLocaleDateString()} to {new Date(internships.find((i) => String(i.id) === id)?.end_date || "").toLocaleDateString()}).
+                      </p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                        If you've checked in outside this period, records won't appear here.
+                      </p>
+                    </div>
                   )}
                 </div>
               )}

@@ -214,9 +214,22 @@ export function StudentAttendancePage() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Records ({stats.total})</h3>
 
             {attendanceRecords.length === 0 ? (
-              <div className="p-8 text-center rounded-lg border border-border">
-                <Calendar className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-                <p className="text-muted-foreground text-sm">No attendance records yet</p>
+              <div className="p-6 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30">
+                <div className="flex gap-3">
+                  <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-blue-900 dark:text-blue-100 text-sm mb-1">No Attendance Records</h4>
+                    <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
+                      Attendance records are only available within your internship active period.
+                    </p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400">
+                      <span className="font-semibold">Active Period:</span> {internshipInfo?.start_date ? new Date(internshipInfo.start_date).toLocaleDateString() : "—"} to {internshipInfo?.end_date ? new Date(internshipInfo.end_date).toLocaleDateString() : "—"}
+                    </p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                      If you've checked in, please ensure it's within this period.
+                    </p>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="space-y-2">

@@ -19,6 +19,8 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId, interns
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [checkedInTime, setCheckedInTime] = useState<string | null>(null);
+  const [internshipDates, setInternshipDates] = useState<{ start?: string; end?: string } | null>(null);
+  const [outsideInternshipPeriod, setOutsideInternshipPeriod] = useState(false);
   const inFlightRef = useRef(false);
 
   const isInternshipActive = internshipStatus === "active" || internshipStatus === "approved";
@@ -32,6 +34,24 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId, interns
     const loadCheckInStatus = async () => {
       try {
         const today = new Date().toISOString().split("T")[0];
+
+        // Get internship details to check if today is within the internship period
+        const internships = await apiClient.getInternships();
+        const internship = internships.data?.find((i: any) => String(i.id) === String(internshipId));
+
+        if (internship?.start_date && internship?.end_date) {
+          setInternshipDates({ start: internship.start_date, end: internship.end_date });
+
+          // Check if today is within internship period
+          const startDate = new Date(internship.start_date);
+          const endDate = new Date(internship.end_date);
+          const todayDate = new Date(today);
+
+          if (todayDate < startDate || todayDate > endDate) {
+            setOutsideInternshipPeriod(true);
+          }
+        }
+
         const res = await apiClient.getInternshipAttendance(String(internshipId), {
           from_date: today,
           to_date: today,
@@ -39,7 +59,7 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId, interns
 
         if (!res.success) return;
 
-        const records = Array.isArray(res.data) ? res.data : res.data?.attendance ?? [];
+        const records = Array.isArray(res.data) ? res.data : [];
         const todayRecord = records.find((r: any) => r.status === "present" || r.status === "late" || r.status === "half_day");
 
         if (todayRecord) {
@@ -195,6 +215,19 @@ export function CheckInModal({ isOpen, onClose, onSuccess, internshipId, interns
         </div>
 
         <div className="p-6 space-y-4">
+          {/* Warning if outside internship period */}
+          {outsideInternshipPeriod && (
+            <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg p-3 flex gap-2">
+              <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-semibold text-amber-700 dark:text-amber-300">Outside Internship Period</p>
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  Check-ins are only recorded within the internship dates. This check-in may not appear in your attendance records.
+                </p>
+              </div>
+            </div>
+          )}
+
           {isCheckedIn ? (
             <>
               <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4 flex items-center justify-center gap-3">
