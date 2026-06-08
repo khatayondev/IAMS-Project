@@ -174,13 +174,13 @@ export function DocumentsPage() {
     {
       id: "acceptance-form",
       name: "Company Acceptance Form",
-      desc: "Form to be signed by the company confirming acceptance of the student",
-      status: (myApp?.status?.toLowerCase() === "company accepted" || myApp?.status?.toLowerCase() === "company_accepted" || isActive || isCompleted) 
-        ? "Uploaded" 
-        : needsAcceptance 
-          ? "Action Required" 
-          : isApproved 
-            ? "Available" 
+      desc: "Form to be signed by the company confirming acceptance of the student. After download, share with your supervisor and invite them to the system.",
+      status: (myApp?.status?.toLowerCase() === "company accepted" || myApp?.status?.toLowerCase() === "company_accepted" || isActive || isCompleted)
+        ? "Uploaded"
+        : needsAcceptance
+          ? "Action Required"
+          : isApproved
+            ? "Available"
             : "Pending",
       canDownload: !!myApp,
       canUpload: needsAcceptance,
@@ -324,13 +324,23 @@ export function DocumentsPage() {
             {/* Action buttons */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 ml-11">
               {doc.id === "acceptance-form" && doc.canDownload ? (
-                <button
-                  onClick={handleDownloadAcceptanceForm}
-                  disabled={isDownloadingForm}
-                  className="px-2.5 py-1.5 border border-primary text-primary hover:bg-primary/5 rounded text-xs font-medium flex items-center justify-center gap-1 transition-colors disabled:opacity-50"
-                >
-                  <Download className="w-3 h-3" /> {isDownloadingForm ? "Downloading..." : "Download Blank Form"}
-                </button>
+                <>
+                  <button
+                    onClick={handleDownloadAcceptanceForm}
+                    disabled={isDownloadingForm}
+                    className="px-2.5 py-1.5 border border-primary text-primary hover:bg-primary/5 rounded text-xs font-medium flex items-center justify-center gap-1 transition-colors disabled:opacity-50"
+                  >
+                    <Download className="w-3 h-3" /> {isDownloadingForm ? "Downloading..." : "Download Form"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      document.querySelector("[data-invite-supervisor-section]")?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className="px-2.5 py-1.5 border border-blue-300 text-blue-600 hover:bg-blue-50 rounded text-xs font-medium flex items-center justify-center gap-1 transition-colors"
+                  >
+                    <Send className="w-3 h-3" /> Invite Supervisor
+                  </button>
+                </>
               ) : doc.canDownload ? (
                 <button
                   onClick={() => {
@@ -380,7 +390,7 @@ export function DocumentsPage() {
 
       {/* Industry Supervisor Magic Link Section */}
       {(needsAcceptance || isActive) && (
-        <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+        <div className="bg-card border border-border rounded-lg p-4 space-y-3" data-invite-supervisor-section>
           <div className="flex items-center gap-2">
             <Link2 className="w-4 h-4 text-primary" />
             <h3 className="font-semibold text-sm">Supervisor Access</h3>
