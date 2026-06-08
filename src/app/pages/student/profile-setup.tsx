@@ -15,7 +15,7 @@ export function StudentProfileSetup() {
 
   // Personal Information
   const [fullName, setFullName] = useState(user?.name || "");
-  const [email] = useState(user?.email || "");
+  const [email, setEmail] = useState(user?.email || "");
   const [phone, setPhone] = useState("");
   const [emergencyContact, setEmergencyContact] = useState("");
   const [emergencyPhone, setEmergencyPhone] = useState("");
@@ -35,6 +35,13 @@ export function StudentProfileSetup() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   const draftKey = `profile_setup_draft_${user?.id}`;
+
+  // Sync email from user context whenever it changes
+  useEffect(() => {
+    if (user?.email) {
+      setEmail(user.email);
+    }
+  }, [user?.email]);
 
   // Load draft or backend profile on mount
   useEffect(() => {
