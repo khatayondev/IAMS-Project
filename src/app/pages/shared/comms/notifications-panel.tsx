@@ -164,33 +164,17 @@ export function NotificationsPanel() {
         ))}
       </div>
 
-      {/* Search & Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search notifications..."
-            className="w-full pl-10 pr-4 py-2 rounded-lg border border-border bg-card"
-            style={{ fontSize: "0.85rem" }}
-          />
-        </div>
-        <div className="flex gap-1.5 flex-wrap">
-          {["All", "Unread", "application", "company", "grade", "escalation", "system"].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-lg border transition-colors capitalize ${
-                filter === f ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-accent"
-              }`}
-              style={{ fontSize: "0.8rem" }}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
+      {/* Search */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search notifications..."
+          className="w-full pl-10 pr-4 py-2 rounded-lg border border-border bg-card"
+          style={{ fontSize: "0.85rem" }}
+        />
       </div>
 
       {/* Notification List */}
