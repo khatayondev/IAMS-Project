@@ -168,7 +168,7 @@ export function MessagesPanel({ preselectedRecipientId }: MessagesPanelProps) {
         </button>
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden flex flex-col md:flex-row" style={{ height: "calc(100vh - 310px)", minHeight: "400px" }}>
+      <div className="bg-card border border-border rounded-xl overflow-hidden flex flex-col md:flex-row min-h-[500px] md:min-h-[600px]">
         {/* Thread List */}
         <div className={`w-full md:w-80 border-b md:border-b-0 md:border-r border-border flex flex-col shrink-0 ${selectedThread ? "hidden md:flex" : "flex"}`}>
           <div className="p-3 border-b border-border">
