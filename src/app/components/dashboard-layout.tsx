@@ -331,8 +331,8 @@ export function DashboardLayout() {
             </button>
           )}
 
-          {/* Notifications - Show NotificationBell for supervisors */}
-          {user.role === "supervisor" && <NotificationBell />}
+          {/* Notifications */}
+          <NotificationBell />
 
           {/* User Profile Dropdown */}
           <div className="relative" ref={profileRef}>
