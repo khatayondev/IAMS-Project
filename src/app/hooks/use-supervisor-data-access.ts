@@ -93,6 +93,7 @@ export function useSupervisorDataAccess() {
   ): T[] => {
     if (!Array.isArray(items)) return [];
     return items.filter((item) => {
+      if (!item) return false;
       const studentId = item[studentIdField];
       return canAccessStudent(studentId);
     });
@@ -104,6 +105,7 @@ export function useSupervisorDataAccess() {
   ): T[] => {
     if (!Array.isArray(items)) return [];
     return items.filter((item) => {
+      if (!item) return false;
       const internshipId = item[internshipIdField];
       return canAccessInternship(internshipId);
     });

@@ -12,7 +12,7 @@ import { toast } from "sonner";
 
 export function SupervisorLogbooksPage() {
   const { user } = useAppContext();
-  const { filterByAssignedStudents, canAccessStudent, loading: accessLoading } = useSupervisorDataAccess();
+  const { filterByAssignedInternships, canAccessStudent, loading: accessLoading } = useSupervisorDataAccess();
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>("All");
@@ -29,7 +29,7 @@ export function SupervisorLogbooksPage() {
       const res = await apiClient.getLogbookEntries({ per_page: 100 });
       if (res.success && Array.isArray(res.data)) {
         // SECURITY: Filter entries to only show assigned students' logbooks
-        const filtered = filterByAssignedStudents(res.data, "internship_id");
+        const filtered = filterByAssignedInternships(res.data, "internship_id");
         setEntries(filtered);
       } else {
         setEntries([]);
@@ -40,7 +40,7 @@ export function SupervisorLogbooksPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterByAssignedStudents]);
+  }, [filterByAssignedInternships]);
 
   useEffect(() => { fetchEntries(); }, [fetchEntries]);
 

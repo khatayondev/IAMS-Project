@@ -25,6 +25,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export function AttendancePage({ viewRole }: Props) {
+  // SECURITY: Get supervisor data access for filtering
   const supervisorDataAccess = viewRole === "supervisor" ? useSupervisorDataAccess() : null;
   const [records, setRecords] = useState<any[]>([]);
   const [missed, setMissed] = useState<any[]>([]);
@@ -50,13 +51,14 @@ export function AttendancePage({ viewRole }: Props) {
 
       // SECURITY: Filter attendance records if supervisor
       if (viewRole === "supervisor" && supervisorDataAccess) {
-        const filteredRecords = supervisorDataAccess.filterByAssignedStudents(
+        // Filter by internship_id since attendance has internship_id field
+        const filteredRecords = supervisorDataAccess.filterByAssignedInternships(
           attRes.data || [],
-          "student_id"
+          "internship_id"
         );
-        const filteredMissed = supervisorDataAccess.filterByAssignedStudents(
+        const filteredMissed = supervisorDataAccess.filterByAssignedInternships(
           missedRes.data || [],
-          "student_id"
+          "id" // Missed endpoint returns internship objects
         );
         setRecords(filteredRecords);
         setMissed(filteredMissed);
