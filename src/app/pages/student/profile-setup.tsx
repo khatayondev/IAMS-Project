@@ -58,6 +58,7 @@ export function StudentProfileSetup() {
           setPreferredIndustries(d.preferredIndustries || "");
           setDesiredRoles(d.desiredRoles || "");
           setIsProfileComplete(isProfileSaved);
+          // Only enter edit mode if there's a draft AND profile is not yet saved
           setIsEditMode(!isProfileSaved);
         } else if (user?.id) {
           const res = await apiClient.getStudentProfile(String(user.id));
@@ -75,14 +76,20 @@ export function StudentProfileSetup() {
             setPreferredIndustries(p.preferred_industries || p.profile_data?.preferred_industries || "");
             setDesiredRoles(p.desired_roles || p.profile_data?.desired_roles || "");
             setLastSaved(new Date());
-            setIsProfileComplete(p.profile_completed || false);
-            setIsEditMode(false);
+            const isComplete = p.profile_completed || false;
+            setIsProfileComplete(isComplete);
+            // Always show view page if profile is complete, otherwise show edit page
+            setIsEditMode(!isComplete);
           } else if (user?.email) {
             setStudentId(user.email.split("@")[0]);
+            // No profile found - show edit page for new profile setup
+            setIsEditMode(true);
           }
         }
       } catch {
         if (user?.email) setStudentId(user.email.split("@")[0]);
+        // On error, show edit page
+        setIsEditMode(true);
       }
     };
     load();
