@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router";
-import { Bell, MessageSquare } from "lucide-react";
+import { Bell, MessageSquare, Megaphone } from "lucide-react";
 import { apiClient } from "../../lib/api-client";
 import { NotificationsPanel } from "./comms/notifications-panel";
 import { MessagesPanel } from "./comms/messages-panel";
+import { AnnouncementsPanel } from "./comms/announcements-panel";
 import type { ExtendedRole } from "../../services/auth-service";
 
-type CommTab = "notifications" | "messages";
+type CommTab = "notifications" | "messages" | "announcements";
 
 interface Props {
   viewRole: ExtendedRole;
@@ -27,9 +28,13 @@ export function CommunicationsPage({ viewRole }: Props) {
     });
   }, []);
 
+  // Only CLO/DLO can compose announcements; all roles can view them
+  const canComposeAnnouncements = viewRole === "clo" || viewRole === "dlo";
+
   const tabs: { key: CommTab; label: string; icon: typeof Bell; badge?: number }[] = [
     { key: "notifications", label: "Notifications", icon: Bell, badge: unreadNotifs || undefined },
     { key: "messages", label: "Messages", icon: MessageSquare, badge: unreadMsgs || undefined },
+    { key: "announcements", label: "Announcements", icon: Megaphone },
   ];
 
   return (
@@ -71,6 +76,7 @@ export function CommunicationsPage({ viewRole }: Props) {
       {/* Tab Content */}
       {activeTab === "notifications" && <NotificationsPanel />}
       {activeTab === "messages" && <MessagesPanel preselectedRecipientId={recipientParam} />}
+      {activeTab === "announcements" && <AnnouncementsPanel viewRole={viewRole} canCompose={canComposeAnnouncements} />}
     </div>
   );
 }
