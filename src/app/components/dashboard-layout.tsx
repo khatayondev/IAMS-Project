@@ -3,7 +3,8 @@ import {
   LayoutDashboard, FileText, Building2, Calendar, Users, Settings, Bell, LogOut,
   GraduationCap, ClipboardCheck, BarChart3, Menu, Shield, BookOpen, BookMarked,
   Upload, MessageSquarePlus, AlertTriangle, MapPin, UserPlus, X, User,
-  Moon, Sun, ChevronDown, HelpCircle, Search, CheckCircle2, Award, Layers, TrendingUp
+  Moon, Sun, ChevronDown, HelpCircle, Search, CheckCircle2, Award, Layers, TrendingUp,
+  LifeBuoy
 } from "lucide-react";
 import { useAppContext } from "../lib/context";
 import { apiClient } from "../lib/api-client";
@@ -38,6 +39,7 @@ const cloNav: NavItem[] = [
   { to: "/clo/audit", icon: Shield, label: "Audit Logs" },
   { to: "/clo/templates", icon: BookOpen, label: "Templates" },
   { to: "/clo/communications", icon: MessageSquarePlus, label: "Communications" },
+  { to: "/clo/help", icon: LifeBuoy, label: "Help & Support" },
   { to: "/clo/settings", icon: Settings, label: "Settings" },
 ];
 
@@ -53,6 +55,7 @@ const dloNav: NavItem[] = [
   { to: "/dlo/reports", icon: BarChart3, label: "Reports" },
   { to: "/dlo/issues", icon: AlertTriangle, label: "Issues" },
   { to: "/dlo/communications", icon: MessageSquarePlus, label: "Communications" },
+  { to: "/dlo/help", icon: LifeBuoy, label: "Help & Support" },
   { to: "/dlo/settings", icon: Settings, label: "Settings" },
 ];
 
@@ -67,6 +70,7 @@ const studentNav: NavItem[] = [
   { to: "/student/history", icon: Award, label: "Internship History" },
   { to: "/student/issues", icon: AlertTriangle, label: "Report Issue" },
   { to: "/student/communications", icon: MessageSquarePlus, label: "Communications" },
+  { to: "/student/help", icon: LifeBuoy, label: "Help & Support" },
   { to: "/student/settings", icon: Settings, label: "Settings" },
 ];
 
@@ -77,6 +81,7 @@ const supervisorNav: NavItem[] = [
   { to: "/supervisor/attendance", icon: MapPin, label: "Attendance" },
   { to: "/supervisor/messages", icon: MessageSquarePlus, label: "Messages" },
   { to: "/supervisor/communications", icon: MessageSquarePlus, label: "Communications" },
+  { to: "/supervisor/help", icon: LifeBuoy, label: "Help & Support" },
   { to: "/supervisor/settings", icon: Settings, label: "Settings" },
 ];
 
@@ -86,6 +91,7 @@ const academicNav: NavItem[] = [
   { to: "/academic/evaluate", icon: ClipboardCheck, label: "Evaluations" },
   { to: "/academic/visits", icon: MapPin, label: "Site Visits" },
   { to: "/academic/communications", icon: MessageSquarePlus, label: "Communications" },
+  { to: "/academic/help", icon: LifeBuoy, label: "Help & Support" },
 ];
 
 const hodNav: NavItem[] = [
@@ -93,8 +99,9 @@ const hodNav: NavItem[] = [
   { to: "/hod/students", icon: GraduationCap, label: "Department Students" },
   { to: "/hod/approvals", icon: ClipboardCheck, label: "Grade Approvals" },
   { to: "/hod/reports", icon: BarChart3, label: "Analytics & Reports" },
-  { to: "/hod/settings", icon: Settings, label: "Settings" },
   { to: "/hod/communications", icon: MessageSquarePlus, label: "Communications" },
+  { to: "/hod/help", icon: LifeBuoy, label: "Help & Support" },
+  { to: "/hod/settings", icon: Settings, label: "Settings" },
 ];
 
 function getNavForRole(role: ExtendedRole): NavItem[] {

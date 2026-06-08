@@ -35,6 +35,7 @@ import { ReportsPage } from "./pages/shared/reports-page";
 import { CommunicationsPage } from "./pages/shared/communications-page";
 import { IssuesPage } from "./pages/shared/issues-page";
 import { AttendancePage } from "./pages/shared/attendance-page";
+import { HelpPage } from "./pages/shared/help-page";
 
 // Student Pages
 import { StudentDashboard } from "./pages/student/dashboard";
@@ -153,6 +154,7 @@ export const router = createBrowserRouter([
           { path: "settings", Component: CLOSettings },
           { path: "issues", Component: CLOIssues },
           { path: "communications", Component: CLOCommunications },
+          { path: "help", element: <HelpPage /> },
         ],
       },
 
@@ -178,6 +180,7 @@ export const router = createBrowserRouter([
           { path: "settings", Component: DLOSettings },
           { path: "issues", Component: DLOIssues },
           { path: "communications", Component: DLOCommunications },
+          { path: "help", element: <HelpPage /> },
         ],
       },
 
@@ -204,6 +207,7 @@ export const router = createBrowserRouter([
           { path: "issues", Component: StudentIssues },
           { path: "communications", Component: StudentCommunications },
           { path: "settings", Component: StudentSettings },
+          { path: "help", element: <HelpPage /> },
         ],
       },
 
@@ -225,6 +229,7 @@ export const router = createBrowserRouter([
           { path: "attendance", Component: SupervisorAttendance },
           { path: "communications", Component: SupervisorCommunications },
           { path: "settings", Component: SupervisorSettings },
+          { path: "help", element: <HelpPage /> },
         ],
       },
 
@@ -244,6 +249,7 @@ export const router = createBrowserRouter([
           { path: "attendance", element: <AttendancePage viewRole="academic" /> },
           { path: "grades", element: <GradesPage viewRole="academic" /> },
           { path: "communications", Component: AcademicCommunications },
+          { path: "help", element: <HelpPage /> },
         ],
       },
 
@@ -262,6 +268,7 @@ export const router = createBrowserRouter([
           { path: "approvals", element: <HODApprovalsPage /> },
           { path: "communications", Component: HODCommunications },
           { path: "settings", Component: HODSettings },
+          { path: "help", element: <HelpPage /> },
         ],
       },
 
