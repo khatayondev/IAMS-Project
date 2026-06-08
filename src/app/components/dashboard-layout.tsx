@@ -14,6 +14,7 @@ import { setNotifications } from "../lib/store";
 import { getOverdueWeeklyRubrics } from "../services/grading-service";
 import { CheckInModal } from "./check-in-modal";
 import { StudentMobileShell } from "./student/student-mobile-shell";
+import { NotificationBell } from "./notification-bell";
 import { useStudentCheckIn } from "../hooks/use-student-check-in";
 
 interface NavItem {
@@ -75,6 +76,7 @@ const supervisorNav: NavItem[] = [
   { to: "/supervisor/logbooks", icon: BookMarked, label: "Student Logbooks" },
   { to: "/supervisor/evaluate", icon: ClipboardCheck, label: "Assessments", badgeKey: "supervisorOverdueRubrics" },
   { to: "/supervisor/attendance", icon: MapPin, label: "Attendance" },
+  { to: "/supervisor/messages", icon: MessageSquarePlus, label: "Messages" },
   { to: "/supervisor/communications", icon: MessageSquarePlus, label: "Communications" },
   { to: "/supervisor/settings", icon: Settings, label: "Settings" },
 ];
@@ -344,81 +346,8 @@ export function DashboardLayout() {
             </button>
           )}
 
-          {/* Notifications */}
-          <div className="relative">
-            <button
-              onClick={() => { setNotifOpen(!notifOpen); setProfileOpen(false); }}
-              className="relative p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-card transition-all duration-200"
-            >
-              <Bell className="w-[18px] h-[18px]" />
-              {unread > 0 && (
-                <span
-                  className="absolute top-1 right-1 w-4 h-4 bg-primary text-primary-foreground rounded-full flex items-center justify-center"
-                  style={{ fontSize: "0.55rem", fontWeight: 600 }}
-                >
-                  {unread}
-                </span>
-              )}
-            </button>
-            {notifOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
-                <div
-                  className="absolute right-0 top-12 w-80 max-w-[calc(100vw-2rem)] bg-popover border border-border rounded-2xl z-50 overflow-hidden"
-                  style={{ boxShadow: "0 4px 24px rgba(11,94,215,0.08), 0 1px 4px rgba(0,0,0,0.04)" }}
-                >
-                  <div className="p-3 border-b border-border flex items-center justify-between">
-                    <h4 className="text-sm font-semibold">Notifications {unread > 0 && <span className="ml-1 text-xs text-primary">({unread} unread)</span>}</h4>
-                    {unread > 0 && (
-                      <button
-                        onClick={async () => {
-                          await apiClient.markAllNotificationsRead();
-                          setNotifications(store.notifications.map((n) => ({ ...n, read: true })));
-                        }}
-                        className="text-xs text-primary hover:underline"
-                      >
-                        Mark all read
-                      </button>
-                    )}
-                  </div>
-                  <div className="max-h-72 overflow-y-auto">
-                    {store.notifications.length === 0 ? (
-                      <div className="px-4 py-8 text-center text-muted-foreground text-sm">No notifications</div>
-                    ) : store.notifications.slice(0, 8).map((n) => (
-                      <div
-                        key={n.id}
-                        className={`px-4 py-3 border-b border-border last:border-0 transition-colors hover:bg-accent/50 cursor-pointer ${!n.read ? "bg-primary/5 border-l-2 border-l-primary" : ""}`}
-                        onClick={async () => {
-                          if (!n.read) {
-                            await apiClient.markNotificationRead(n.id);
-                            setNotifications(store.notifications.map((x) => x.id === n.id ? { ...x, read: true } : x));
-                          }
-                        }}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <p style={{ fontSize: "0.82rem" }} className="text-foreground font-medium leading-snug">{n.title}</p>
-                          {!n.read && <span className="w-2 h-2 rounded-full bg-primary shrink-0 mt-1" />}
-                        </div>
-                        <p style={{ fontSize: "0.72rem" }} className="text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
-                        <p style={{ fontSize: "0.65rem" }} className="text-muted-foreground mt-1">
-                          {new Date(n.timestamp).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="p-2 border-t border-border">
-                    <NavLink
-                      to={`/${user.role === "clo" ? "clo" : user.role === "dlo" ? "dlo" : user.role === "hod" ? "hod" : user.role === "supervisor" ? "supervisor" : user.role === "academic" ? "academic" : "student"}/communications`}
-                      onClick={() => setNotifOpen(false)}
-                      className="block w-full text-center text-xs text-primary hover:underline py-1"
-                    >
-                      View all notifications →
-                    </NavLink>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+          {/* Notifications - Show NotificationBell for supervisors */}
+          {user.role === "supervisor" && <NotificationBell />}
 
           {/* User Profile Dropdown */}
           <div className="relative" ref={profileRef}>

@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useContext, useState, useSyncExternalStore, useEffect, type ReactNode } from "react";
 import type { AuthUser, ExtendedRole } from "../services/auth-service";
 import { subscribe, getState, type StoreState } from "./store";
+import { setCurrentUser } from "./api-client";
 
 interface AppContextType {
   user: AuthUser | null;
@@ -58,9 +59,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const store = useSyncExternalStore(subscribe, getState, getState);
 
+  // SECURITY: Sync loaded user to API client on mount
+  useEffect(() => {
+    if (user && user.id && user.role) {
+      setCurrentUser({ id: user.id, role: user.role });
+    } else {
+      setCurrentUser(null);
+    }
+  }, [user?.id, user?.role]);
+
   const setUser = (u: AuthUser | null) => {
     saveUser(u);
     setUserState(u);
+    // SECURITY: Sync user to API client for supervisor context in requests
+    if (u && u.id && u.role) {
+      setCurrentUser({ id: u.id, role: u.role });
+    } else {
+      setCurrentUser(null);
+    }
   };
 
   return (

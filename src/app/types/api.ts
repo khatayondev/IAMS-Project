@@ -319,6 +319,26 @@ export interface LogbookFilters extends PaginationParams {
   per_page?: number;
 }
 
+export interface LogbookComment {
+  id: string;
+  logbook_id: string;
+  author_id: string;
+  author_name: string;
+  author_role: "student" | "supervisor" | "academic_supervisor";
+  content: string;
+  is_edited: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface AddLogbookCommentRequest {
+  content: string;
+}
+
+export interface UpdateLogbookCommentRequest {
+  content: string;
+}
+
 export interface LogbookEntryResponse {
   id: string;
   internship_id: number;
@@ -330,6 +350,9 @@ export interface LogbookEntryResponse {
   attachment_name?: string;
   attachment_url?: string;
   created_at: string;
+  comments?: LogbookComment[];
+  industry_supervisor_comment?: string;
+  academic_supervisor_comment?: string;
 }
 
 // ── Attendance ──
@@ -497,4 +520,98 @@ export interface SupervisorResponse {
   department: string;
   currentLoad: number;
   maxLoad: number;
+}
+
+// ── Direct Messaging (Supervisor ↔ Student) ──
+
+export interface MessageThread {
+  id: string;
+  subject?: string;
+  participants: Array<{
+    id: string;
+    name: string;
+    email: string;
+    role: "student" | "supervisor" | "academic_supervisor";
+  }>;
+  last_message?: Message;
+  last_message_at?: string;
+  unread_count: number;
+  created_at: string;
+  read_at?: string;
+}
+
+export interface Message {
+  id: string;
+  thread_id: string;
+  sender_id: string;
+  sender_name: string;
+  sender_role: "student" | "supervisor" | "academic_supervisor";
+  content: string;
+  created_at: string;
+  read_at?: string;
+  edited_at?: string;
+}
+
+// ── Notifications ──
+
+export type NotificationType =
+  | "logbook_submitted"
+  | "student_checked_in"
+  | "deadline_approaching"
+  | "message"
+  | "logbook_approved"
+  | "assessment_due"
+  | "system";
+
+export interface NotificationResponse {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  related_id?: string;
+  related_type?: string;
+  action_url?: string;
+  read: boolean;
+  read_at?: string;
+  created_at: string;
+  priority?: "low" | "normal" | "high" | "urgent";
+  data?: Record<string, unknown>;
+}
+
+// ── Assessment Completion Checklist ──
+
+export interface SupervisorAssessmentSummary {
+  total_students: number;
+  logbooks: {
+    submitted: number;
+    approved: number;
+    pending_review: number;
+  };
+  assessments: {
+    submitted: number;
+    pending: number;
+    total: number;
+  };
+  attendance: {
+    verified: number;
+    pending_verification: number;
+  };
+  comments: {
+    added: number;
+    pending: number;
+  };
+  deadline?: string;
+  overall_progress: number;
+}
+
+export interface AssessmentChecklistItem {
+  id: string;
+  student_id: string;
+  student_name: string;
+  type: "logbook" | "assessment" | "attendance" | "comment";
+  status: "pending" | "in_progress" | "completed";
+  due_date?: string;
+  action_url?: string;
+  priority?: "low" | "normal" | "high";
 }

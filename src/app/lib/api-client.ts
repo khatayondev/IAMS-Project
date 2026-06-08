@@ -22,15 +22,26 @@ import type {
   SendMessageRequest,
   CreateThreadRequest,
   SettingsRequest,
+  NotificationResponse,
+  SupervisorAssessmentSummary,
+  AssessmentChecklistItem,
 } from "../types/api";
 
 import { API_ENDPOINTS } from "./constants";
 
 // ── Auth token — persisted in localStorage, restored on load ──
 const TOKEN_KEY = "iams_token";
+const USER_KEY = "iams_user";
 
 let authToken: string | null = (() => {
   try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }
+})();
+
+let currentUser: { id: string; role: string } | null = (() => {
+  try {
+    const user = localStorage.getItem(USER_KEY);
+    return user ? JSON.parse(user) : null;
+  } catch { return null; }
 })();
 
 export function setApiAuthToken(token: string | null): void {
@@ -43,6 +54,18 @@ export function setApiAuthToken(token: string | null): void {
 
 export function getApiAuthToken(): string | null {
   return authToken;
+}
+
+export function setCurrentUser(user: { id: string; role: string } | null): void {
+  currentUser = user;
+  try {
+    if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
+    else localStorage.removeItem(USER_KEY);
+  } catch {}
+}
+
+export function getCurrentUser(): { id: string; role: string } | null {
+  return currentUser;
 }
 
 export function clearApiAuthToken(): void {
@@ -123,6 +146,25 @@ function extractCollection<T>(response: ApiResponse<unknown>, collectionKey: str
   }
   if (Array.isArray(envelope.data)) return envelope.data as T[];
   return [];
+}
+
+/**
+ * Add supervisor context to query parameters for server-side filtering
+ * Backend should use these parameters to enforce data access control
+ */
+function addSupervisorContext(query?: Record<string, unknown>): Record<string, unknown> {
+  const user = getCurrentUser();
+
+  // If supervisor, automatically add supervisor_id to enable backend filtering
+  if (user?.role === "supervisor" && user?.id) {
+    return {
+      ...query,
+      supervisor_id: user.id,
+      scoped_by_supervisor: true,
+    };
+  }
+
+  return query || {};
 }
 
 async function requestApi<T>(
@@ -769,7 +811,8 @@ export const apiClient = {
   async getLogbookEntries(filters?: LogbookFilters): Promise<ApiResponse<LogbookEntryResponse[]>> {
     const response = await requestApi<unknown>(API_ENDPOINTS.LOGBOOK_ENTRIES, {
       method: "GET",
-      query: filters as Record<string, unknown>,
+      // SECURITY: Add supervisor context for server-side filtering
+      query: addSupervisorContext(filters as Record<string, unknown>),
     });
     return {
       success: response.success,
@@ -799,6 +842,13 @@ export const apiClient = {
     );
   },
 
+  async addLogbookComment(logbookId: string, content: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(
+      replacePathParams("/api/v1/logbooks/:id/comment", { id: logbookId }),
+      { method: "POST", body: JSON.stringify({ comment: content }) }
+    );
+  },
+
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // ATTENDANCE
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -806,7 +856,8 @@ export const apiClient = {
   async getAttendance(filters?: AttendanceFilters): Promise<ApiResponse<AttendanceResponse[]>> {
     const response = await requestApi<unknown>(API_ENDPOINTS.ATTENDANCE, {
       method: "GET",
-      query: filters as Record<string, unknown>,
+      // SECURITY: Add supervisor context for server-side filtering
+      query: addSupervisorContext(filters as Record<string, unknown>),
     });
     return {
       success: response.success,
@@ -822,7 +873,8 @@ export const apiClient = {
     // Use general attendance endpoint with internship_id filter
     const response = await requestApi<unknown>(
       "/api/v1/attendance",
-      { method: "GET", query: { ...filters, internship_id: internshipId } }
+      // SECURITY: Add supervisor context for server-side filtering
+      { method: "GET", query: addSupervisorContext({ ...filters, internship_id: internshipId }) }
     );
     const attendance = response.success ? extractCollection<any>(response, "attendance") : [];
     console.log(`[API] getInternshipAttendance(${internshipId}):`, {
@@ -837,7 +889,8 @@ export const apiClient = {
   async getMissedAttendance(days?: number): Promise<ApiResponse<any[]>> {
     const response = await requestApi<unknown>(
       API_ENDPOINTS.ATTENDANCE_MISSED,
-      { method: "GET", query: days && days > 1 ? { days } : undefined }
+      // SECURITY: Add supervisor context for server-side filtering
+      { method: "GET", query: addSupervisorContext(days && days > 1 ? { days } : {}) }
     );
     return {
       success: response.success,
@@ -981,7 +1034,8 @@ export const apiClient = {
   async getThreads(userId?: string): Promise<ApiResponse<any[]>> {
     const response = await requestApi<unknown>(API_ENDPOINTS.THREADS, {
       method: "GET",
-      query: userId ? { user_id: userId } : undefined,
+      // SECURITY: Add supervisor context for server-side filtering
+      query: addSupervisorContext(userId ? { user_id: userId } : {}),
     });
     return {
       success: response.success,
@@ -1496,6 +1550,140 @@ export const apiClient = {
 
   async deleteLogbookEntry(id: string): Promise<ApiResponse<null>> {
     return requestApi<null>(replacePathParams("/api/v1/logbooks/:id", { id }), { method: "DELETE" });
+  },
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // SUPERVISOR: DIRECT MESSAGING
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  async createDirectThread(
+    studentId: string,
+    studentName: string,
+    firstMessage?: string
+  ): Promise<ApiResponse<{ threadId: string }>> {
+    const data: CreateThreadRequest = {
+      recipientId: studentId,
+      recipientName: studentName,
+      senderId: "current_user_id",
+      senderName: "Supervisor",
+      senderRole: "supervisor",
+      participantIds: [studentId, "current_user_id"],
+      participantNames: [studentName, "Supervisor"],
+      subject: `Conversation with ${studentName}`,
+      firstMessage: firstMessage || "",
+    };
+    return this.createThread(data);
+  },
+
+  async sendDirectMessage(threadId: string, content: string): Promise<ApiResponse<null>> {
+    const data: SendMessageRequest = {
+      senderId: "current_user_id",
+      senderName: "Supervisor",
+      senderRole: "supervisor",
+      recipientId: "student_id",
+      recipientName: "Student",
+      content,
+    };
+    return this.sendMessage(threadId, data);
+  },
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // SUPERVISOR: NOTIFICATIONS
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  async getSupervisorNotifications(filters?: {
+    unread_only?: boolean;
+    type?: string;
+    limit?: number;
+  }): Promise<ApiResponse<NotificationResponse[]>> {
+    const response = await requestApi<unknown>(API_ENDPOINTS.NOTIFICATIONS, {
+      method: "GET",
+      query: filters,
+    });
+    return {
+      success: response.success,
+      data: response.success
+        ? extractCollection<NotificationResponse>(response, "notifications")
+        : [],
+      message: response.message,
+    };
+  },
+
+  async getUnreadNotificationCount(): Promise<ApiResponse<{ unread_count: number }>> {
+    const res = await this.getSupervisorNotifications({ unread_only: true });
+    return {
+      success: res.success,
+      data: { unread_count: Array.isArray(res.data) ? res.data.length : 0 },
+      message: res.message,
+    };
+  },
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // SUPERVISOR: ASSESSMENT CHECKLIST
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  async getSupervisorAssessmentSummary(): Promise<ApiResponse<SupervisorAssessmentSummary | null>> {
+    const response = await requestApi<SupervisorAssessmentSummary>(
+      "/api/v1/supervisor/assessment-summary",
+      { method: "GET" }
+    );
+    return {
+      success: response.success,
+      data: response.data || null,
+      message: response.message,
+    };
+  },
+
+  async getSupervisorAssessmentChecklist(filters?: {
+    type?: "logbook" | "assessment" | "attendance";
+    status?: "pending" | "completed";
+  }): Promise<ApiResponse<AssessmentChecklistItem[]>> {
+    const response = await requestApi<unknown>(
+      "/api/v1/supervisor/assessment-checklist",
+      { method: "GET", query: filters }
+    );
+    return {
+      success: response.success,
+      data: response.success ? extractCollection<AssessmentChecklistItem>(response, "items") : [],
+      message: response.message,
+    };
+  },
+
+  async computeAssessmentSummary(): Promise<SupervisorAssessmentSummary> {
+    const [logbooksRes, dashboardRes] = await Promise.all([
+      this.getLogbookEntries({ per_page: 1000 }),
+      this.getDashboard("industry-supervisor"),
+    ]);
+
+    const logbooks = logbooksRes.data || [];
+    const dashboard = dashboardRes.data || {};
+
+    const approvedCount = logbooks.filter((l: any) => l.status === "approved").length;
+    const totalLogbooks = logbooks.length || 1;
+
+    return {
+      total_students: dashboard.assigned_students || 0,
+      logbooks: {
+        submitted: logbooks.filter((l: any) => l.status === "submitted").length,
+        approved: approvedCount,
+        pending_review: logbooks.filter((l: any) => l.status === "submitted").length,
+      },
+      assessments: {
+        submitted: 0,
+        pending: dashboard.pending_assessments || 0,
+        total: dashboard.assigned_students || 0,
+      },
+      attendance: {
+        verified: dashboard.today_attendance?.filter((a: any) => a.verified_by).length || 0,
+        pending_verification: dashboard.today_attendance?.filter((a: any) => !a.verified_by)
+          .length || 0,
+      },
+      comments: {
+        added: 0,
+        pending: dashboard.assigned_students || 0,
+      },
+      overall_progress: Math.round((approvedCount / totalLogbooks) * 100),
+    };
   },
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━

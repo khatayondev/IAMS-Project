@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useAppContext } from "../../lib/context";
+import { useSupervisorDataAccess } from "../../hooks/use-supervisor-data-access";
 import { StatusBadge } from "../../components/status-badge";
 import { StatCard } from "../../components/stat-card";
+import { AssessmentChecklistCard } from "../../components/supervisor/assessment-checklist-card";
 import { apiClient } from "../../lib/api-client";
 import {
   GraduationCap, BookMarked, ClipboardCheck, AlertTriangle,
-  MapPin, TrendingUp, Calendar, CheckCircle2
+  MapPin, TrendingUp, Calendar, CheckCircle2, Shield
 } from "lucide-react";
 import { useNavigate } from "react-router";
 
@@ -17,6 +19,7 @@ function getDept(i: any)        { return i.student?.department?.name ?? "—"; }
 export function SupervisorDashboard() {
   const { user } = useAppContext();
   const navigate = useNavigate();
+  const { canAccessInternship, loading: accessLoading } = useSupervisorDataAccess();
 
   const [dashboard, setDashboard] = useState<any>(null);
   const [pendingLogs, setPendingLogs] = useState<any[]>([]);
@@ -131,6 +134,9 @@ export function SupervisorDashboard() {
           </div>
         </div>
       )}
+
+      {/* Assessment Completion Checklist */}
+      <AssessmentChecklistCard onNavigate={navigate} />
 
       {/* Students Overview */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden">

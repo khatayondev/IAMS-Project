@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { SkeletonTableRows } from "../../components/skeleton";
+import { useSupervisorDataAccess } from "../../hooks/use-supervisor-data-access";
 import { apiClient } from "../../lib/api-client";
-import { CheckCircle2, XCircle, AlertTriangle, Clock, Search, X, Navigation } from "lucide-react";
+import { CheckCircle2, XCircle, AlertTriangle, Clock, Search, X, Navigation, Shield } from "lucide-react";
 import { toast } from "sonner";
 import type { ExtendedRole } from "../../services/auth-service";
 import { Card, CardContent } from "../../components/ui/card";
@@ -24,6 +25,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export function AttendancePage({ viewRole }: Props) {
+  const supervisorDataAccess = viewRole === "supervisor" ? useSupervisorDataAccess() : null;
   const [records, setRecords] = useState<any[]>([]);
   const [missed, setMissed] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,18 +38,40 @@ export function AttendancePage({ viewRole }: Props) {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [attRes, missedRes] = await Promise.all([
-      apiClient.getAttendance({
-        from_date: dateFrom || undefined,
-        to_date: dateTo || undefined,
-        per_page: 100,
-      }),
-      apiClient.getMissedAttendance(),
-    ]);
-    if (attRes.success) setRecords(attRes.data);
-    if (missedRes.success) setMissed(missedRes.data);
-    setLoading(false);
-  }, [dateFrom, dateTo]);
+    try {
+      const [attRes, missedRes] = await Promise.all([
+        apiClient.getAttendance({
+          from_date: dateFrom || undefined,
+          to_date: dateTo || undefined,
+          per_page: 100,
+        }),
+        apiClient.getMissedAttendance(),
+      ]);
+
+      // SECURITY: Filter attendance records if supervisor
+      if (viewRole === "supervisor" && supervisorDataAccess) {
+        const filteredRecords = supervisorDataAccess.filterByAssignedStudents(
+          attRes.data || [],
+          "student_id"
+        );
+        const filteredMissed = supervisorDataAccess.filterByAssignedStudents(
+          missedRes.data || [],
+          "student_id"
+        );
+        setRecords(filteredRecords);
+        setMissed(filteredMissed);
+      } else {
+        if (attRes.success) setRecords(attRes.data);
+        if (missedRes.success) setMissed(missedRes.data);
+      }
+    } catch (error) {
+      console.error("Error fetching attendance:", error);
+      setRecords([]);
+      setMissed([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [dateFrom, dateTo, viewRole, supervisorDataAccess]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
