@@ -160,7 +160,13 @@ export function DashboardLayout() {
 
   if (!user) return null;
 
-  const nav = getNavForRole(user.role);
+  let nav = getNavForRole(user.role);
+
+  // For students with active internship, hide Applications tab and only show track
+  if (user.role === "student" && activeInternship) {
+    nav = nav.filter((item) => item.label !== "Applications");
+  }
+
   const unread = store.notifications.filter((n) => !n.read).length + (store.announcementUnread ?? 0);
 
   // Per-role nav badges. Recomputed on every store change because `store` is reactive.
