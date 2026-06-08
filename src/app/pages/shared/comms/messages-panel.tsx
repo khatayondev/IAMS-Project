@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useAppContext } from "../../../lib/context";
 import { apiClient } from "../../../lib/api-client";
 import { usePolling } from "../../../lib/hooks";
-import { MessageSquare, Send, ArrowLeft, Plus, Search, X, Paperclip, Phone, Video, MoreVertical } from "lucide-react";
+import { MessageSquare, Send, ArrowLeft, Plus, Search, X, Phone, Video, MoreVertical } from "lucide-react";
 
 interface Thread {
   id: string | number;
@@ -335,10 +335,7 @@ export function MessagesPanel({ preselectedRecipientId }: MessagesPanelProps) {
 
               {/* Input */}
               <div className="p-3 sm:p-4 border-t border-border">
-                <div className="flex gap-1.5 sm:gap-2 items-end">
-                  <button className="p-2 sm:p-2.5 rounded-lg border border-border hover:bg-accent text-muted-foreground shrink-0" title="Attach file">
-                    <Paperclip className="w-4 h-4" />
-                  </button>
+                <div className="flex gap-2 items-end">
                   <input
                     type="text"
                     value={messageText}
