@@ -466,9 +466,9 @@ export function DocumentsPage() {
         isOpen={isInviteSupervisorOpen}
         onClose={() => setIsInviteSupervisorOpen(false)}
         applicationId={myApp?.id}
-        initialName={supervisorName}
-        initialEmail={supervisorEmail}
-        initialPhone={supervisorPhone}
+        initialName={uploadedSupervisorName || ""}
+        initialEmail={uploadedSupervisorEmail || ""}
+        initialPhone={uploadedSupervisorPhone || ""}
         studentName={myApp?.student?.user?.name ?? myApp?.studentName ?? user?.name ?? "Student"}
         companyName={typeof myApp?.company?.name === "string" ? myApp.company.name : (typeof myApp?.companyName === "string" ? myApp.companyName : "Company")}
       />
