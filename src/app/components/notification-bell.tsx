@@ -84,6 +84,11 @@ export function NotificationBell() {
 
   const handleNotificationClick = (notification: NotificationResponse) => {
     if (!notification.read) {
+      // Update immediately to reduce count
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
+      );
+      // Mark as read on server
       handleMarkAsRead(notification.id);
     }
     if (notification.action_url) {
@@ -120,7 +125,7 @@ export function NotificationBell() {
 
       {/* Dropdown Popover */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 bg-card border border-border rounded-xl shadow-2xl z-50 flex flex-col max-h-[600px] overflow-hidden">
+        <div className="absolute right-0 mt-2 w-full sm:w-96 bg-card border border-border rounded-xl shadow-2xl z-50 flex flex-col max-h-[600px] overflow-hidden max-w-[calc(100vw-2rem)] sm:max-w-none">
           {/* Header */}
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <h3 className="font-semibold text-sm">Notifications</h3>
