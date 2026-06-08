@@ -18,15 +18,18 @@ export function MagicLinkPage() {
   const emailFromUrl = searchParams.get("email") ?? "";
   const studentName = searchParams.get("student") ?? "";
   const companyName = searchParams.get("company") ?? "";
+  const nameFromUrl = searchParams.get("name") ?? "";
+  const phoneFromUrl = searchParams.get("phone") ?? "";
+  const jobTitleFromUrl = searchParams.get("job_title") ?? "";
 
   const [stage, setStage] = useState<Stage>(token ? "form" : "error");
   const [errorMsg, setErrorMsg] = useState(
     token ? "" : "No invitation token found. This link may be invalid or already used."
   );
 
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [jobTitle, setJobTitle] = useState("");
+  const [name, setName] = useState(nameFromUrl);
+  const [phone, setPhone] = useState(phoneFromUrl);
+  const [jobTitle, setJobTitle] = useState(jobTitleFromUrl);
 
   const handleAccept = async () => {
     if (!name.trim()) {
@@ -170,7 +173,7 @@ export function MagicLinkPage() {
               </button>
 
               <p className="text-center text-muted-foreground" style={{ fontSize: "0.75rem" }}>
-                After activation you can sign in anytime using Google at{" "}
+                After activation, keep this invitation link handy or request a fresh secure link from the student or DLO at{" "}
                 <Link to="/login" className="text-primary hover:underline">
                   the login page
                 </Link>

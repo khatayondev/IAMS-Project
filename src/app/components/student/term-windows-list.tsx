@@ -32,14 +32,7 @@ export function TermWindowsList({
   const [selectedDetail, setSelectedDetail] = useState<string | null>(null);
   return (
     <div className="space-y-4">
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3 dark:bg-blue-950/20 dark:border-blue-800">
-        <Info className="w-5 h-5 text-blue-600 mt-0.5 shrink-0 dark:text-blue-400" />
-        <div>
-          <p className="text-blue-800 dark:text-blue-300" style={{ fontSize: "0.85rem" }}>
-            Below are the internship terms currently open or upcoming. Click on a term to view eligibility and apply.
-          </p>
-        </div>
-      </div>
+      <h2 className="text-xl font-bold text-foreground">Internship Windows</h2>
 
       {availableTerms.length === 0 ? (
         <div className="bg-card border border-border rounded-2xl p-12 text-center">

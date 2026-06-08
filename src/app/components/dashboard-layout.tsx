@@ -3,17 +3,19 @@ import {
   LayoutDashboard, FileText, Building2, Calendar, Users, Settings, Bell, LogOut,
   GraduationCap, ClipboardCheck, BarChart3, Menu, Shield, BookOpen, BookMarked,
   Upload, MessageSquarePlus, AlertTriangle, MapPin, UserPlus, X, User,
-  Moon, Sun, ChevronDown, HelpCircle, Search, CheckCircle2, Award, Layers, TrendingUp
+  Moon, Sun, ChevronDown, HelpCircle, Search, CheckCircle2, Award, Layers, TrendingUp,
+  LifeBuoy
 } from "lucide-react";
 import { useAppContext } from "../lib/context";
 import { apiClient } from "../lib/api-client";
 import { useState, useEffect, useSyncExternalStore, useRef } from "react";
 import type { ExtendedRole } from "../services/auth-service";
 import { getSettings, updateSettings, subscribeSettings } from "../lib/settings-store";
+import { setNotifications } from "../lib/store";
 import { getOverdueWeeklyRubrics } from "../services/grading-service";
 import { CheckInModal } from "./check-in-modal";
-import { hasCheckedInToday, subscribeAttendance } from "../services/attendance-service";
-import { StudentMobileShell } from "./student/student-mobile-shell";
+import { NotificationBell } from "./notification-bell";
+import { useStudentCheckIn } from "../hooks/use-student-check-in";
 
 interface NavItem {
   to: string;
@@ -37,6 +39,7 @@ const cloNav: NavItem[] = [
   { to: "/clo/audit", icon: Shield, label: "Audit Logs" },
   { to: "/clo/templates", icon: BookOpen, label: "Templates" },
   { to: "/clo/communications", icon: MessageSquarePlus, label: "Communications" },
+  { to: "/clo/help", icon: LifeBuoy, label: "Help & Support" },
   { to: "/clo/settings", icon: Settings, label: "Settings" },
 ];
 
@@ -52,6 +55,7 @@ const dloNav: NavItem[] = [
   { to: "/dlo/reports", icon: BarChart3, label: "Reports" },
   { to: "/dlo/issues", icon: AlertTriangle, label: "Issues" },
   { to: "/dlo/communications", icon: MessageSquarePlus, label: "Communications" },
+  { to: "/dlo/help", icon: LifeBuoy, label: "Help & Support" },
   { to: "/dlo/settings", icon: Settings, label: "Settings" },
 ];
 
@@ -66,6 +70,7 @@ const studentNav: NavItem[] = [
   { to: "/student/history", icon: Award, label: "Internship History" },
   { to: "/student/issues", icon: AlertTriangle, label: "Report Issue" },
   { to: "/student/communications", icon: MessageSquarePlus, label: "Communications" },
+  { to: "/student/help", icon: LifeBuoy, label: "Help & Support" },
   { to: "/student/settings", icon: Settings, label: "Settings" },
 ];
 
@@ -74,7 +79,9 @@ const supervisorNav: NavItem[] = [
   { to: "/supervisor/logbooks", icon: BookMarked, label: "Student Logbooks" },
   { to: "/supervisor/evaluate", icon: ClipboardCheck, label: "Assessments", badgeKey: "supervisorOverdueRubrics" },
   { to: "/supervisor/attendance", icon: MapPin, label: "Attendance" },
+  { to: "/supervisor/messages", icon: MessageSquarePlus, label: "Messages" },
   { to: "/supervisor/communications", icon: MessageSquarePlus, label: "Communications" },
+  { to: "/supervisor/help", icon: LifeBuoy, label: "Help & Support" },
   { to: "/supervisor/settings", icon: Settings, label: "Settings" },
 ];
 
@@ -84,6 +91,7 @@ const academicNav: NavItem[] = [
   { to: "/academic/evaluate", icon: ClipboardCheck, label: "Evaluations" },
   { to: "/academic/visits", icon: MapPin, label: "Site Visits" },
   { to: "/academic/communications", icon: MessageSquarePlus, label: "Communications" },
+  { to: "/academic/help", icon: LifeBuoy, label: "Help & Support" },
 ];
 
 const hodNav: NavItem[] = [
@@ -91,8 +99,9 @@ const hodNav: NavItem[] = [
   { to: "/hod/students", icon: GraduationCap, label: "Department Students" },
   { to: "/hod/approvals", icon: ClipboardCheck, label: "Grade Approvals" },
   { to: "/hod/reports", icon: BarChart3, label: "Analytics & Reports" },
-  { to: "/hod/settings", icon: Settings, label: "Settings" },
   { to: "/hod/communications", icon: MessageSquarePlus, label: "Communications" },
+  { to: "/hod/help", icon: LifeBuoy, label: "Help & Support" },
+  { to: "/hod/settings", icon: Settings, label: "Settings" },
 ];
 
 function getNavForRole(role: ExtendedRole): NavItem[] {
@@ -128,30 +137,11 @@ export function DashboardLayout() {
   const navigate = useNavigate();
   const profileRef = useRef<HTMLDivElement>(null);
 
-  // Subscribe to attendance changes for reactivity
-  const [checkedInToday, setCheckedInToday] = useState(false);
-  const [activeInternship, setActiveInternship] = useState<any | null>(null);
-
-  useEffect(() => {
-    if (user?.role === "student" && user.studentId) {
-      const updateCheckInStatus = () => {
-        setCheckedInToday(hasCheckedInToday(user.studentId || ""));
-      };
-      updateCheckInStatus();
-      const unsubscribe = subscribeAttendance(updateCheckInStatus);
-
-      apiClient.getInternships().then((res) => {
-        if (res.success && res.data.length > 0) {
-          const active = res.data.find((i: any) => i.status === "active" || i.status === "approved");
-          setActiveInternship(active || res.data[0]);
-        }
-      });
-
-      return () => {
-        unsubscribe();
-      };
-    }
-  }, [user]);
+  const {
+    activeInternship,
+    checkedInToday,
+    refresh: refreshCheckInStatus,
+  } = useStudentCheckIn(user?.role === "student");
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -177,13 +167,8 @@ export function DashboardLayout() {
 
   if (!user) return null;
 
-  // For students on mobile, use the mobile shell instead
-  if (user.role === "student" && isMobile) {
-    return <StudentMobileShell />;
-  }
-
   const nav = getNavForRole(user.role);
-  const unread = store.notifications.filter((n) => !n.read).length;
+  const unread = store.notifications.filter((n) => !n.read).length + (store.announcementUnread ?? 0);
 
   // Per-role nav badges. Recomputed on every store change because `store` is reactive.
   const navBadges: Record<NonNullable<NavItem["badgeKey"]>, number> = {
@@ -267,32 +252,16 @@ export function DashboardLayout() {
 
             {/* Main nav */}
             <div className="space-y-0.5">
-              {mainNav.map((item) => {
-                // Block Applications link if student has active internship
-                const isApplicationsLink = item.label === "Applications";
-                const isBlocked = user.role === "student" && isApplicationsLink && activeInternship?.status === "active";
-
-                return (
+              {mainNav.map((item) => (
                   <NavLink
                     key={item.to}
                     to={item.to}
                     end={item.to === `/${user.role}`}
-                    onClick={(e) => {
-                      if (isBlocked) {
-                        e.preventDefault();
-                        return;
-                      }
-                      handleNavClick();
-                    }}
-                    className={({ isActive }) => {
-                      if (isBlocked) {
-                        return `group relative flex items-center ${sidebarOpen || isMobile ? "gap-3 px-6" : "justify-center px-0"} -mx-3 py-3 transition-all duration-200 opacity-50 cursor-not-allowed text-sidebar-foreground/50`;
-                      }
-                      return `group relative flex items-center ${sidebarOpen || isMobile ? "gap-3 px-6" : "justify-center px-0"} -mx-3 py-3 transition-all duration-200 ${isActive
+                    onClick={handleNavClick}
+                    className={({ isActive }) => `group relative flex items-center ${sidebarOpen || isMobile ? "gap-3 px-6" : "justify-center px-0"} -mx-3 py-3 transition-all duration-200 ${isActive
                         ? "bg-[#E3EBFF] dark:bg-primary/20 text-primary font-medium"
                         : "text-sidebar-foreground hover:bg-[#E3EBFF]/50 dark:hover:bg-white/5 hover:text-foreground"
-                      }`;
-                    }}
+                      }`}
                   >
                   {({ isActive }) => (
                     <>
@@ -316,8 +285,8 @@ export function DashboardLayout() {
                     </>
                   )}
                   </NavLink>
-                );
-              })}
+                ))}
+
             </div>
           </nav>
         </div>
@@ -362,51 +331,8 @@ export function DashboardLayout() {
             </button>
           )}
 
-          {/* Notifications */}
-          <div className="relative">
-            <button
-              onClick={() => { setNotifOpen(!notifOpen); setProfileOpen(false); }}
-              className="relative p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-card transition-all duration-200"
-            >
-              <Bell className="w-[18px] h-[18px]" />
-              {unread > 0 && (
-                <span
-                  className="absolute top-1 right-1 w-4 h-4 bg-primary text-primary-foreground rounded-full flex items-center justify-center"
-                  style={{ fontSize: "0.55rem", fontWeight: 600 }}
-                >
-                  {unread}
-                </span>
-              )}
-            </button>
-            {notifOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
-                <div
-                  className="absolute right-0 top-12 w-80 max-w-[calc(100vw-2rem)] bg-popover border border-border rounded-2xl z-50 overflow-hidden"
-                  style={{ boxShadow: "0 4px 24px rgba(11,94,215,0.08), 0 1px 4px rgba(0,0,0,0.04)" }}
-                >
-                  <div className="p-4 border-b border-border">
-                    <h4>Notifications</h4>
-                  </div>
-                  <div className="max-h-72 overflow-y-auto">
-                    {store.notifications.slice(0, 8).map((n) => (
-                      <div
-                        key={n.id}
-                        className={`px-4 py-3 border-b border-border last:border-0 transition-colors duration-150 hover:bg-card ${!n.read ? "bg-card/60" : ""}`}
-                      >
-                        <p style={{ fontSize: "0.85rem" }} className="text-foreground">
-                          {n.title}
-                        </p>
-                        <p style={{ fontSize: "0.75rem" }} className="text-muted-foreground mt-0.5">
-                          {n.message}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+          {/* Notifications - Show NotificationBell for supervisors */}
+          {user.role === "supervisor" && <NotificationBell />}
 
           {/* User Profile Dropdown */}
           <div className="relative" ref={profileRef}>
@@ -418,17 +344,17 @@ export function DashboardLayout() {
                 className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground shrink-0"
                 style={{ fontSize: "0.75rem", fontWeight: 600 }}
               >
-                {user.name
+                {(user.name || "U")
                   .split(" ")
                   .map((w) => w[0])
                   .join("")}
               </div>
               <div className="hidden md:block text-left">
                 <p style={{ fontSize: "0.85rem", fontWeight: 500 }} className="text-foreground">
-                  {user.name}
+                  {user.name || "User"}
                 </p>
                 <p style={{ fontSize: "0.7rem" }} className="text-muted-foreground">
-                  {user.email}
+                  {user.email || "—"}
                 </p>
               </div>
               <ChevronDown className={`w-4 h-4 text-muted-foreground hidden md:block transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`} />
@@ -448,14 +374,14 @@ export function DashboardLayout() {
                         className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-primary-foreground shrink-0"
                         style={{ fontSize: "0.8rem", fontWeight: 600 }}
                       >
-                        {user.name.split(" ").map((w) => w[0]).join("")}
+                        {(user.name || "U").split(" ").map((w) => w[0]).join("")}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p style={{ fontSize: "0.9rem", fontWeight: 500 }} className="text-foreground truncate">
-                          {user.name}
+                          {user.name || "User"}
                         </p>
                         <p style={{ fontSize: "0.75rem" }} className="text-muted-foreground truncate">
-                          {user.email}
+                          {user.email || "—"}
                         </p>
                         <span
                           className="inline-flex items-center px-2 py-0.5 rounded-full bg-primary/8 text-primary mt-1"
@@ -533,7 +459,12 @@ export function DashboardLayout() {
       {user.role === "student" && (
         <CheckInModal
           isOpen={checkInModalOpen}
-          onClose={() => setCheckInModalOpen(false)}
+          onClose={() => {
+            setCheckInModalOpen(false);
+            // Refresh check-in status after modal closes
+            refreshCheckInStatus();
+          }}
+          onSuccess={refreshCheckInStatus}
           internshipId={activeInternship?.id}
           internshipStatus={activeInternship?.status}
         />

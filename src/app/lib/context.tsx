@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useContext, useState, useSyncExternalStore, useEffect, type ReactNode } from "react";
 import type { AuthUser, ExtendedRole } from "../services/auth-service";
 import { subscribe, getState, type StoreState } from "./store";
+import { setCurrentUser, apiClient } from "./api-client";
 
 interface AppContextType {
   user: AuthUser | null;
@@ -21,8 +22,8 @@ const AppContext = createContext<AppContextType>({
 const USER_KEY = "iams_user";
 
 function normalizeRole(role: string): ExtendedRole {
-  if (role === "academic_supervisor") return "academic";
-  if (role === "industry_supervisor") return "supervisor";
+  if (role === "academic_supervisor" || role === "academic-supervisor") return "academic";
+  if (role === "industry_supervisor" || role === "industry-supervisor") return "supervisor";
   return role as ExtendedRole;
 }
 
@@ -58,9 +59,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const store = useSyncExternalStore(subscribe, getState, getState);
 
+  // SECURITY: Sync loaded user to API client on mount AND refetch if incomplete
+  useEffect(() => {
+    const refreshUser = async () => {
+      if (user && user.id && user.role) {
+        setCurrentUser({ id: user.id, role: user.role });
+        // If user is missing name or email, refetch from API
+        if (!user.name || !user.email) {
+          try {
+            const res = await apiClient.me();
+            if (res?.success && res?.data) {
+              const rawUser = (res.data as any).user ?? res.data;
+              const freshUser = normalizeApiUser(rawUser);
+              setUserState(freshUser);
+              saveUser(freshUser);
+              setCurrentUser({ id: freshUser.id, role: freshUser.role });
+            }
+          } catch {
+            // Silently fail — keep the user we have
+          }
+        }
+      } else {
+        setCurrentUser(null);
+      }
+    };
+    refreshUser();
+  }, [user?.id, user?.role]);
+
   const setUser = (u: AuthUser | null) => {
     saveUser(u);
     setUserState(u);
+    // SECURITY: Sync user to API client for supervisor context in requests
+    if (u && u.id && u.role) {
+      setCurrentUser({ id: u.id, role: u.role });
+    } else {
+      setCurrentUser(null);
+    }
   };
 
   return (

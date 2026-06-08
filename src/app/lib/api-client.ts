@@ -22,15 +22,26 @@ import type {
   SendMessageRequest,
   CreateThreadRequest,
   SettingsRequest,
+  NotificationResponse,
+  SupervisorAssessmentSummary,
+  AssessmentChecklistItem,
 } from "../types/api";
 
 import { API_ENDPOINTS } from "./constants";
 
 // ── Auth token — persisted in localStorage, restored on load ──
 const TOKEN_KEY = "iams_token";
+const USER_KEY = "iams_user";
 
 let authToken: string | null = (() => {
   try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }
+})();
+
+let currentUser: { id: string; role: string } | null = (() => {
+  try {
+    const user = localStorage.getItem(USER_KEY);
+    return user ? JSON.parse(user) : null;
+  } catch { return null; }
 })();
 
 export function setApiAuthToken(token: string | null): void {
@@ -43,6 +54,18 @@ export function setApiAuthToken(token: string | null): void {
 
 export function getApiAuthToken(): string | null {
   return authToken;
+}
+
+export function setCurrentUser(user: { id: string; role: string } | null): void {
+  currentUser = user;
+  try {
+    if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
+    else localStorage.removeItem(USER_KEY);
+  } catch {}
+}
+
+export function getCurrentUser(): { id: string; role: string } | null {
+  return currentUser;
 }
 
 export function clearApiAuthToken(): void {
@@ -125,6 +148,23 @@ function extractCollection<T>(response: ApiResponse<unknown>, collectionKey: str
   return [];
 }
 
+/**
+ * Add supervisor context to query parameters for server-side filtering
+ * Backend should use these parameters to enforce data access control
+ */
+function addSupervisorContext(query?: Record<string, unknown>): Record<string, unknown> {
+  const user = getCurrentUser();
+  const result = { ...(query || {}) };
+
+  // If supervisor, automatically add supervisor_id to enable backend filtering
+  if (user?.role === "supervisor" && user?.id) {
+    result.supervisor_id = user.id;
+    result.scoped_by_supervisor = true;
+  }
+
+  return result;
+}
+
 async function requestApi<T>(
   path: string,
   options: RequestInit & { query?: Record<string, unknown> } = {}
@@ -202,10 +242,21 @@ export const apiClient = {
     return response;
   },
 
-  async requestMagicLink(email: string): Promise<ApiResponse<{ expires_in?: string; magic_link?: string } | null>> {
+  async requestMagicLink(
+    email: string,
+    context?: {
+      role?: "industry_supervisor" | "supervisor";
+      name?: string;
+      phone?: string;
+      job_title?: string;
+      application_id?: string | number;
+      company_name?: string;
+      student_name?: string;
+    }
+  ): Promise<ApiResponse<{ expires_in?: string; magic_link?: string } | null>> {
     return requestApi(API_ENDPOINTS.AUTH_MAGIC_LINK, {
       method: "POST",
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, ...context }),
     });
   },
 
@@ -758,7 +809,8 @@ export const apiClient = {
   async getLogbookEntries(filters?: LogbookFilters): Promise<ApiResponse<LogbookEntryResponse[]>> {
     const response = await requestApi<unknown>(API_ENDPOINTS.LOGBOOK_ENTRIES, {
       method: "GET",
-      query: filters as Record<string, unknown>,
+      // SECURITY: Add supervisor context for server-side filtering
+      query: addSupervisorContext(filters as Record<string, unknown>),
     });
     return {
       success: response.success,
@@ -788,6 +840,13 @@ export const apiClient = {
     );
   },
 
+  async addLogbookComment(logbookId: string, content: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(
+      replacePathParams("/api/v1/logbooks/:id/comment", { id: logbookId }),
+      { method: "POST", body: JSON.stringify({ comment: content }) }
+    );
+  },
+
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // ATTENDANCE
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -795,7 +854,8 @@ export const apiClient = {
   async getAttendance(filters?: AttendanceFilters): Promise<ApiResponse<AttendanceResponse[]>> {
     const response = await requestApi<unknown>(API_ENDPOINTS.ATTENDANCE, {
       method: "GET",
-      query: filters as Record<string, unknown>,
+      // SECURITY: Add supervisor context for server-side filtering
+      query: addSupervisorContext(filters as Record<string, unknown>),
     });
     return {
       success: response.success,
@@ -806,16 +866,31 @@ export const apiClient = {
 
   async getInternshipAttendance(
     internshipId: string,
-    filters?: { from_date?: string; to_date?: string }
-  ): Promise<ApiResponse<any>> {
-    return requestApi<any>(
-      replacePathParams(API_ENDPOINTS.ATTENDANCE_BY_INTERNSHIP, { internshipId }),
-      { method: "GET", query: filters }
+    filters?: { from_date?: string; to_date?: string; per_page?: number }
+  ): Promise<ApiResponse<any[]>> {
+    // Use general attendance endpoint with internship_id filter
+    const response = await requestApi<unknown>(
+      "/api/v1/attendance",
+      // SECURITY: Add supervisor context for server-side filtering
+      { method: "GET", query: addSupervisorContext({ ...filters, internship_id: internshipId }) }
     );
+    const attendance = response.success ? extractCollection<any>(response, "attendance") : [];
+    console.log(`[API] getInternshipAttendance(${internshipId}):`, {
+      success: response.success,
+      filters: { ...filters, internship_id: internshipId },
+      rawResponse: response.data,
+      extractedAttendance: attendance
+    });
+    return { success: response.success, data: attendance, message: response.message };
   },
 
-  async getMissedAttendance(): Promise<ApiResponse<any[]>> {
-    const response = await requestApi<unknown>(API_ENDPOINTS.ATTENDANCE_MISSED, { method: "GET" });
+  async getMissedAttendance(days?: number): Promise<ApiResponse<any[]>> {
+    const baseQuery = days && days > 1 ? { days } : undefined;
+    const response = await requestApi<unknown>(
+      API_ENDPOINTS.ATTENDANCE_MISSED,
+      // SECURITY: Add supervisor context for server-side filtering
+      { method: "GET", query: addSupervisorContext(baseQuery) }
+    );
     return {
       success: response.success,
       data: response.success ? extractCollection<any>(response, "internships") : [],
@@ -958,7 +1033,8 @@ export const apiClient = {
   async getThreads(userId?: string): Promise<ApiResponse<any[]>> {
     const response = await requestApi<unknown>(API_ENDPOINTS.THREADS, {
       method: "GET",
-      query: userId ? { user_id: userId } : undefined,
+      // SECURITY: Add supervisor context for server-side filtering
+      query: addSupervisorContext(userId ? { user_id: userId } : {}),
     });
     return {
       success: response.success,
@@ -1025,6 +1101,77 @@ export const apiClient = {
 
   async markAllNotificationsRead(): Promise<ApiResponse<null>> {
     return requestApi<null>(API_ENDPOINTS.NOTIFICATIONS_READ_ALL, { method: "POST" });
+  },
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ANNOUNCEMENTS (dedicated table)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  async getAnnouncements(filters?: { unread_only?: boolean; per_page?: number }): Promise<ApiResponse<any[]>> {
+    const response = await requestApi<unknown>(API_ENDPOINTS.ANNOUNCEMENTS, {
+      method: "GET",
+      query: filters as Record<string, unknown>,
+    });
+    return {
+      success: response.success,
+      data: response.success ? extractCollection<any>(response, "announcements") : [],
+      message: response.message,
+    };
+  },
+
+  async getAnnouncementUnreadCount(): Promise<ApiResponse<{ unread_count: number } | null>> {
+    return requestApi<{ unread_count: number } | null>(API_ENDPOINTS.ANNOUNCEMENT_UNREAD_COUNT, { method: "GET" });
+  },
+
+  async createAnnouncement(data: {
+    title: string;
+    message: string;
+    priority?: "low" | "normal" | "high" | "urgent";
+    target_roles?: string[];
+    target_department_id?: number;
+    student_level?: number;
+    term_type?: string;
+    placement_status?: string;
+  }): Promise<ApiResponse<any | null>> {
+    return requestApi<any | null>(API_ENDPOINTS.ANNOUNCEMENTS, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async markAnnouncementRead(id: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(
+      replacePathParams(API_ENDPOINTS.ANNOUNCEMENT_READ, { id }),
+      { method: "POST" }
+    );
+  },
+
+  async pinAnnouncement(id: string): Promise<ApiResponse<{ pinned: boolean } | null>> {
+    return requestApi<{ pinned: boolean } | null>(
+      replacePathParams(API_ENDPOINTS.ANNOUNCEMENT_PIN, { id }),
+      { method: "PATCH" }
+    );
+  },
+
+  async deleteAnnouncement(id: string): Promise<ApiResponse<null>> {
+    return requestApi<null>(
+      replacePathParams(API_ENDPOINTS.ANNOUNCEMENT_DELETE, { id }),
+      { method: "DELETE" }
+    );
+  },
+
+  async broadcastNotification(data: {
+    title: string;
+    message: string;
+    type?: string;
+    priority?: "normal" | "urgent";
+    roles?: string[];
+    department_id?: number;
+  }): Promise<ApiResponse<{ recipients: number } | null>> {
+    return requestApi<{ recipients: number } | null>("/api/v1/notifications/broadcast", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   },
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1136,11 +1283,13 @@ export const apiClient = {
   },
 
   async getInternshipLogbooks(internshipId: string, filters?: Record<string, unknown>): Promise<ApiResponse<any[]>> {
+    // Use general logbooks endpoint with internship_id filter (internship-specific endpoint doesn't work)
     const response = await requestApi<unknown>(
-      replacePathParams(API_ENDPOINTS.INTERNSHIP_LOGBOOKS, { internshipId }),
-      { method: "GET", query: filters }
+      "/api/v1/logbooks",
+      { method: "GET", query: { ...filters, internship_id: internshipId } }
     );
-    return { success: response.success, data: response.success ? extractCollection<any>(response, "logbooks") : [], message: response.message };
+    const logbooks = response.success ? extractCollection<any>(response, "logbooks") : [];
+    return { success: response.success, data: logbooks, message: response.message };
   },
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1400,6 +1549,140 @@ export const apiClient = {
 
   async deleteLogbookEntry(id: string): Promise<ApiResponse<null>> {
     return requestApi<null>(replacePathParams("/api/v1/logbooks/:id", { id }), { method: "DELETE" });
+  },
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // SUPERVISOR: DIRECT MESSAGING
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  async createDirectThread(
+    studentId: string,
+    studentName: string,
+    firstMessage?: string
+  ): Promise<ApiResponse<{ threadId: string }>> {
+    const data: CreateThreadRequest = {
+      recipientId: studentId,
+      recipientName: studentName,
+      senderId: "current_user_id",
+      senderName: "Supervisor",
+      senderRole: "supervisor",
+      participantIds: [studentId, "current_user_id"],
+      participantNames: [studentName, "Supervisor"],
+      subject: `Conversation with ${studentName}`,
+      firstMessage: firstMessage || "",
+    };
+    return this.createThread(data);
+  },
+
+  async sendDirectMessage(threadId: string, content: string): Promise<ApiResponse<null>> {
+    const data: SendMessageRequest = {
+      senderId: "current_user_id",
+      senderName: "Supervisor",
+      senderRole: "supervisor",
+      recipientId: "student_id",
+      recipientName: "Student",
+      content,
+    };
+    return this.sendMessage(threadId, data);
+  },
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // SUPERVISOR: NOTIFICATIONS
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  async getSupervisorNotifications(filters?: {
+    unread_only?: boolean;
+    type?: string;
+    limit?: number;
+  }): Promise<ApiResponse<NotificationResponse[]>> {
+    const response = await requestApi<unknown>(API_ENDPOINTS.NOTIFICATIONS, {
+      method: "GET",
+      query: filters,
+    });
+    return {
+      success: response.success,
+      data: response.success
+        ? extractCollection<NotificationResponse>(response, "notifications")
+        : [],
+      message: response.message,
+    };
+  },
+
+  async getUnreadNotificationCount(): Promise<ApiResponse<{ unread_count: number }>> {
+    const res = await this.getSupervisorNotifications({ unread_only: true });
+    return {
+      success: res.success,
+      data: { unread_count: Array.isArray(res.data) ? res.data.length : 0 },
+      message: res.message,
+    };
+  },
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // SUPERVISOR: ASSESSMENT CHECKLIST
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  async getSupervisorAssessmentSummary(): Promise<ApiResponse<SupervisorAssessmentSummary | null>> {
+    const response = await requestApi<SupervisorAssessmentSummary>(
+      "/api/v1/supervisor/assessment-summary",
+      { method: "GET" }
+    );
+    return {
+      success: response.success,
+      data: response.data || null,
+      message: response.message,
+    };
+  },
+
+  async getSupervisorAssessmentChecklist(filters?: {
+    type?: "logbook" | "assessment" | "attendance";
+    status?: "pending" | "completed";
+  }): Promise<ApiResponse<AssessmentChecklistItem[]>> {
+    const response = await requestApi<unknown>(
+      "/api/v1/supervisor/assessment-checklist",
+      { method: "GET", query: filters }
+    );
+    return {
+      success: response.success,
+      data: response.success ? extractCollection<AssessmentChecklistItem>(response, "items") : [],
+      message: response.message,
+    };
+  },
+
+  async computeAssessmentSummary(): Promise<SupervisorAssessmentSummary> {
+    const [logbooksRes, dashboardRes] = await Promise.all([
+      this.getLogbookEntries({ per_page: 1000 }),
+      this.getDashboard("industry-supervisor"),
+    ]);
+
+    const logbooks = logbooksRes.data || [];
+    const dashboard = dashboardRes.data || {};
+
+    const approvedCount = logbooks.filter((l: any) => l.status === "approved").length;
+    const totalLogbooks = logbooks.length || 1;
+
+    return {
+      total_students: dashboard.assigned_students || 0,
+      logbooks: {
+        submitted: logbooks.filter((l: any) => l.status === "submitted").length,
+        approved: approvedCount,
+        pending_review: logbooks.filter((l: any) => l.status === "submitted").length,
+      },
+      assessments: {
+        submitted: 0,
+        pending: dashboard.pending_assessments || 0,
+        total: dashboard.assigned_students || 0,
+      },
+      attendance: {
+        verified: dashboard.today_attendance?.filter((a: any) => a.verified_by).length || 0,
+        pending_verification: dashboard.today_attendance?.filter((a: any) => !a.verified_by)
+          .length || 0,
+      },
+      comments: {
+        added: 0,
+        pending: dashboard.assigned_students || 0,
+      },
+      overall_progress: Math.round((approvedCount / totalLogbooks) * 100),
+    };
   },
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━

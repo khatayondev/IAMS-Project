@@ -1,13 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
+import { useAppContext } from "../../lib/context";
 import { SkeletonList } from "../../components/skeleton";
+import { LogbookCommentsSection } from "../../components/logbook-comments-section";
 import { apiClient } from "../../lib/api-client";
 import {
   BookMarked, CheckCircle2, RotateCcw, Calendar, X, Clock, AlertTriangle,
-  ChevronDown, ChevronUp, FileText, Eye, ExternalLink,
+  ChevronDown, ChevronUp, FileText, Eye, ExternalLink, Shield,
 } from "lucide-react";
 import { toast } from "sonner";
 
 export function SupervisorLogbooksPage() {
+  const { user } = useAppContext();
+  // Note: Backend now handles filtering via supervisor_id parameter
+  // Client-side filtering temporarily disabled to debug routing error
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>("All");
@@ -20,9 +25,20 @@ export function SupervisorLogbooksPage() {
 
   const fetchEntries = useCallback(async () => {
     setLoading(true);
-    const res = await apiClient.getLogbookEntries({ per_page: 100 });
-    if (res.success) setEntries(res.data);
-    setLoading(false);
+    try {
+      const res = await apiClient.getLogbookEntries({ per_page: 100 });
+      // SECURITY: Backend filters by supervisor_id parameter (sent automatically)
+      if (res.success && Array.isArray(res.data)) {
+        setEntries(res.data);
+      } else {
+        setEntries([]);
+      }
+    } catch (error) {
+      console.error("Error fetching logbook entries:", error);
+      setEntries([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { fetchEntries(); }, [fetchEntries]);
@@ -287,6 +303,13 @@ export function SupervisorLogbooksPage() {
                         </p>
                       </div>
                     )}
+                    <div className="bg-card border border-border rounded-lg p-4">
+                      <LogbookCommentsSection
+                        logbookId={String(entry.id)}
+                        readOnly={entry.status !== "submitted"}
+                        onCommentAdded={() => fetchEntries()}
+                      />
+                    </div>
                   </div>
                 )}
               </div>

@@ -8,6 +8,7 @@ import {
 import { CLOGradingConfigPage } from "./clo/grading-config";
 import { DLOGradingConfigPage } from "./dlo/grading-config";
 import { HODGradingConfigPage } from "./hod/grading-config";
+import { NotificationPreferences } from "../components/notification-preferences";
 import { toast } from "sonner";
 import type { ExtendedRole } from "../services/auth-service";
 import { getSettings, updateSettings, subscribeSettings } from "../lib/settings-store";
@@ -425,6 +426,8 @@ export function SettingsPage() {
               </div>
             </div>
           )}
+
+          <NotificationPreferences />
 
           <button onClick={handleSaveNotifications} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 flex items-center gap-2" style={{ fontSize: "0.85rem" }}>
             <Save className="w-4 h-4" /> Save Preferences

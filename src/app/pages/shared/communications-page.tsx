@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router";
 import { Bell, MessageSquare, Megaphone } from "lucide-react";
-import { useAppContext } from "../../lib/context";
+import { apiClient } from "../../lib/api-client";
 import { NotificationsPanel } from "./comms/notifications-panel";
 import { MessagesPanel } from "./comms/messages-panel";
 import { AnnouncementsPanel } from "./comms/announcements-panel";
@@ -13,19 +14,31 @@ interface Props {
 }
 
 export function CommunicationsPage({ viewRole }: Props) {
-  const { store } = useAppContext();
-  const [activeTab, setActiveTab] = useState<CommTab>("notifications");
+  const [searchParams] = useSearchParams();
+  const canComposeAnnouncements = viewRole === "clo" || viewRole === "dlo";
+  const requestedTab = searchParams.get("tab") as CommTab;
 
-  const unreadNotifs = store.notifications.filter((n) => !n.read).length;
+  // If non-composer tries to view announcements, default to notifications
+  const initialTab: CommTab =
+    (requestedTab === "announcements" && !canComposeAnnouncements)
+      ? "notifications"
+      : (requestedTab as CommTab) ?? "notifications";
+  const recipientParam = searchParams.get("recipient") ?? undefined;
+
+  const [activeTab, setActiveTab] = useState<CommTab>(initialTab);
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
   const unreadMsgs = 0;
 
-  // Only CLO/DLO can compose announcements; all roles can view them
-  const canComposeAnnouncements = viewRole === "clo" || viewRole === "dlo";
+  useEffect(() => {
+    apiClient.getNotifications({ per_page: 50 }).then((res) => {
+      if (res.success) setUnreadNotifs(res.data.filter((n: any) => !n.is_read).length);
+    });
+  }, []);
 
   const tabs: { key: CommTab; label: string; icon: typeof Bell; badge?: number }[] = [
     { key: "notifications", label: "Notifications", icon: Bell, badge: unreadNotifs || undefined },
     { key: "messages", label: "Messages", icon: MessageSquare, badge: unreadMsgs || undefined },
-    { key: "announcements", label: "Announcements", icon: Megaphone },
+    ...(canComposeAnnouncements ? [{ key: "announcements" as const, label: "Announcements", icon: Megaphone }] : []),
   ];
 
   return (
@@ -66,7 +79,7 @@ export function CommunicationsPage({ viewRole }: Props) {
 
       {/* Tab Content */}
       {activeTab === "notifications" && <NotificationsPanel />}
-      {activeTab === "messages" && <MessagesPanel />}
+      {activeTab === "messages" && <MessagesPanel preselectedRecipientId={recipientParam} />}
       {activeTab === "announcements" && <AnnouncementsPanel viewRole={viewRole} canCompose={canComposeAnnouncements} />}
     </div>
   );

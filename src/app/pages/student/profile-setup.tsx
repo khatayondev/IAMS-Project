@@ -15,7 +15,7 @@ export function StudentProfileSetup() {
 
   // Personal Information
   const [fullName, setFullName] = useState(user?.name || "");
-  const [email] = useState(user?.email || "");
+  const [email, setEmail] = useState(user?.email || "");
   const [phone, setPhone] = useState("");
   const [emergencyContact, setEmergencyContact] = useState("");
   const [emergencyPhone, setEmergencyPhone] = useState("");
@@ -35,6 +35,13 @@ export function StudentProfileSetup() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   const draftKey = `profile_setup_draft_${user?.id}`;
+
+  // Sync email from user context whenever it changes
+  useEffect(() => {
+    if (user?.email) {
+      setEmail(user.email);
+    }
+  }, [user?.email]);
 
   // Load draft or backend profile on mount
   useEffect(() => {
@@ -58,7 +65,8 @@ export function StudentProfileSetup() {
           setPreferredIndustries(d.preferredIndustries || "");
           setDesiredRoles(d.desiredRoles || "");
           setIsProfileComplete(isProfileSaved);
-          setIsEditMode(!isProfileSaved);
+          // Always show view page first, user clicks Edit to modify
+          setIsEditMode(false);
         } else if (user?.id) {
           const res = await apiClient.getStudentProfile(String(user.id));
           if (res.success && res.data) {
@@ -75,14 +83,20 @@ export function StudentProfileSetup() {
             setPreferredIndustries(p.preferred_industries || p.profile_data?.preferred_industries || "");
             setDesiredRoles(p.desired_roles || p.profile_data?.desired_roles || "");
             setLastSaved(new Date());
-            setIsProfileComplete(p.profile_completed || false);
+            const isComplete = p.profile_completed || false;
+            setIsProfileComplete(isComplete);
+            // Always show view page first - whether complete or not
             setIsEditMode(false);
           } else if (user?.email) {
             setStudentId(user.email.split("@")[0]);
+            // No profile found - still show view page with empty/placeholder data
+            setIsEditMode(false);
           }
         }
       } catch {
         if (user?.email) setStudentId(user.email.split("@")[0]);
+        // On error, still show view page
+        setIsEditMode(false);
       }
     };
     load();
@@ -157,13 +171,13 @@ export function StudentProfileSetup() {
   ];
 
   // ── VIEW MODE ──
-  if (!isEditMode && isProfileComplete) {
+  if (!isEditMode) {
     return (
       <div className="space-y-4">
         <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-bold">My Profile</h1>
-            <p className="text-muted-foreground text-xs mt-1">Your profile is complete</p>
+            <p className="text-muted-foreground text-xs mt-1">{isProfileComplete ? "Your profile is complete" : "Your profile (click Edit to complete)"}</p>
           </div>
           <button
             onClick={() => setIsEditMode(true)}

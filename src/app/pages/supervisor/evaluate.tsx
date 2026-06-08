@@ -5,7 +5,7 @@ import { Card } from "../../components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/tabs";
 import { Badge } from "../../components/ui/badge";
-import { CheckCircle2, Clock, Loader2 } from "lucide-react";
+import { CheckCircle2, Clock, Loader2, AlertTriangle } from "lucide-react";
 import { IndustrialAssessmentForm } from "../../components/grading/industrial-assessment-form";
 import { WeeklyRubricForm } from "../../components/grading/weekly-rubric-form";
 import { useAppContext } from "../../lib/context";
@@ -14,32 +14,103 @@ import { useToastAction } from "../../lib/hooks";
 import {
   getActiveConfig,
   getIndustrialAssessment,
-  getWeeksForApplication,
-  getCurrentWeekNumber,
   getWeeklyRubric,
 } from "../../services/grading-service";
 import type { GradingActor } from "../../types/grading";
 
 type TabKey = "weekly" | "final";
 
+function getInternshipId(item: any): string {
+  return String(item?.id ?? item?.internship_id ?? item?.applicationId ?? "");
+}
+
+function getStudentName(item: any): string {
+  return item?.student?.user?.name ?? item?.studentName ?? "Student";
+}
+
+function getStudentId(item: any): string {
+  return item?.student?.student_id ?? item?.studentId ?? "N/A";
+}
+
+function getCompanyName(item: any): string {
+  return item?.company?.name ?? item?.companyName ?? "Company";
+}
+
+function getDepartmentName(item: any): string {
+  return item?.student?.department?.name ?? item?.student?.department ?? item?.department ?? "";
+}
+
+function toIsoDate(value: unknown): string | undefined {
+  if (!value) return undefined;
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date.toISOString().slice(0, 10);
+}
+
+function addDays(date: Date, days: number): Date {
+  const copy = new Date(date);
+  copy.setDate(copy.getDate() + days);
+  return copy;
+}
+
+function buildWeeksForInternship(item: any) {
+  const startIso = toIsoDate(item?.confirmed_start_date ?? item?.start_date ?? item?.proposed_start_date);
+  const endIso = toIsoDate(item?.confirmed_end_date ?? item?.end_date ?? item?.proposed_end_date);
+  if (!startIso || !endIso) return [];
+
+  const weeks = [];
+  let cursor = new Date(startIso);
+  const end = new Date(endIso);
+  let weekNumber = 1;
+  while (cursor <= end) {
+    const weekStart = cursor.toISOString().slice(0, 10);
+    const weekEnd = addDays(cursor, 6);
+    weeks.push({
+      weekNumber,
+      weekStart,
+      weekEnd: (weekEnd > end ? end : weekEnd).toISOString().slice(0, 10),
+    });
+    cursor = addDays(cursor, 7);
+    weekNumber += 1;
+  }
+  return weeks;
+}
+
+function getCurrentWeekNumberFromWeeks(weeks: Array<{ weekNumber: number; weekStart: string; weekEnd: string }>): number {
+  const today = new Date().toISOString().slice(0, 10);
+  return weeks.find((w) => today >= w.weekStart && today <= w.weekEnd)?.weekNumber ?? 0;
+}
+
 export function EvaluatePage() {
   const { user, store } = useAppContext();
   const _ = store.industrialAssessments.length + store.weeklyRubrics.length;
+  const [assignedInternships, setAssignedInternships] = useState<any[]>([]);
 
   const { execute: runEvaluationAction, loading: isSubmitting } = useToastAction();
 
   const [params, setParams] = useSearchParams();
 
-  // Industrial supervisors see students attached to their company.
-  // For mock purposes, show all active students; in production filter by supervisor.
-  const activeApps = store.applications.filter((a) => {
-    const s = (a.status ?? "").toLowerCase();
-    return s === "active" || s === "completed";
-  });
+  useEffect(() => {
+    let cancelled = false;
+    apiClient.getDashboard("industry-supervisor").then((res) => {
+      if (!cancelled && res.success) {
+        setAssignedInternships(res.data?.assigned_internships ?? []);
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
 
-  const initialAppId = params.get("student") || activeApps[0]?.id || "";
+  const activeApps = assignedInternships;
+
+  const initialAppId = params.get("student") || getInternshipId(activeApps[0]) || "";
   const [appId, setAppId] = useState<string>(initialAppId);
-  const app = activeApps.find((a) => a.id === appId);
+  const app = activeApps.find((a) => getInternshipId(a) === appId);
+
+  // SECURITY: Backend filters by supervisor_id parameter
+
+  useEffect(() => {
+    if (!appId && activeApps.length > 0) setAppId(getInternshipId(activeApps[0]));
+  }, [activeApps, appId]);
 
   // Default tab: deep-link wins → otherwise Weekly (the most-frequent action).
   const initialTab: TabKey = (params.get("tab") as TabKey) || "weekly";
@@ -47,10 +118,10 @@ export function EvaluatePage() {
 
   // Weeks for the selected student.
   const weeks = useMemo(
-    () => (appId ? getWeeksForApplication(appId) : []),
-    [appId, store.applications.length, store.terms.length]
+    () => (app ? buildWeeksForInternship(app) : []),
+    [app]
   );
-  const currentWeekNumber = useMemo(() => (appId ? getCurrentWeekNumber(appId) : 0), [appId]);
+  const currentWeekNumber = useMemo(() => getCurrentWeekNumberFromWeeks(weeks), [weeks]);
 
   // Pick the deep-linked week, else the most overdue unfilled, else current, else 1.
   const defaultWeek = useMemo(() => {
@@ -77,7 +148,7 @@ export function EvaluatePage() {
   const week = weeks.find((w) => w.weekNumber === weekNumber);
   const existingWeekly = appId && week ? getWeeklyRubric(appId, weekNumber) : undefined;
 
-  const config = useMemo(() => (app ? getActiveConfig(app.department) : null), [app]);
+  const config = useMemo(() => (app ? getActiveConfig(getDepartmentName(app)) : null), [app]);
   const existingFinal = appId ? getIndustrialAssessment(appId) : undefined;
 
   const filledWeeks = appId ? weeks.filter((w) => !!getWeeklyRubric(appId, w.weekNumber)).length : 0;
@@ -100,16 +171,20 @@ export function EvaluatePage() {
 
       <Card className="p-4">
         <label className="text-sm text-gray-700 block mb-2">Student</label>
-        <Select value={appId} onValueChange={setAppId}>
-          <SelectTrigger className="max-w-md"><SelectValue placeholder="Select a student" /></SelectTrigger>
-          <SelectContent>
-            {activeApps.map((a) => (
-              <SelectItem key={a.id} value={a.id}>
-                {a.studentName} ({a.studentId}) — {a.companyName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {activeApps.length > 0 ? (
+          <Select value={appId} onValueChange={setAppId}>
+            <SelectTrigger className="max-w-md"><SelectValue placeholder="Select a student" /></SelectTrigger>
+            <SelectContent>
+              {activeApps.map((a) => (
+                <SelectItem key={getInternshipId(a)} value={getInternshipId(a)}>
+                  {getStudentName(a)} ({getStudentId(a)}) - {getCompanyName(a)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <p className="text-sm text-gray-600">No assigned internships found for your account yet.</p>
+        )}
       </Card>
 
       {app && (
@@ -190,7 +265,7 @@ export function EvaluatePage() {
                   initialNotes={existingWeekly?.notes}
                   onSubmit={async (ratings, notes) => {
                     await runEvaluationAction(async () => {
-                      return apiClient.submitWeeklyRubric(app.id, week.weekNumber, ratings, notes, actor);
+                      return apiClient.submitWeeklyRubric(getInternshipId(app), week.weekNumber, ratings, notes, actor);
                     }, {
                       successMessage: "Weekly rubric submitted successfully!",
                       errorMessage: "Failed to submit weekly rubric."
@@ -222,7 +297,7 @@ export function EvaluatePage() {
                   initialComments={existingFinal?.comments}
                   onSubmit={async (ratings, comments) => {
                     await runEvaluationAction(async () => {
-                      return apiClient.submitIndustrialAssessment(app.id, ratings, comments, actor);
+                      return apiClient.submitIndustrialAssessment(getInternshipId(app), ratings, comments, actor);
                     }, {
                       successMessage: "Final assessment submitted successfully!",
                       errorMessage: "Failed to submit final assessment."

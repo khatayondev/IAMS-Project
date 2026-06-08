@@ -1,7 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { apiClient } from "../../../lib/api-client";
-import { useAppContext } from "../../../lib/context";
-import { markNotificationRead, setNotifications } from "../../../lib/store";
 import {
   Bell, CheckCheck, Mail, Search, Archive, FileText,
   Building2, GraduationCap, AlertTriangle, Settings2
@@ -9,12 +7,26 @@ import {
 import { toast } from "sonner";
 
 export function NotificationsPanel() {
-  const { store } = useAppContext();
+  const [allNotifications, setAllNotifications] = useState<any[]>([]);
   const [filter, setFilter] = useState<string>("All");
   const [search, setSearch] = useState("");
   const [archivedIds, setArchivedIds] = useState<Set<string>>(new Set());
 
-  const allNotifications = store.notifications;
+  const fetchNotifications = useCallback(async () => {
+    const res = await apiClient.getNotifications({ per_page: 100 });
+    if (res.success) {
+      setAllNotifications(res.data.map((n: any) => ({
+        id: String(n.id),
+        title: n.title ?? "Notification",
+        message: n.message ?? "",
+        type: n.type ?? "system",
+        read: !!n.is_read,
+        timestamp: n.created_at ?? new Date().toISOString(),
+      })));
+    }
+  }, []);
+
+  useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
 
   const notifications = allNotifications.filter((n) => !archivedIds.has(n.id));
   const searched = search
@@ -30,12 +42,12 @@ export function NotificationsPanel() {
       : searched.filter((n) => n.type === filter);
 
   const handleMarkRead = async (id: string) => {
-    markNotificationRead(id);
+    setAllNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
     await apiClient.markNotificationRead(id);
   };
 
   const handleMarkAllRead = async () => {
-    setNotifications(allNotifications.map((n) => ({ ...n, read: true })));
+    setAllNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     await apiClient.markAllNotificationsRead();
     toast.success("All notifications marked as read.");
   };
@@ -152,33 +164,17 @@ export function NotificationsPanel() {
         ))}
       </div>
 
-      {/* Search & Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search notifications..."
-            className="w-full pl-10 pr-4 py-2 rounded-lg border border-border bg-card"
-            style={{ fontSize: "0.85rem" }}
-          />
-        </div>
-        <div className="flex gap-1.5 flex-wrap">
-          {["All", "Unread", "application", "company", "grade", "escalation", "system"].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-lg border transition-colors capitalize ${
-                filter === f ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-accent"
-              }`}
-              style={{ fontSize: "0.8rem" }}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
+      {/* Search */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search notifications..."
+          className="w-full pl-10 pr-4 py-2 rounded-lg border border-border bg-card"
+          style={{ fontSize: "0.85rem" }}
+        />
       </div>
 
       {/* Notification List */}

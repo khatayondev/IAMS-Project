@@ -12,26 +12,57 @@ export function StudentDashboard() {
   const [dashboard, setDashboard] = useState<any>(null);
   const [visitations, setVisitations] = useState<any[]>([]);
   const [pendingApplication, setPendingApplication] = useState<any>(null);
+  const [attendanceData, setAttendanceData] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
   const prevStatusRef = useRef<string | null>(null);
 
   const refreshDashboard = async () => {
     setRefreshing(true);
     try {
-      const [dashRes, visRes, appsRes, internshipRes] = await Promise.all([
+      const [dashRes, appsRes, internshipRes] = await Promise.all([
         apiClient.getDashboard("student"),
-        apiClient.getSiteVisitations(),
         apiClient.getApplications(),
         apiClient.getInternships(), // Fetch internship data to get approved applications
       ]);
-      if (dashRes.success) setDashboard(dashRes.data);
-      if (visRes.success) setVisitations(visRes.data);
+      if (dashRes.success) {
+        setDashboard(dashRes.data);
+
+        // Fetch real attendance data for active internship (within internship period only)
+        const activeInternship = dashRes.data?.active_internship;
+        if (activeInternship?.id) {
+          const filters: any = { per_page: 100 };
+          if (activeInternship.start_date) filters.from_date = activeInternship.start_date;
+          if (activeInternship.end_date) filters.to_date = activeInternship.end_date;
+
+          const attRes = await apiClient.getInternshipAttendance(String(activeInternship.id), filters);
+          if (attRes.success) {
+            const records = Array.isArray(attRes.data) ? attRes.data : [];
+            const present = records.filter((r: any) => r.status === "present").length;
+            const total = records.length;
+            const rate = total > 0 ? Math.round((present / total) * 100) : 0;
+            setAttendanceData({ present, total, rate });
+          }
+        }
+      }
       if (appsRes.success && appsRes.data) {
-        const apps = Array.isArray(appsRes.data) ? appsRes.data : appsRes.data.applications || [];
-        // Show pending, approved, or rejected applications (don't show completed)
+        
+        const apps = (() => {
+          const data: any = appsRes.data;   
+          return Array.isArray(data) ? data : data.applications ?? [];
+        })();
+
+        type DashboardApp = {
+          status?: string | null;
+          [key: string]: any;
+        };
+
         const pending = apps.find(
-          (app) => app && ["submitted", "under_review", "approved", "rejected"].includes((app.status ?? "").toLowerCase())
+          (app: DashboardApp) =>
+            app && ["submitted", "under_review", "approved", "rejected"].includes(
+              (app.status ?? "").toLowerCase()
+            )
         );
+
 
         // Detect status change and notify student
         const currentStatus = pending?.status?.toLowerCase() ?? null;
@@ -73,7 +104,6 @@ export function StudentDashboard() {
 
   const activeInternship = dashboard?.active_internship;
   const recentLogbooks: any[] = dashboard?.recent_logbooks ?? [];
-  const attendanceSummary = dashboard?.attendance_summary;
   const publishedGrade = dashboard?.published_grade;
 
   const companyName = activeInternship?.company?.name ?? "N/A";
@@ -82,14 +112,10 @@ export function StudentDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Top Bar: Search and Profile */}
+      {/* Profile */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex-1 max-w-md">
-          <input
-            type="text"
-            placeholder="Search..."
-            className="w-full px-4 py-2 border border-border rounded-lg bg-background text-sm"
-          />
+          
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -100,17 +126,7 @@ export function StudentDashboard() {
           >
             <RotateCcw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
           </button>
-          <div className="flex items-center gap-3 px-4 py-2 bg-card border border-border rounded-lg">
-            <img
-              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`}
-              alt={user?.name}
-              className="w-8 h-8 rounded-full"
-            />
-            <div className="min-w-0">
-              <p className="font-semibold text-sm">{user?.name}</p>
-              <p className="text-muted-foreground text-xs">3rd year</p>
-            </div>
-          </div>
+          
         </div>
       </div>
 
@@ -218,8 +234,17 @@ export function StudentDashboard() {
                   <p className="text-muted-foreground text-sm">Term</p>
                   <Calendar className="w-4 h-4 text-orange-600" />
                 </div>
-                <h3 className="font-bold text-sm">{activeInternship?.term?.name ?? "N/A"}</h3>
-                <p className="text-muted-foreground text-xs">{activeInternship?.term?.year ? `Year ${activeInternship.term.year}` : "Pending approval"}</p>
+                <h3 className="font-bold text-sm">
+                  {activeInternship?.term?.name ??
+                   activeInternship?.term_id ??
+                   activeInternship?.termName ??
+                   "N/A"}
+                </h3>
+                <p className="text-muted-foreground text-xs">
+                  {activeInternship?.term?.year ? `Year ${activeInternship.term.year}` :
+                   activeInternship?.start_date ? `Started ${new Date(activeInternship.start_date).toLocaleDateString()}` :
+                   "Pending approval"}
+                </p>
               </div>
 
               {/* Current Status Card */}
@@ -250,8 +275,10 @@ export function StudentDashboard() {
                   <p className="text-muted-foreground text-sm">Attendance</p>
                   <Clock className="w-4 h-4 text-teal-600" />
                 </div>
-                <h3 className="text-2xl font-bold">{attendanceSummary?.attendance_rate ?? "—"}%</h3>
-                <p className="text-muted-foreground text-xs">{attendanceSummary ? attendanceSummary.present + " present" : "No data"}</p>
+                <h3 className="text-2xl font-bold">{attendanceData?.rate ?? "—"}%</h3>
+                <p className="text-muted-foreground text-xs">
+                  {attendanceData ? `${attendanceData.present}/${attendanceData.total} present` : "No data"}
+                </p>
               </div>
             </div>
           </div>

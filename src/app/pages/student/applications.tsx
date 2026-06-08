@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "../../lib/context";
 import { apiClient } from "../../lib/api-client";
 import { useToastAction } from "../../lib/hooks";
+import { useStudentCheckIn } from "../../hooks/use-student-check-in";
 import { ghanaRegions } from "../../lib/mock-data";
 import {
   Calendar,
@@ -105,6 +106,7 @@ const defaultForm: FormData = {
 
 export function StudentApplicationsPage() {
   const { user } = useAppContext();
+  const { activeInternship } = useStudentCheckIn(!!user);
   const [myApp, setMyApp] = useState<any | null>(null);
   const [terms, setTerms] = useState<any[]>([]);
   const [companies, setCompanies] = useState<any[]>([]);
@@ -148,6 +150,13 @@ export function StudentApplicationsPage() {
   const [form, setForm] = useState<FormData>({ ...defaultForm });
   const [eligibilityError, setEligibilityError] = useState<string | null>(null);
   const [hasSavedDraft, setHasSavedDraft] = useState(false);
+
+  // Auto-switch to tracker view when active internship exists
+  useEffect(() => {
+    if (activeInternship && (view === "windows" || view === "apply")) {
+      setView("tracker");
+    }
+  }, [activeInternship]);
 
   // Per-user draft keys so drafts don't bleed between accounts
   const draftKey  = `application_form_${user?.id ?? "anon"}`;
@@ -461,7 +470,15 @@ export function StudentApplicationsPage() {
           { key: "windows" as const, label: "Windows", icon: Calendar },
           { key: "apply" as const, label: "Apply", icon: FileText },
           { key: "tracker" as const, label: "Track", icon: Eye },
-        ].map((tab) => (
+        ]
+          .filter((tab) => {
+            // If student has active internship, only show tracker tab
+            if (activeInternship && tab.key !== "tracker") {
+              return false;
+            }
+            return true;
+          })
+          .map((tab) => (
           <button
             key={tab.key}
             type="button"

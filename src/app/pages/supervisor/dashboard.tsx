@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { useAppContext } from "../../lib/context";
 import { StatusBadge } from "../../components/status-badge";
 import { StatCard } from "../../components/stat-card";
+import { AssessmentChecklistCard } from "../../components/supervisor/assessment-checklist-card";
 import { apiClient } from "../../lib/api-client";
 import {
   GraduationCap, BookMarked, ClipboardCheck, AlertTriangle,
-  MapPin, TrendingUp, Calendar, CheckCircle2
+  MapPin, TrendingUp, Calendar, CheckCircle2, Shield
 } from "lucide-react";
 import { useNavigate } from "react-router";
 
@@ -131,6 +132,9 @@ export function SupervisorDashboard() {
           </div>
         </div>
       )}
+
+      {/* Assessment Completion Checklist */}
+      <AssessmentChecklistCard onNavigate={navigate} />
 
       {/* Students Overview */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
