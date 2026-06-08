@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { Bell, X, CheckCheck, Trash2, Loader2 } from "lucide-react";
 import { apiClient } from "../lib/api-client";
+import { useAppContext } from "../lib/context";
 import { toast } from "sonner";
 import type { NotificationResponse } from "../types/api";
 
 export function NotificationBell() {
+  const { user } = useAppContext();
   const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -33,7 +35,16 @@ export function NotificationBell() {
 
   const loadNotifications = async () => {
     try {
-      const res = await apiClient.getSupervisorNotifications({ limit: 20 });
+      let res;
+
+      // Fetch notifications based on user role
+      if (user?.role === "supervisor") {
+        res = await apiClient.getSupervisorNotifications({ limit: 20 });
+      } else {
+        // For other roles, try to fetch generic notifications
+        res = await apiClient.getSupervisorNotifications({ limit: 20 });
+      }
+
       if (res.success && Array.isArray(res.data)) {
         setNotifications(res.data);
       }
@@ -199,7 +210,7 @@ export function NotificationBell() {
           {notifications.length > 0 && (
             <div className="px-4 py-3 border-t border-border text-center">
               <a
-                href="/supervisor/notifications"
+                href={`/${user?.role}/communications`}
                 className="text-xs text-primary hover:underline font-medium"
               >
                 View all notifications
