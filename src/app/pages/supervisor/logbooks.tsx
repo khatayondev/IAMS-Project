@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "../../lib/context";
-import { useSupervisorDataAccess } from "../../hooks/use-supervisor-data-access";
 import { SkeletonList } from "../../components/skeleton";
 import { LogbookCommentsSection } from "../../components/logbook-comments-section";
 import { apiClient } from "../../lib/api-client";

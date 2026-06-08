@@ -5,8 +5,7 @@ import { Card } from "../../components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/tabs";
 import { Badge } from "../../components/ui/badge";
-import { CheckCircle2, Clock, Loader2, Shield, AlertTriangle } from "lucide-react";
-import { useSupervisorDataAccess } from "../../hooks/use-supervisor-data-access";
+import { CheckCircle2, Clock, Loader2, AlertTriangle } from "lucide-react";
 import { IndustrialAssessmentForm } from "../../components/grading/industrial-assessment-form";
 import { WeeklyRubricForm } from "../../components/grading/weekly-rubric-form";
 import { useAppContext } from "../../lib/context";
@@ -84,10 +83,8 @@ function getCurrentWeekNumberFromWeeks(weeks: Array<{ weekNumber: number; weekSt
 
 export function EvaluatePage() {
   const { user, store } = useAppContext();
-  const { canAccessInternship } = useSupervisorDataAccess();
   const _ = store.industrialAssessments.length + store.weeklyRubrics.length;
   const [assignedInternships, setAssignedInternships] = useState<any[]>([]);
-  const [accessDenied, setAccessDenied] = useState(false);
 
   const { execute: runEvaluationAction, loading: isSubmitting } = useToastAction();
 
@@ -106,36 +103,10 @@ export function EvaluatePage() {
   const activeApps = assignedInternships;
 
   const initialAppId = params.get("student") || getInternshipId(activeApps[0]) || "";
-
-  // SECURITY: Validate access to requested student
-  useEffect(() => {
-    if (initialAppId && !canAccessInternship(initialAppId)) {
-      console.error("[SECURITY] Unauthorized access attempt to internship:", initialAppId);
-      setAccessDenied(true);
-    } else {
-      setAccessDenied(false);
-    }
-  }, [initialAppId, canAccessInternship]);
-
   const [appId, setAppId] = useState<string>(initialAppId);
   const app = activeApps.find((a) => getInternshipId(a) === appId);
 
-  // Prevent rendering if access denied
-  if (accessDenied) {
-    return (
-      <div className="space-y-6">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 flex items-start gap-4">
-          <Shield className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-semibold text-red-900 mb-2">Access Denied</h3>
-            <p className="text-sm text-red-700">
-              You do not have permission to access this student's assessments. If you believe this is an error, please contact your administrator.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // SECURITY: Backend filters by supervisor_id parameter
 
   useEffect(() => {
     if (!appId && activeApps.length > 0) setAppId(getInternshipId(activeApps[0]));

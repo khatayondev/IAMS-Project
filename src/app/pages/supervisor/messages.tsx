@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { useAppContext } from "../../lib/context";
-import { useSupervisorDataAccess } from "../../hooks/use-supervisor-data-access";
 import { apiClient } from "../../lib/api-client";
 import {
   Send, Loader2, MessageSquare, Search, ChevronLeft, Plus,

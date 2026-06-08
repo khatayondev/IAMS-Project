@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useAppContext } from "../../lib/context";
-import { useSupervisorDataAccess } from "../../hooks/use-supervisor-data-access";
 import { StatusBadge } from "../../components/status-badge";
 import { StatCard } from "../../components/stat-card";
 import { AssessmentChecklistCard } from "../../components/supervisor/assessment-checklist-card";
@@ -19,7 +18,6 @@ function getDept(i: any)        { return i.student?.department?.name ?? "—"; }
 export function SupervisorDashboard() {
   const { user } = useAppContext();
   const navigate = useNavigate();
-  const { canAccessInternship, loading: accessLoading } = useSupervisorDataAccess();
 
   const [dashboard, setDashboard] = useState<any>(null);
   const [pendingLogs, setPendingLogs] = useState<any[]>([]);

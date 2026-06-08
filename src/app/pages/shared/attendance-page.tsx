@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import { SkeletonTableRows } from "../../components/skeleton";
-import { useSupervisorDataAccess } from "../../hooks/use-supervisor-data-access";
 import { apiClient } from "../../lib/api-client";
 import { CheckCircle2, XCircle, AlertTriangle, Clock, Search, X, Navigation, Shield } from "lucide-react";
 import { toast } from "sonner";
