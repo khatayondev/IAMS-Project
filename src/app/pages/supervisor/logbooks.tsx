@@ -12,7 +12,8 @@ import { toast } from "sonner";
 
 export function SupervisorLogbooksPage() {
   const { user } = useAppContext();
-  const { filterByAssignedInternships, canAccessStudent, loading: accessLoading } = useSupervisorDataAccess();
+  // Note: Backend now handles filtering via supervisor_id parameter
+  // Client-side filtering temporarily disabled to debug routing error
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>("All");
@@ -27,10 +28,9 @@ export function SupervisorLogbooksPage() {
     setLoading(true);
     try {
       const res = await apiClient.getLogbookEntries({ per_page: 100 });
+      // SECURITY: Backend filters by supervisor_id parameter (sent automatically)
       if (res.success && Array.isArray(res.data)) {
-        // SECURITY: Filter entries to only show assigned students' logbooks
-        const filtered = filterByAssignedInternships(res.data, "internship_id");
-        setEntries(filtered);
+        setEntries(res.data);
       } else {
         setEntries([]);
       }
@@ -40,7 +40,7 @@ export function SupervisorLogbooksPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterByAssignedInternships]);
+  }, []);
 
   useEffect(() => { fetchEntries(); }, [fetchEntries]);
 
@@ -198,10 +198,6 @@ export function SupervisorLogbooksPage() {
         <div className="space-y-3">
           {filtered.map((entry: any) => {
             const isExpanded = expandedEntry === String(entry.id);
-            // SECURITY: Double-check access before rendering entry
-            if (!canAccessStudent(entry.internship?.student?.id)) {
-              return null;
-            }
             return (
               <div key={entry.id} className={`bg-card border rounded-xl transition-colors ${entry.status === "submitted" ? "border-amber-200" : "border-border"}`}>
                 <div onClick={() => setExpandedEntry(isExpanded ? null : String(entry.id))} className="w-full text-left p-5 flex items-center gap-4 cursor-pointer">

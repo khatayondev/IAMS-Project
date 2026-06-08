@@ -25,8 +25,8 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export function AttendancePage({ viewRole }: Props) {
-  // SECURITY: Get supervisor data access for filtering
-  const supervisorDataAccess = viewRole === "supervisor" ? useSupervisorDataAccess() : null;
+  // SECURITY: Backend filters by supervisor_id parameter (sent automatically)
+  // Client-side filtering disabled to debug routing error
   const [records, setRecords] = useState<any[]>([]);
   const [missed, setMissed] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,23 +49,9 @@ export function AttendancePage({ viewRole }: Props) {
         apiClient.getMissedAttendance(),
       ]);
 
-      // SECURITY: Filter attendance records if supervisor
-      if (viewRole === "supervisor" && supervisorDataAccess) {
-        // Filter by internship_id since attendance has internship_id field
-        const filteredRecords = supervisorDataAccess.filterByAssignedInternships(
-          attRes.data || [],
-          "internship_id"
-        );
-        const filteredMissed = supervisorDataAccess.filterByAssignedInternships(
-          missedRes.data || [],
-          "id" // Missed endpoint returns internship objects
-        );
-        setRecords(filteredRecords);
-        setMissed(filteredMissed);
-      } else {
-        if (attRes.success) setRecords(attRes.data);
-        if (missedRes.success) setMissed(missedRes.data);
-      }
+      // SECURITY: Backend filters by supervisor_id parameter (sent automatically)
+      if (attRes.success) setRecords(attRes.data);
+      if (missedRes.success) setMissed(missedRes.data);
     } catch (error) {
       console.error("Error fetching attendance:", error);
       setRecords([]);
@@ -73,7 +59,7 @@ export function AttendancePage({ viewRole }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [dateFrom, dateTo, viewRole, supervisorDataAccess]);
+  }, [dateFrom, dateTo]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

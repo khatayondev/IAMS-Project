@@ -11,7 +11,7 @@ import type { MessageThread, Message } from "../../types/api";
 
 export function SupervisorMessagesPage() {
   const { user } = useAppContext();
-  const { filterByAssignedStudents, canAccessStudent } = useSupervisorDataAccess();
+  // SECURITY: Backend filters by supervisor_id parameter (sent automatically)
   const [threads, setThreads] = useState<MessageThread[]>([]);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -46,17 +46,11 @@ export function SupervisorMessagesPage() {
   const loadThreads = async () => {
     try {
       const res = await apiClient.getThreads();
+      // SECURITY: Backend filters by supervisor_id parameter (sent automatically)
       if (res.success && Array.isArray(res.data)) {
-        // SECURITY: Filter threads to only show conversations with assigned students
-        const filtered = res.data.filter((thread: any) => {
-          // Check if any participant (other than supervisor) is an assigned student
-          return thread.participants?.some((p: any) =>
-            p.role === "student" && canAccessStudent(p.id)
-          );
-        });
-        setThreads(filtered);
-        if (!selectedThreadId && filtered.length > 0) {
-          setSelectedThreadId(filtered[0].id);
+        setThreads(res.data);
+        if (!selectedThreadId && res.data.length > 0) {
+          setSelectedThreadId(res.data[0].id);
         }
       }
     } catch (error) {

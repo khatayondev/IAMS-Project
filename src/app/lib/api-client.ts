@@ -154,17 +154,15 @@ function extractCollection<T>(response: ApiResponse<unknown>, collectionKey: str
  */
 function addSupervisorContext(query?: Record<string, unknown>): Record<string, unknown> {
   const user = getCurrentUser();
+  const result = { ...(query || {}) };
 
   // If supervisor, automatically add supervisor_id to enable backend filtering
   if (user?.role === "supervisor" && user?.id) {
-    return {
-      ...query,
-      supervisor_id: user.id,
-      scoped_by_supervisor: true,
-    };
+    result.supervisor_id = user.id;
+    result.scoped_by_supervisor = true;
   }
 
-  return query || {};
+  return result;
 }
 
 async function requestApi<T>(
@@ -887,10 +885,11 @@ export const apiClient = {
   },
 
   async getMissedAttendance(days?: number): Promise<ApiResponse<any[]>> {
+    const baseQuery = days && days > 1 ? { days } : undefined;
     const response = await requestApi<unknown>(
       API_ENDPOINTS.ATTENDANCE_MISSED,
       // SECURITY: Add supervisor context for server-side filtering
-      { method: "GET", query: addSupervisorContext(days && days > 1 ? { days } : {}) }
+      { method: "GET", query: addSupervisorContext(baseQuery) }
     );
     return {
       success: response.success,
