@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useSyncExternalStore, useEffect, type ReactNode } from "react";
 import type { AuthUser, ExtendedRole } from "../services/auth-service";
 import { subscribe, getState, type StoreState } from "./store";
-import { setCurrentUser } from "./api-client";
+import { setCurrentUser, apiClient } from "./api-client";
 
 interface AppContextType {
   user: AuthUser | null;
@@ -59,13 +59,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const store = useSyncExternalStore(subscribe, getState, getState);
 
-  // SECURITY: Sync loaded user to API client on mount
+  // SECURITY: Sync loaded user to API client on mount AND refetch if incomplete
   useEffect(() => {
-    if (user && user.id && user.role) {
-      setCurrentUser({ id: user.id, role: user.role });
-    } else {
-      setCurrentUser(null);
-    }
+    const refreshUser = async () => {
+      if (user && user.id && user.role) {
+        setCurrentUser({ id: user.id, role: user.role });
+        // If user is missing name or email, refetch from API
+        if (!user.name || !user.email) {
+          try {
+            const res = await apiClient.me();
+            if (res?.success && res?.data) {
+              const rawUser = (res.data as any).user ?? res.data;
+              const freshUser = normalizeApiUser(rawUser);
+              setUserState(freshUser);
+              saveUser(freshUser);
+              setCurrentUser({ id: freshUser.id, role: freshUser.role });
+            }
+          } catch {
+            // Silently fail — keep the user we have
+          }
+        }
+      } else {
+        setCurrentUser(null);
+      }
+    };
+    refreshUser();
   }, [user?.id, user?.role]);
 
   const setUser = (u: AuthUser | null) => {
