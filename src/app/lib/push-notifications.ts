@@ -3,6 +3,8 @@
  * Handles subscription, permission requests, and notification management
  */
 
+import { getApiAuthToken, getApiUrl } from "./api-client";
+
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || "";
 
 export interface NotificationSubscription {
@@ -150,14 +152,9 @@ async function sendSubscriptionToBackend(
   subscription: PushSubscription
 ): Promise<void> {
   try {
-    // This endpoint should be implemented in the backend
-    // For now, we'll log it as a demo
     const subscriptionJson = subscription.toJSON();
-    console.log("[Push] Subscription ready to send to backend:", subscriptionJson);
 
-    // Uncomment when backend is ready:
-    /*
-    const response = await fetch("/api/push/subscribe", {
+    const response = await fetch(getApiUrl("/api/v1/push/subscribe"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -167,14 +164,13 @@ async function sendSubscriptionToBackend(
     });
 
     if (!response.ok) {
-      throw new Error("Failed to subscribe on backend");
+      throw new Error("Failed to save push subscription on backend");
     }
 
-    console.log("[Push] Subscription sent to backend");
-    */
+    console.log("[Push] Subscription saved to backend");
   } catch (error) {
     console.warn("[Push] Could not send subscription to backend:", error);
-    // Don't throw - subscription is still valid locally
+    // Don't throw — subscription is still valid locally
   }
 }
 
