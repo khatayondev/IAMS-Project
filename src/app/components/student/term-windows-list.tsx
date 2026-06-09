@@ -135,9 +135,7 @@ export function TermWindowsList({
 
         const today = new Date().toISOString().split("T")[0];
         const appDeadline = term.applicationEnd ?? ""; // Single deadline date
-        const appStart = term.applicationStart ?? appDeadline; // When applications start
         const isOpen = appDeadline && today <= appDeadline;
-        const hasNotStarted = appStart && today < appStart;
         const isClosed = appDeadline && today > appDeadline;
 
         const levelNames = (term.eligibleLevels ?? []).map((l: any) =>
@@ -236,8 +234,6 @@ export function TermWindowsList({
                       ? "Complete Your Pending Application First"
                       : isClosed
                       ? "Application Window Closed"
-                      : hasNotStarted
-                      ? "Application Window Not Yet Opened"
                       : !isEligible
                       ? "Your Level Does Not Match"
                       : "Apply Now"}
