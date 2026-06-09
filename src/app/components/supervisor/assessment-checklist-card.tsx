@@ -87,7 +87,7 @@ export function AssessmentChecklistCard({ onNavigate }: AssessmentChecklistCardP
     },
     {
       label: "Messages",
-      route: "/supervisor/messages",
+      route: "/supervisor/communications",
       current: summary.comments.added,
       total: summary.comments.pending,
       status: summary.comments.pending > 0 ? "pending" : "complete",
@@ -188,7 +188,7 @@ export function AssessmentChecklistCard({ onNavigate }: AssessmentChecklistCardP
         </button>
 
         <button
-          onClick={() => onNavigate?.("/supervisor/messages")}
+          onClick={() => onNavigate?.("/supervisor/communications")}
           className="w-full flex items-center justify-between px-4 py-2.5 bg-secondary hover:bg-secondary/80 rounded-lg transition-colors text-sm font-medium"
         >
           View Messages
