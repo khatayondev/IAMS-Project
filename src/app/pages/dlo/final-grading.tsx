@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { SkeletonTable } from "../../components/skeleton";
 import { StatusBadge } from "../../components/status-badge";
 import { useAppContext } from "../../lib/context";
-import { AlertTriangle, GraduationCap, RefreshCw, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, GraduationCap, RefreshCw, CheckCircle2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "../../lib/api-client";
 
@@ -23,6 +23,8 @@ export function DLOFinalGradingPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [compiling, setCompiling] = useState<string | null>(null);
+  const [approving, setApproving] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,7 +60,7 @@ export function DLOFinalGradingPage() {
   useEffect(() => { load(); }, [load]);
 
   const displayStatus = (s: string | null) =>
-    s === "calculated" ? "Submitted" : s === "approved" ? "Approved" : s === "published" ? "Published" : "Pending";
+    s === "calculated" ? "Ready for Approval" : s === "approved" ? "Approved" : s === "published" ? "Published" : "Pending";
 
   const handleCompile = async (internshipId: string) => {
     setCompiling(internshipId);
@@ -69,6 +71,30 @@ export function DLOFinalGradingPage() {
       load();
     } else {
       toast.error(res.message ?? "Could not compile — ensure all component scores are submitted and approved.");
+    }
+  };
+
+  const handleApprove = async (gradeId: string) => {
+    setApproving(gradeId);
+    const res = await apiClient.approveGrade(gradeId);
+    setApproving(null);
+    if (res.success) {
+      toast.success(res.message ?? "Grade approved.");
+      load();
+    } else {
+      toast.error(res.message ?? "Failed to approve grade.");
+    }
+  };
+
+  const handlePublish = async (gradeId: string) => {
+    setPublishing(gradeId);
+    const res = await apiClient.publishGrade(gradeId);
+    setPublishing(null);
+    if (res.success) {
+      toast.success(res.message ?? "Grade published to student.");
+      load();
+    } else {
+      toast.error(res.message ?? "Failed to publish grade.");
     }
   };
 
@@ -84,8 +110,7 @@ export function DLOFinalGradingPage() {
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
         <AlertTriangle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
         <p className="text-blue-800" style={{ fontSize: "0.8rem" }}>
-          Component scores are entered by the industry &amp; academic supervisors. Once all are in, compile here —
-          then the grade flows to HOD/CLO for approval and publishing.
+          After all component scores are submitted, compile the grade, then approve and publish it to the student.
         </p>
       </div>
 
@@ -128,18 +153,32 @@ export function DLOFinalGradingPage() {
                         : <span className="text-muted-foreground">—</span>}
                     </td>
                     <td className="px-4 py-3"><StatusBadge status={displayStatus(r.gradeStatus)} /></td>
-                    <td className="px-4 py-3 text-right">
-                      {r.gradeStatus && r.gradeStatus !== "draft" ? (
-                        <span className="inline-flex items-center gap-1 text-emerald-600" style={{ fontSize: "0.8rem" }}>
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Compiled
-                        </span>
-                      ) : (
+                    <td className="px-4 py-3 text-right space-x-2">
+                      {r.gradeStatus === "draft" || !r.gradeStatus ? (
                         <button onClick={() => handleCompile(r.internshipId)} disabled={compiling === r.internshipId}
                           className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 inline-flex items-center gap-1.5" style={{ fontSize: "0.8rem" }}>
                           {compiling === r.internshipId
                             ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Compiling…</>
                             : <><GraduationCap className="w-3.5 h-3.5" /> Compile</>}
                         </button>
+                      ) : r.gradeStatus === "calculated" ? (
+                        <button onClick={() => handleApprove(r.internshipId)} disabled={approving === r.internshipId}
+                          className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:opacity-90 disabled:opacity-50 inline-flex items-center gap-1.5" style={{ fontSize: "0.8rem" }}>
+                          {approving === r.internshipId
+                            ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Approving…</>
+                            : <><CheckCircle2 className="w-3.5 h-3.5" /> Approve</>}
+                        </button>
+                      ) : r.gradeStatus === "approved" ? (
+                        <button onClick={() => handlePublish(r.internshipId)} disabled={publishing === r.internshipId}
+                          className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:opacity-90 disabled:opacity-50 inline-flex items-center gap-1.5" style={{ fontSize: "0.8rem" }}>
+                          {publishing === r.internshipId
+                            ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Publishing…</>
+                            : <><Send className="w-3.5 h-3.5" /> Publish</>}
+                        </button>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-emerald-600" style={{ fontSize: "0.8rem" }}>
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Published
+                        </span>
                       )}
                     </td>
                   </tr>
