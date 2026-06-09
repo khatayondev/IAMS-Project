@@ -35,6 +35,37 @@ const actionColors: Record<string, string> = {
   // Assessments & Invitations
   "Assessment Approved":    "bg-pink-100 text-pink-700 dark:bg-pink-500/15 dark:text-pink-300",
   "Invitation Accepted":    "bg-lime-100 text-lime-700 dark:bg-lime-500/15 dark:text-lime-300",
+  // Report scores
+  "Report Graded":          "bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300",
+  "Report Score Submitted": "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
+  "Report Score Approved":  "bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300",
+  // Presentations
+  "Presentation Scheduled": "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+  "Presentation Graded":    "bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300",
+  "Presentation Approved":  "bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300",
+  // Site visitations
+  "Site Visit Scheduled":   "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300",
+  "Site Visit Completed":   "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  "Site Visit Cancelled":   "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+  "Visit Score Submitted":  "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
+  "Visit Score Approved":   "bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300",
+  // Issues
+  "Issue Reported":         "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300",
+  "Issue Status Updated":   "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  "Issue Escalated":        "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+  // Grading config
+  "Grading Config Created":     "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+  "Grading Config Updated":     "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
+  "Grading Config Set Default": "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  // System & admin
+  "Setting Updated":        "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+  "Department Created":     "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+  "Department Updated":     "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
+  // Announcements
+  "Announcement Created":   "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300",
+  "Announcement Pinned":    "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  "Announcement Unpinned":  "bg-gray-200 text-gray-600 dark:bg-gray-500/15 dark:text-gray-300",
+  "Announcement Deleted":   "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
 };
 
 const PAGE_SIZE = 10;
