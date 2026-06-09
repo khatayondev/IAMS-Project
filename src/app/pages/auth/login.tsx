@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { GraduationCap, AlertCircle, Loader2, ClipboardList, Users, BarChart3, Mail, CheckCircle2, ArrowLeft } from "lucide-react";
-import { getApiUrl, apiClient } from "../../lib/api-client";
+import { GraduationCap, AlertCircle, Loader2, ClipboardList, Users, BarChart3 } from "lucide-react";
+import { getApiUrl } from "../../lib/api-client";
 import { API_ENDPOINTS } from "../../lib/constants";
 
 const BG_IMAGE =
@@ -10,36 +10,10 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Magic-link flow state
-  const [showMagicLink, setShowMagicLink] = useState(false);
-  const [magicEmail, setMagicEmail] = useState("");
-  const [magicLoading, setMagicLoading] = useState(false);
-  const [magicSent, setMagicSent] = useState(false);
-  const [magicError, setMagicError] = useState("");
-
   const handleGoogleSignIn = () => {
     setError("");
     setLoading(true);
     window.location.href = getApiUrl(API_ENDPOINTS.AUTH_GOOGLE);
-  };
-
-  const handleMagicLinkRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!magicEmail.trim()) return;
-    setMagicError("");
-    setMagicLoading(true);
-    try {
-      const res = await apiClient.requestMagicLink(magicEmail.trim(), { role: "industry_supervisor" });
-      if (res.success) {
-        setMagicSent(true);
-      } else {
-        setMagicError(res.message || "Failed to send login link. Please try again.");
-      }
-    } catch {
-      setMagicError("Something went wrong. Please check your connection and try again.");
-    } finally {
-      setMagicLoading(false);
-    }
   };
 
   return (
@@ -123,135 +97,36 @@ export function LoginPage() {
 
           {/* Login card */}
           <div
-            className="rounded-2xl p-7 shadow-2xl"
+            className="rounded-2xl p-7 space-y-5 shadow-2xl"
             style={{
               background: "rgba(255,255,255,0.92)",
               backdropFilter: "blur(12px)",
             }}
           >
-            {!showMagicLink ? (
-              /* ── Google sign-in panel ── */
-              <div className="space-y-5">
-                <button
-                  onClick={handleGoogleSignIn}
-                  disabled={loading}
-                  className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 transition-colors disabled:opacity-60 font-medium text-gray-800 shadow-sm"
-                  style={{ fontSize: "0.9rem" }}
-                >
-                  {loading ? (
-                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                  ) : (
-                    <GoogleIcon />
-                  )}
-                  {loading ? "Redirecting…" : "Sign in with Google"}
-                </button>
+            <button
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 transition-colors disabled:opacity-60 font-medium text-gray-800 shadow-sm"
+              style={{ fontSize: "0.9rem" }}
+            >
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+              ) : (
+                <GoogleIcon />
+              )}
+              {loading ? "Redirecting…" : "Sign in with Google"}
+            </button>
 
-                {error && (
-                  <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
-                    <p className="text-red-700" style={{ fontSize: "0.8rem" }}>{error}</p>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-3">
-                  <hr className="flex-1 border-gray-200" />
-                  <span className="text-gray-400" style={{ fontSize: "0.72rem" }}>or</span>
-                  <hr className="flex-1 border-gray-200" />
-                </div>
-
-                <button
-                  onClick={() => { setShowMagicLink(true); setMagicSent(false); setMagicError(""); setMagicEmail(""); }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 transition-colors font-medium text-gray-600"
-                  style={{ fontSize: "0.85rem" }}
-                >
-                  <Mail className="w-4 h-4" />
-                  Industry supervisor? Sign in with email link
-                </button>
-
-                <p className="text-center text-gray-400" style={{ fontSize: "0.72rem" }}>
-                  HTU staff &amp; students use Google sign-in above.
-                </p>
-              </div>
-            ) : (
-              /* ── Magic-link request panel ── */
-              <div className="space-y-5">
-                <button
-                  onClick={() => setShowMagicLink(false)}
-                  className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 transition-colors"
-                  style={{ fontSize: "0.8rem" }}
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  Back
-                </button>
-
-                {magicSent ? (
-                  /* success state */
-                  <div className="text-center space-y-3 py-2">
-                    <CheckCircle2 className="w-10 h-10 text-green-500 mx-auto" />
-                    <div>
-                      <p className="font-semibold text-gray-800" style={{ fontSize: "0.95rem" }}>Check your email</p>
-                      <p className="text-gray-500 mt-1 leading-relaxed" style={{ fontSize: "0.78rem" }}>
-                        A login link has been sent to <strong>{magicEmail}</strong>.
-                        <br />Click it to sign in — the link expires in 15 minutes.
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => { setMagicSent(false); setMagicEmail(""); }}
-                      className="text-blue-600 hover:underline"
-                      style={{ fontSize: "0.78rem" }}
-                    >
-                      Use a different email
-                    </button>
-                  </div>
-                ) : (
-                  /* form state */
-                  <form onSubmit={handleMagicLinkRequest} className="space-y-4">
-                    <div>
-                      <p className="font-semibold text-gray-800 mb-0.5" style={{ fontSize: "0.95rem" }}>Industry supervisor login</p>
-                      <p className="text-gray-500" style={{ fontSize: "0.78rem" }}>
-                        Enter your email and we'll send you a sign-in link.
-                      </p>
-                    </div>
-
-                    <input
-                      type="email"
-                      required
-                      value={magicEmail}
-                      onChange={e => setMagicEmail(e.target.value)}
-                      placeholder="your@company.com"
-                      className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 text-gray-800 placeholder-gray-400"
-                      style={{ fontSize: "0.88rem" }}
-                      disabled={magicLoading}
-                    />
-
-                    {magicError && (
-                      <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                        <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
-                        <p className="text-red-700" style={{ fontSize: "0.78rem" }}>{magicError}</p>
-                      </div>
-                    )}
-
-                    <button
-                      type="submit"
-                      disabled={magicLoading || !magicEmail.trim()}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors disabled:opacity-60"
-                      style={{ fontSize: "0.88rem" }}
-                    >
-                      {magicLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Mail className="w-4 h-4" />
-                      )}
-                      {magicLoading ? "Sending…" : "Send login link"}
-                    </button>
-
-                    <p className="text-center text-gray-400" style={{ fontSize: "0.72rem" }}>
-                      Only previously invited supervisors can sign in this way.
-                    </p>
-                  </form>
-                )}
+            {error && (
+              <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
+                <p className="text-red-700" style={{ fontSize: "0.8rem" }}>{error}</p>
               </div>
             )}
+
+            <p className="text-center text-gray-500" style={{ fontSize: "0.73rem" }}>
+              HTU staff, students &amp; supervisors all sign in here.
+            </p>
           </div>
 
           {/* Footer note (mobile) */}

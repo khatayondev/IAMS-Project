@@ -1,16 +1,12 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router";
-import { useAppContext } from "../../lib/context";
-import { normalizeApiUser } from "../../lib/context";
 import { apiClient } from "../../lib/api-client";
-import { getRoutePrefix } from "../../services/auth-service";
 import { GraduationCap, CheckCircle, XCircle, Loader2, User, Phone, Briefcase, Building2 } from "lucide-react";
 import { toast } from "sonner";
 
 type Stage = "form" | "submitting" | "success" | "error";
 
 export function MagicLinkPage() {
-  const { setUser } = useAppContext();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -45,18 +41,14 @@ export function MagicLinkPage() {
         job_title: jobTitle.trim() || undefined,
       });
 
-      if (!res.success || !res.data) {
+      if (!res.success) {
         setStage("error");
         setErrorMsg(res.message ?? "This invitation link has expired or has already been used.");
         return;
       }
 
-      const rawUser = (res.data as any).user ?? res.data;
-      const user = normalizeApiUser(rawUser);
-      setUser(user);
       setStage("success");
-      toast.success(`Welcome, ${user.name}! Your account has been created.`);
-      setTimeout(() => navigate(getRoutePrefix(user.role), { replace: true }), 1500);
+      setTimeout(() => navigate("/login", { replace: true }), 2500);
     } catch {
       setStage("error");
       setErrorMsg("Could not reach the server. Please check your connection and try again.");
@@ -171,14 +163,6 @@ export function MagicLinkPage() {
               >
                 Accept &amp; Activate Account
               </button>
-
-              <p className="text-center text-muted-foreground" style={{ fontSize: "0.75rem" }}>
-                After activation, keep this invitation link handy or request a fresh secure link from the student or DLO at{" "}
-                <Link to="/login" className="text-primary hover:underline">
-                  the login page
-                </Link>
-                .
-              </p>
             </>
           )}
 
@@ -200,9 +184,9 @@ export function MagicLinkPage() {
             <div className="text-center space-y-4 py-4">
               <CheckCircle className="w-10 h-10 text-green-500 mx-auto" />
               <div>
-                <p className="font-medium" style={{ fontSize: "0.95rem" }}>Account activated!</p>
+                <p className="font-medium" style={{ fontSize: "0.95rem" }}>Invitation accepted!</p>
                 <p className="text-muted-foreground mt-1" style={{ fontSize: "0.82rem" }}>
-                  Redirecting to your dashboard…
+                  Your profile has been saved. Please sign in with Google to access your supervisor dashboard.
                 </p>
               </div>
             </div>
