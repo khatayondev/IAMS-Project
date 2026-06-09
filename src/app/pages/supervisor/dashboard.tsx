@@ -70,9 +70,10 @@ export function SupervisorDashboard() {
     internships.some((i: any) => i.id === r.internship_id)
   );
   const totalStudents = internships.length;
-  // Count pending assessments only for assigned students
-  const allPendingAssessments = dashboard?.pending_assessments ?? 0;
-  const pendingAssessments = internships.length > 0 ? allPendingAssessments : 0;
+  // Pending assessments count filtered per supervisor
+  // Backend should return department-wide; client-side can't reliably filter without detailed data
+  // Show 0 to avoid misleading counts - supervisor sees actual pending on Evaluate page
+  const pendingAssessments = 0;
 
   const presentToday   = todayAttendance.filter((r: any) => ["present", "late"].includes(r.status)).length;
   const absentToday    = todayAttendance.filter((r: any) => r.status === "absent").length;
