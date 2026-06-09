@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { SkeletonTableRows } from "../../components/skeleton";
 import { Shield, Search, Filter, Download, ChevronLeft, ChevronRight, Calendar, User, Eye } from "lucide-react";
 import { exportToCSV } from "../../lib/csv-export";
@@ -6,16 +6,35 @@ import { toast } from "sonner";
 import { apiClient } from "../../lib/api-client";
 
 const actionColors: Record<string, string> = {
-  "Created Term": "bg-blue-100 text-blue-700",
-  "Approved Company": "bg-emerald-100 text-emerald-700",
-  "Approved Application": "bg-green-100 text-green-700",
-  "Assigned Supervisor": "bg-violet-100 text-violet-700",
-  "Updated Template": "bg-amber-100 text-amber-700",
-  "Rejected Company": "bg-red-100 text-red-700",
-  "Rejected Application": "bg-red-100 text-red-700",
-  "Archived Term": "bg-gray-200 text-gray-600",
-  "Grade Submitted": "bg-indigo-100 text-indigo-700",
-  "Grade Approved": "bg-teal-100 text-teal-700",
+  // Users
+  "User Created":           "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+  "User Updated":           "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
+  "Role Changed":           "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
+  "User Activated":         "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  "User Deactivated":       "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+  // Companies
+  "Company Approved":       "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300",
+  "Company Rejected":       "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+  // Applications
+  "Application Approved":   "bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300",
+  "Application Rejected":   "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300",
+  // Internships
+  "Internship Activated":   "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300",
+  "Internship Completed":   "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  "Internship Terminated":  "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+  "Supervisor Assigned":    "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  // Terms
+  "Term Created":           "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+  "Term Archived":          "bg-gray-200 text-gray-600 dark:bg-gray-500/15 dark:text-gray-300",
+  // Grades
+  "Grade Approved":         "bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300",
+  "Grade Published":        "bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300",
+  // Logbooks
+  "Logbook Approved":       "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300",
+  "Logbook Rejected":       "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300",
+  // Assessments & Invitations
+  "Assessment Approved":    "bg-pink-100 text-pink-700 dark:bg-pink-500/15 dark:text-pink-300",
+  "Invitation Accepted":    "bg-lime-100 text-lime-700 dark:bg-lime-500/15 dark:text-lime-300",
 };
 
 const PAGE_SIZE = 10;
@@ -24,19 +43,31 @@ type AuditLogItem = {
   id: string;
   timestamp: string;
   user: string;
+  userId: string | null;
   action: string;
-  target: string;
-  details: string;
+  modelType: string;
+  modelId: string | null;
+  description: string;
+  oldValues: Record<string, unknown> | null;
+  newValues: Record<string, unknown> | null;
+  ipAddress: string | null;
+  tags: string | null;
 };
 
 function normalizeAuditLogs(logs: any[]): AuditLogItem[] {
   return logs.map((log, index) => ({
-    id: String(log.id ?? log.audit_id ?? `audit-${index}`),
-    timestamp: log.timestamp ?? log.created_at ?? log.createdAt ?? new Date().toISOString(),
-    user: log.user?.name ?? log.user_name ?? log.actor ?? log.performed_by ?? "System",
-    action: log.action ?? log.event ?? log.verb ?? "Updated",
-    target: log.target ?? log.auditable_type ?? log.resource ?? "Record",
-    details: log.details ?? log.description ?? log.message ?? "No additional details provided.",
+    id: String(log.id ?? `audit-${index}`),
+    timestamp: log.created_at ?? log.timestamp ?? new Date().toISOString(),
+    user: log.user?.name ?? log.user_name ?? "System",
+    userId: log.user_id ? String(log.user_id) : null,
+    action: log.action ?? "Updated",
+    modelType: (log.auditable_type ?? "Record").split("\\").pop() ?? "Record",
+    modelId: log.auditable_id ? String(log.auditable_id) : null,
+    description: log.description ?? log.details ?? "No additional details.",
+    oldValues: log.old_values ?? null,
+    newValues: log.new_values ?? null,
+    ipAddress: log.ip_address ?? null,
+    tags: log.tags ?? null,
   }));
 }
 
@@ -51,63 +82,68 @@ export function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let active = true;
+  const loadLogs = useCallback(async () => {
+    setLoading(true);
+    // Only date range is sent to the server to narrow the dataset.
+    // Action, user, and text search are filtered client-side so the
+    // filter dropdowns always show the full set of available values.
+    const filters: Record<string, unknown> = { per_page: 500 };
+    if (dateFrom) filters.from = dateFrom;
+    if (dateTo)   filters.to   = dateTo;
 
-    async function loadLogs() {
-      setLoading(true);
-      const response = await apiClient.getAuditLogs();
-      if (!active) return;
-
-      if (response.success && response.data.length > 0) {
-        setLogs(normalizeAuditLogs(response.data));
-      } else {
-        setLogs([]);
-      }
-      setLoading(false);
-    }
-
-    loadLogs().catch(() => {
-      if (!active) return;
+    const response = await apiClient.getAuditLogs(filters);
+    if (response.success) {
+      setLogs(normalizeAuditLogs(response.data));
+    } else {
       setLogs([]);
-      setLoading(false);
-    });
+    }
+    setLoading(false);
+  }, [dateFrom, dateTo]);
 
-    return () => {
-      active = false;
-    };
-  }, []);
+  useEffect(() => {
+    loadLogs().catch(() => setLoading(false));
+  }, [loadLogs]);
 
-  const uniqueActions = [...new Set(logs.map((l) => l.action))];
-  const uniqueUsers = [...new Set(logs.map((l) => l.user))];
+  const uniqueActions = [...new Set(logs.map((l) => l.action))].sort();
+  const uniqueUsers   = [...new Set(logs.map((l) => l.user))].sort();
 
   const filtered = logs.filter((log) => {
-    const matchSearch =
-      search === "" ||
-      log.user.toLowerCase().includes(search.toLowerCase()) ||
-      log.action.toLowerCase().includes(search.toLowerCase()) ||
-      log.target.toLowerCase().includes(search.toLowerCase()) ||
-      log.details.toLowerCase().includes(search.toLowerCase());
-    const matchAction = actionFilter === "All" || log.action === actionFilter;
-    const matchUser = userFilter === "All" || log.user === userFilter;
-    const logDate = new Date(log.timestamp);
-    const matchFrom = !dateFrom || logDate >= new Date(dateFrom);
-    const matchTo = !dateTo || logDate <= new Date(dateTo + "T23:59:59");
-    return matchSearch && matchAction && matchUser && matchFrom && matchTo;
+    if (search) {
+      const q = search.toLowerCase();
+      if (
+        !log.user.toLowerCase().includes(q) &&
+        !log.action.toLowerCase().includes(q) &&
+        !log.modelType.toLowerCase().includes(q) &&
+        !log.description.toLowerCase().includes(q)
+      ) return false;
+    }
+    if (userFilter !== "All" && log.user !== userFilter) return false;
+    return true;
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const safePage   = Math.min(page, totalPages - 1);
+  const paged      = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
 
-  const getActionColor = (action: string) => actionColors[action] || "bg-secondary text-secondary-foreground";
+  const getActionColor = (action: string) =>
+    actionColors[action] ?? "bg-secondary text-secondary-foreground";
+
+  const clearFilters = () => {
+    setSearch(""); setActionFilter("All"); setUserFilter("All");
+    setDateFrom(""); setDateTo(""); setPage(0);
+  };
+
+  const hasFilters = search || actionFilter !== "All" || userFilter !== "All" || dateFrom || dateTo;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1>Audit Logs</h1>
           <p className="text-muted-foreground" style={{ fontSize: "0.85rem" }}>
-            {loading ? "Loading audit logs from the API..." : `All system actions are logged for accountability · ${filtered.length} records`}
+            {loading
+              ? "Loading audit logs…"
+              : `All system actions · ${filtered.length.toLocaleString()} records`}
           </p>
         </div>
         <button
@@ -115,7 +151,15 @@ export function AuditLogsPage() {
           style={{ fontSize: "0.85rem" }}
           onClick={() => {
             exportToCSV(
-              filtered.map(l => ({ Timestamp: l.timestamp, User: l.user, Action: l.action, Target: l.target, Details: l.details })),
+              filtered.map((l) => ({
+                Timestamp:   l.timestamp,
+                User:        l.user,
+                Action:      l.action,
+                "Model Type": l.modelType,
+                "Model ID":  l.modelId ?? "",
+                Description: l.description,
+                "IP Address": l.ipAddress ?? "",
+              })),
               "audit_logs"
             );
             toast.success("Audit logs exported!");
@@ -132,7 +176,7 @@ export function AuditLogsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search logs..."
+              placeholder="Search user, action, description…"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(0); }}
               className="w-full pl-10 pr-4 py-2 rounded-lg border border-border bg-background"
@@ -158,7 +202,7 @@ export function AuditLogsPage() {
             {uniqueUsers.map((u) => <option key={u}>{u}</option>)}
           </select>
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
             <input
               type="date"
               value={dateFrom}
@@ -176,9 +220,9 @@ export function AuditLogsPage() {
             />
           </div>
         </div>
-        {(search || actionFilter !== "All" || userFilter !== "All" || dateFrom || dateTo) && (
+        {hasFilters && (
           <button
-            onClick={() => { setSearch(""); setActionFilter("All"); setUserFilter("All"); setDateFrom(""); setDateTo(""); setPage(0); }}
+            onClick={clearFilters}
             className="mt-3 text-primary hover:underline flex items-center gap-1"
             style={{ fontSize: "0.8rem" }}
           >
@@ -188,28 +232,29 @@ export function AuditLogsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-card rounded-2xl overflow-hidden">
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                <th className="text-left px-4 py-3" style={{ fontSize: "0.75rem" }}>Timestamp</th>
-                <th className="text-left px-4 py-3" style={{ fontSize: "0.75rem" }}>User</th>
-                <th className="text-left px-4 py-3" style={{ fontSize: "0.75rem" }}>Action</th>
-                <th className="text-left px-4 py-3" style={{ fontSize: "0.75rem" }}>Target</th>
-                <th className="text-left px-4 py-3" style={{ fontSize: "0.75rem" }}>Details</th>
-                <th className="text-left px-4 py-3" style={{ fontSize: "0.75rem" }}></th>
+                <th className="text-left px-4 py-3 text-muted-foreground font-medium" style={{ fontSize: "0.75rem" }}>Timestamp</th>
+                <th className="text-left px-4 py-3 text-muted-foreground font-medium" style={{ fontSize: "0.75rem" }}>User</th>
+                <th className="text-left px-4 py-3 text-muted-foreground font-medium" style={{ fontSize: "0.75rem" }}>Action</th>
+                <th className="text-left px-4 py-3 text-muted-foreground font-medium" style={{ fontSize: "0.75rem" }}>Resource</th>
+                <th className="text-left px-4 py-3 text-muted-foreground font-medium" style={{ fontSize: "0.75rem" }}>Description</th>
+                <th className="px-4 py-3" style={{ fontSize: "0.75rem" }}></th>
               </tr>
             </thead>
             <tbody>
               {loading && <SkeletonTableRows rows={8} cols={6} />}
               {!loading && paged.map((log) => (
-                <tr key={log.id} className={`border-b border-border last:border-0 hover:bg-muted/20 ${selectedLog === log.id ? "bg-primary/5" : ""}`}>
+                <tr
+                  key={log.id}
+                  className={`border-b border-border last:border-0 hover:bg-muted/20 ${selectedLog === log.id ? "bg-primary/5" : ""}`}
+                >
                   <td className="px-4 py-3 text-muted-foreground whitespace-nowrap" style={{ fontSize: "0.8rem" }}>
-                    <div>
-                      <p>{new Date(log.timestamp).toLocaleDateString()}</p>
-                      <p style={{ fontSize: "0.7rem" }}>{new Date(log.timestamp).toLocaleTimeString()}</p>
-                    </div>
+                    <p>{new Date(log.timestamp).toLocaleDateString()}</p>
+                    <p style={{ fontSize: "0.7rem" }}>{new Date(log.timestamp).toLocaleTimeString()}</p>
                   </td>
                   <td className="px-4 py-3" style={{ fontSize: "0.85rem" }}>
                     <div className="flex items-center gap-2">
@@ -220,13 +265,18 @@ export function AuditLogsPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full ${getActionColor(log.action)}`} style={{ fontSize: "0.75rem" }}>
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full ${getActionColor(log.action)}`}
+                      style={{ fontSize: "0.75rem" }}
+                    >
                       <Shield className="w-3 h-3" />{log.action}
                     </span>
                   </td>
-                  <td className="px-4 py-3" style={{ fontSize: "0.85rem" }}>{log.target}</td>
-                  <td className="px-4 py-3 text-muted-foreground max-w-[200px] truncate" style={{ fontSize: "0.8rem" }}>
-                    {log.details}
+                  <td className="px-4 py-3 text-muted-foreground whitespace-nowrap" style={{ fontSize: "0.8rem" }}>
+                    {log.modelType}{log.modelId ? ` #${log.modelId}` : ""}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground max-w-[240px] truncate" style={{ fontSize: "0.8rem" }}>
+                    {log.description}
                   </td>
                   <td className="px-4 py-3">
                     <button
@@ -240,8 +290,10 @@ export function AuditLogsPage() {
               ))}
               {!loading && paged.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground" style={{ fontSize: "0.85rem" }}>
-                    No audit logs match your filters.
+                  <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground" style={{ fontSize: "0.85rem" }}>
+                    {logs.length === 0
+                      ? "No audit logs recorded yet. Actions will appear here as users interact with the system."
+                      : "No logs match your current filters."}
                   </td>
                 </tr>
               )}
@@ -254,14 +306,14 @@ export function AuditLogsPage() {
           const log = logs.find((l) => l.id === selectedLog);
           if (!log) return null;
           return (
-            <div className="border-t border-border bg-muted/20 p-4">
+            <div className="border-t border-border bg-muted/20 p-5 space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <p className="text-muted-foreground" style={{ fontSize: "0.7rem" }}>Log ID</p>
-                  <p style={{ fontSize: "0.85rem" }}>{log.id}</p>
+                  <p style={{ fontSize: "0.85rem" }}>#{log.id}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground" style={{ fontSize: "0.7rem" }}>Full Timestamp</p>
+                  <p className="text-muted-foreground" style={{ fontSize: "0.7rem" }}>Timestamp</p>
                   <p style={{ fontSize: "0.85rem" }}>{new Date(log.timestamp).toLocaleString()}</p>
                 </div>
                 <div>
@@ -270,13 +322,39 @@ export function AuditLogsPage() {
                 </div>
                 <div>
                   <p className="text-muted-foreground" style={{ fontSize: "0.7rem" }}>IP Address</p>
-                  <p style={{ fontSize: "0.85rem" }}>192.168.1.{Math.floor(Math.random() * 255)}</p>
+                  <p style={{ fontSize: "0.85rem" }}>{log.ipAddress ?? "—"}</p>
                 </div>
               </div>
-              <div className="mt-3">
-                <p className="text-muted-foreground" style={{ fontSize: "0.7rem" }}>Full Details</p>
-                <p style={{ fontSize: "0.85rem" }}>{log.details}</p>
+              <div>
+                <p className="text-muted-foreground mb-1" style={{ fontSize: "0.7rem" }}>Description</p>
+                <p style={{ fontSize: "0.85rem" }}>{log.description}</p>
               </div>
+              {(log.oldValues || log.newValues) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {log.oldValues && (
+                    <div>
+                      <p className="text-muted-foreground mb-1" style={{ fontSize: "0.7rem" }}>Before</p>
+                      <pre className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg p-3 text-red-800 dark:text-red-300 overflow-x-auto" style={{ fontSize: "0.75rem" }}>
+                        {JSON.stringify(log.oldValues, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                  {log.newValues && (
+                    <div>
+                      <p className="text-muted-foreground mb-1" style={{ fontSize: "0.7rem" }}>After</p>
+                      <pre className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 rounded-lg p-3 text-emerald-800 dark:text-emerald-300 overflow-x-auto" style={{ fontSize: "0.75rem" }}>
+                        {JSON.stringify(log.newValues, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              )}
+              {log.tags && (
+                <div>
+                  <p className="text-muted-foreground mb-1" style={{ fontSize: "0.7rem" }}>Tags</p>
+                  <span className="px-2 py-0.5 rounded bg-secondary text-secondary-foreground" style={{ fontSize: "0.75rem" }}>{log.tags}</span>
+                </div>
+              )}
             </div>
           );
         })()}
@@ -284,29 +362,34 @@ export function AuditLogsPage() {
         {/* Pagination */}
         <div className="border-t border-border px-4 py-3 flex items-center justify-between">
           <p className="text-muted-foreground" style={{ fontSize: "0.8rem" }}>
-            Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
+            {filtered.length === 0
+              ? "0 records"
+              : `Showing ${safePage * PAGE_SIZE + 1}–${Math.min((safePage + 1) * PAGE_SIZE, filtered.length)} of ${filtered.length}`}
           </p>
           <div className="flex items-center gap-1">
             <button
-              onClick={() => setPage(Math.max(0, page - 1))}
-              disabled={page === 0}
+              onClick={() => setPage(Math.max(0, safePage - 1))}
+              disabled={safePage === 0}
               className="p-1.5 rounded-md hover:bg-accent disabled:opacity-40"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button
-                key={i}
-                onClick={() => setPage(i)}
-                className={`w-8 h-8 rounded-md ${page === i ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
-                style={{ fontSize: "0.8rem" }}
-              >
-                {i + 1}
-              </button>
-            ))}
+            {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+              const pageNum = totalPages <= 7 ? i : safePage <= 3 ? i : safePage >= totalPages - 4 ? totalPages - 7 + i : safePage - 3 + i;
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setPage(pageNum)}
+                  className={`w-8 h-8 rounded-md ${safePage === pageNum ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
+                  style={{ fontSize: "0.8rem" }}
+                >
+                  {pageNum + 1}
+                </button>
+              );
+            })}
             <button
-              onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-              disabled={page >= totalPages - 1}
+              onClick={() => setPage(Math.min(totalPages - 1, safePage + 1))}
+              disabled={safePage >= totalPages - 1}
               className="p-1.5 rounded-md hover:bg-accent disabled:opacity-40"
             >
               <ChevronRight className="w-4 h-4" />
