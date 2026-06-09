@@ -295,7 +295,7 @@ export function DashboardLayout() {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="h-16 flex items-center px-4 md:px-6 gap-3 shrink-0">
+        <header className="h-16 flex items-center px-4 md:px-6 gap-3 shrink-0 pt-safe" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-card transition-all duration-200"
