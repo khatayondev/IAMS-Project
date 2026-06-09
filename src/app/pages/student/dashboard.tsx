@@ -147,7 +147,7 @@ export function StudentDashboard() {
 
           {/* Hero Banner - Based on Application Status */}
           {activeInternship ? (
-            <div className="bg-gradient-to-r from-primary/80 via-primary/60 to-primary/40 rounded-2xl p-8 text-white relative overflow-hidden">
+            <div className="bg-primary rounded-2xl p-8 text-white relative overflow-hidden">
               <div className="relative z-10">
                 <p className="text-sm opacity-90 mb-2">{new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
                 <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.name?.split(" ")[0]}!</h1>
@@ -158,7 +158,7 @@ export function StudentDashboard() {
               </div>
             </div>
           ) : pendingApplication?.status?.toLowerCase() === "approved" ? (
-            <div className="bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-950/30 dark:to-green-950/30 rounded-2xl p-8">
+            <div className="bg-emerald-100 dark:bg-emerald-950/30 rounded-2xl p-8">
               <h1 className="text-3xl font-bold mb-2">🎉 Application Approved!</h1>
               <p className="text-sm mb-4">Your application for <span className="font-semibold">{pendingApplication?.company?.name || "a position"}</span> has been approved. Download documents and submit the signed company acceptance form to activate your internship.</p>
               <button
@@ -169,7 +169,7 @@ export function StudentDashboard() {
               </button>
             </div>
           ) : pendingApplication?.status?.toLowerCase() === "rejected" ? (
-            <div className="bg-gradient-to-r from-red-100 to-rose-100 dark:from-red-950/30 dark:to-rose-950/30 rounded-2xl p-8">
+            <div className="bg-red-100 dark:bg-red-950/30 rounded-2xl p-8">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h1 className="text-3xl font-bold mb-2">Application Not Approved</h1>
@@ -185,7 +185,7 @@ export function StudentDashboard() {
               </div>
             </div>
           ) : pendingApplication ? (
-            <div className="bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-950/30 dark:to-orange-950/30 rounded-2xl p-8">
+            <div className="bg-amber-100 dark:bg-amber-950/30 rounded-2xl p-8">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h1 className="text-3xl font-bold mb-2">Application Under Review</h1>
@@ -211,7 +211,7 @@ export function StudentDashboard() {
               </div>
             </div>
           ) : (
-            <div className="bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-950/30 dark:to-orange-950/30 rounded-2xl p-8">
+            <div className="bg-amber-100 dark:bg-amber-950/30 rounded-2xl p-8">
               <h1 className="text-3xl font-bold mb-2">Ready to start?</h1>
               <p className="text-sm mb-4">Submit an application to begin your industrial attachment</p>
               <button
@@ -301,7 +301,7 @@ export function StudentDashboard() {
                   See all <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-xl p-6 space-y-4">
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-6 space-y-4">
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 className="font-bold text-lg">{companyName}</h3>
