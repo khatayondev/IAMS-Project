@@ -219,10 +219,12 @@ export function DashboardLayout() {
           flex flex-col shrink-0
         `}
       >
-        {/* Sidebar inner container with rounded style */}
+        {/* Sidebar inner container with glassmorphism */}
         <div
-          className="flex flex-col flex-1 m-3 rounded-2xl bg-sidebar overflow-hidden"
-          style={{ boxShadow: "0 1px 3px rgba(11,94,215,0.04), 0 4px 16px rgba(11,94,215,0.03)" }}
+          className="flex flex-col flex-1 m-3 rounded-2xl overflow-hidden backdrop-blur-md border border-white/20 dark:border-white/10 bg-white/40 dark:bg-slate-900/40"
+          style={{
+            boxShadow: "0 8px 32px rgba(31, 38, 135, 0.15), 0 2px 8px rgba(31, 38, 135, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.2)"
+          }}
         >
           {/* Logo */}
           <div className={`flex items-center ${sidebarOpen || isMobile ? "gap-3 px-5" : "justify-center px-0"} py-5 transition-all duration-300`}>
@@ -258,9 +260,9 @@ export function DashboardLayout() {
                     to={item.to}
                     end={item.to === `/${user.role}`}
                     onClick={handleNavClick}
-                    className={({ isActive }) => `group relative flex items-center ${sidebarOpen || isMobile ? "gap-3 px-6" : "justify-center px-0"} -mx-3 py-3 transition-all duration-200 ${isActive
-                        ? "bg-[#E3EBFF] dark:bg-primary/20 text-primary font-medium"
-                        : "text-sidebar-foreground hover:bg-[#E3EBFF]/50 dark:hover:bg-white/5 hover:text-foreground"
+                    className={({ isActive }) => `group relative flex items-center ${sidebarOpen || isMobile ? "gap-3 px-6" : "justify-center px-0"} -mx-3 py-3 transition-all duration-200 rounded-lg ${isActive
+                        ? "bg-white/40 dark:bg-white/10 text-primary font-medium backdrop-blur-sm"
+                        : "text-sidebar-foreground hover:bg-white/30 dark:hover:bg-white/8 hover:text-foreground backdrop-blur-sm"
                       }`}
                   >
                   {({ isActive }) => (
