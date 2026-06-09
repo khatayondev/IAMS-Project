@@ -117,6 +117,19 @@ export function StudentDashboard() {
   const supervisorData = pendingApplication?.industry_supervisor_name || pendingApplication?.supervisor || activeInternship?.industry_supervisor?.user?.name || activeInternship?.supervisor_name;
   const supervisorInviteStatus = pendingApplication?.supervisor_approval_status || activeInternship?.supervisor_approval_status || (activeInternship?.industry_supervisor?.user?.id ? "approved" : "pending");
 
+  // Debug logging
+  useEffect(() => {
+    console.log('[DEBUG] Supervisor Status:', {
+      supervisorData,
+      supervisorInviteStatus,
+      pendingAppStatus: pendingApplication?.supervisor_approval_status,
+      activeInternshipStatus: activeInternship?.supervisor_approval_status,
+      industrySupervisor: activeInternship?.industry_supervisor,
+      industrySupervisorUser: activeInternship?.industry_supervisor?.user,
+      activeInternship: activeInternship ? { id: activeInternship.id, status: activeInternship.status, supervisor_name: activeInternship.supervisor_name, industry_supervisor_id: activeInternship.industry_supervisor_id } : null,
+    });
+  }, [activeInternship, pendingApplication]);
+
   if (loading) return <SkeletonDashboard statCount={3} />;
 
   return (
