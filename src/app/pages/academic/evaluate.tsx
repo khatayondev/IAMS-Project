@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAppContext } from "../../lib/context";
 import { apiClient } from "../../lib/api-client";
 import { getCompiledGrade, getActiveConfig } from "../../services/grading-service";
-import { updateApplication, addNotification, addAuditLog } from "../../lib/store";
 import { GradeBreakdownCard } from "../../components/grading/grade-breakdown-card";
 import { ChevronLeft, Building2, ClipboardCheck, BookMarked, MapPin } from "lucide-react";
 import { toast } from "sonner";
-import type { AttendanceResponse, LogbookEntryResponse } from "../../types/api";
+import { SkeletonDashboard } from "../../components/skeleton";
 
 import { StudentListReview } from "../../components/academic/student-list-review";
 import { StudentLogbookView } from "../../components/academic/student-logbook-view";
@@ -15,144 +14,130 @@ import { StudentSiteVisitsView } from "../../components/academic/student-site-vi
 
 type Tab = "logbook" | "attendance" | "evaluation" | "visits";
 
-interface SiteVisitNote {
-  id: string;
-  date: string;
-  observations: string;
-  studentEngagement: number; // 1-5
-  companyFeedback: string;
-  recommendations: string;
+interface NormalizedStudent {
+  id: string;           // internship id — used as the selection key
+  studentName: string;
+  studentId: string;    // student number e.g. "STD-001"
+  department: string;
+  companyName: string;
+  status: string;
 }
 
-interface EvaluationForm {
-  technicalSkills: number;
-  problemSolving: number;
-  communication: number;
-  professionalism: number;
-  logbookQuality: number;
-  reportQuality: number;
-  supervisorRelationship: number;
-  overallPerformance: number;
-  strengths: string;
-  improvements: string;
-  generalComments: string;
-  recommendation: string;
+// Convert a raw site visitation from the API to the SiteVisitNote shape
+function normalizeVisitToNote(v: any) {
+  return {
+    id: String(v.id),
+    date: v.visit_date ?? "—",
+    observations: v.observations ?? v.visit_purpose ?? "",
+    studentEngagement: v.student_engagement_rating ?? 3,
+    companyFeedback: v.company_feedback ?? "",
+    recommendations: v.recommendations ?? "",
+  };
 }
-
-const defaultEvaluation: EvaluationForm = {
-  technicalSkills: 0,
-  problemSolving: 0,
-  communication: 0,
-  professionalism: 0,
-  logbookQuality: 0,
-  reportQuality: 0,
-  supervisorRelationship: 0,
-  overallPerformance: 0,
-  strengths: "",
-  improvements: "",
-  generalComments: "",
-  recommendation: "",
-};
-
-const criteria = [
-  { key: "technicalSkills" as const, label: "Technical Skills Acquired", maxScore: 15, description: "Relevance and depth of skills gained during attachment" },
-  { key: "problemSolving" as const, label: "Problem Solving & Initiative", maxScore: 15, description: "Ability to identify and solve problems independently" },
-  { key: "communication" as const, label: "Communication Skills", maxScore: 10, description: "Written and verbal communication effectiveness" },
-  { key: "professionalism" as const, label: "Professionalism & Conduct", maxScore: 10, description: "Punctuality, attitude, and professional behavior" },
-  { key: "logbookQuality" as const, label: "Logbook Quality", maxScore: 15, description: "Completeness, accuracy, and consistency of daily logs" },
-  { key: "reportQuality" as const, label: "Final Report Quality", maxScore: 25, description: "Structure, content depth, and analysis quality" },
-  { key: "supervisorRelationship" as const, label: "Supervisor Relationship", maxScore: 5, description: "Relationship with industry and academic supervisors" },
-  { key: "overallPerformance" as const, label: "Overall Performance", maxScore: 5, description: "Holistic assessment of the student's attachment experience" },
-];
 
 export function AcademicEvaluatePage() {
-  const { user, store } = useAppContext();
+  const { user } = useAppContext();
+
+  // ── Dashboard data ──
+  const [dashboard, setDashboard] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  // ── Logbook data for all assigned students (keyed by internship id) ──
+  const [logbookEntriesByStudent, setLogbookEntriesByStudent] = useState<Record<string, any[]>>({});
+  const [isLoadingRecords, setIsLoadingRecords] = useState(false);
+
+  // ── Per-student data loaded when a student is selected ──
+  const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
+  const [siteVisitNotes, setSiteVisitNotes] = useState<any[]>([]);
+
+  // ── Navigation ──
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("logbook");
-  const [evaluation, setEvaluation] = useState<EvaluationForm>({ ...defaultEvaluation });
-  const [logbookEntriesByStudent, setLogbookEntriesByStudent] = useState<Record<string, LogbookEntryResponse[]>>({});
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceResponse[]>([]);
-  const [isLoadingRecords, setIsLoadingRecords] = useState(false);
-  const [siteVisitNotes, setSiteVisitNotes] = useState<SiteVisitNote[]>([
-    {
-      id: "sv1",
-      date: "2026-04-10",
-      observations: "Student is well-integrated into the team. Workstation is set up properly. Company mentor is actively engaged.",
-      studentEngagement: 4,
-      companyFeedback: "Very satisfied with student performance. Contributes actively to projects.",
-      recommendations: "Continue current trajectory. Consider involving student in the upcoming network migration project.",
-    },
-  ]);
 
-  // Get assigned students (handle both legacy capitalized and real lowercase statuses)
-  const assignedStudents = store.applications.filter((a) => {
-    const s = (a.status ?? "").toLowerCase();
-    return (s === "active" || s === "completed") &&
-      (a.supervisorAssigned === user?.name || a.department === user?.department ||
-       a.student?.department?.name === user?.department);
-  });
-  const assignedStudentIdsKey = assignedStudents.map((student) => student.studentId).join("|");
+  // Load dashboard
+  useEffect(() => {
+    apiClient.getDashboard("academic-supervisor").then((res) => {
+      if (res.success) setDashboard(res.data);
+      setLoading(false);
+    });
+  }, []);
+
+  // Derive assigned students from dashboard internships
+  const assignedStudents: NormalizedStudent[] = (dashboard?.assigned_internships ?? []).map(
+    (i: any): NormalizedStudent => ({
+      id: String(i.id),
+      studentName: i.student?.user?.name ?? "—",
+      studentId: i.student?.student_id ?? "—",
+      department: i.student?.department?.name ?? "—",
+      companyName: i.company?.name ?? "—",
+      status: i.status === "active" ? "Active" : "Pending",
+    })
+  );
+
+  // Fetch logbook entries for all assigned students, keyed by internship id
+  useEffect(() => {
+    if (assignedStudents.length === 0) return;
+    let cancelled = false;
+    setIsLoadingRecords(true);
+    Promise.all(
+      assignedStudents.map(async (s) => {
+        const res = await apiClient.getLogbookEntries({ internship_id: Number(s.id), per_page: 200 });
+        return [s.id, res.success ? (res.data ?? []) : []] as const;
+      })
+    ).then((entries) => {
+      if (!cancelled) {
+        setLogbookEntriesByStudent(Object.fromEntries(entries));
+        setIsLoadingRecords(false);
+      }
+    });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dashboard]);
+
+  // Load per-student data when selection changes
+  const loadSelectedStudentData = useCallback(async (internshipId: string) => {
+    const [attendanceRes, visitsRes] = await Promise.all([
+      apiClient.getAttendance({ internship_id: Number(internshipId), per_page: 500 }),
+      apiClient.getSiteVisitations({ internship_id: Number(internshipId), per_page: 100 }),
+    ]);
+    if (attendanceRes.success) setAttendanceRecords(attendanceRes.data ?? []);
+    if (visitsRes.success) setSiteVisitNotes((visitsRes.data ?? []).map(normalizeVisitToNote));
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-
-    const loadStudentData = async () => {
-      if (assignedStudents.length === 0) {
-        setLogbookEntriesByStudent({});
-        setAttendanceRecords([]);
-        return;
-      }
-
-      setIsLoadingRecords(true);
-      try {
-        const logbookEntries = await Promise.all(
-          assignedStudents.map(async (student) => {
-            const res = await apiClient.getLogbookEntries({
-              studentId: student.studentId,
-              per_page: 200,
-            });
-            return [student.studentId, res.success ? res.data ?? [] : []] as const;
-          })
-        );
-
-        const attendanceRes = await apiClient.getAttendance({ per_page: 500 });
-        const rawAttendance = attendanceRes.success && Array.isArray(attendanceRes.data) ? attendanceRes.data : [];
-
-        if (cancelled) return;
-        setLogbookEntriesByStudent(Object.fromEntries(logbookEntries));
-        setAttendanceRecords(rawAttendance);
-      } finally {
-        if (!cancelled) setIsLoadingRecords(false);
-      }
-    };
-
-    loadStudentData();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [assignedStudentIdsKey]);
+    if (selectedStudent) {
+      setAttendanceRecords([]);
+      setSiteVisitNotes([]);
+      loadSelectedStudentData(selectedStudent);
+    }
+  }, [selectedStudent, loadSelectedStudentData]);
 
   const student = assignedStudents.find((s) => s.id === selectedStudent);
-  const logbookEntries = student ? (logbookEntriesByStudent[student.studentId] ?? []) : [];
-  const selectedAttendanceRecords = student
-    ? attendanceRecords.filter((record) => attendanceBelongsToStudent(record, student.studentId))
-    : [];
-  const attendanceViewRecords = selectedAttendanceRecords.map((record) => {
-    const anyRecord = record as any;
-    const hasGps = anyRecord.gps_check_in_lat != null && anyRecord.gps_check_in_lng != null;
+  const logbookEntries = student ? (logbookEntriesByStudent[student.id] ?? []) : [];
+
+  // Logbook stats
+  const approvedCount  = logbookEntries.filter((l: any) => l.status === "approved").length;
+  const pendingCount   = logbookEntries.filter((l: any) => l.status === "draft" || l.status === "submitted").length;
+
+  // Attendance view records
+  const attendanceViewRecords = attendanceRecords.map((record: any) => {
+    const hasGps = record.gps_check_in_lat != null && record.gps_check_in_lng != null;
     return {
       id: record.id,
-      date: record.date,
+      date: record.attendance_date ?? record.date,
       checkInTime: record.check_in_time ?? "—",
       checkInType: hasGps ? "gps" : "manual",
       location: hasGps
-        ? `${anyRecord.gps_check_in_lat}, ${anyRecord.gps_check_in_lng}`
+        ? `${record.gps_check_in_lat}, ${record.gps_check_in_lng}`
         : record.notes ?? "—",
-      verificationStatus: anyRecord.verified_by ? "Verified" : "Pending Verification",
+      verificationStatus: record.verified_by ? "Verified" : "Pending Verification",
     };
   });
-  const logbookViewRecords = logbookEntries.map((entry) => ({
+
+  const verifiedAttendance = attendanceRecords.filter((r: any) => r.verified_by).length;
+
+  // Logbook view records
+  const logbookViewRecords = logbookEntries.map((entry: any) => ({
     id: entry.id,
     date: entry.entry_date,
     activities: entry.activities_description,
@@ -162,75 +147,28 @@ export function AcademicEvaluatePage() {
     createdAt: entry.created_at,
   }));
 
-  // Logbook stats
-  const approvedCount = logbookEntries.filter((l) => l.status === "approved").length;
-  const pendingCount = logbookEntries.filter((l) => l.status === "draft" || l.status === "submitted").length;
-  const revisionCount = logbookEntries.filter((l) => l.status === "revision_requested").length;
-
-  // Attendance stats
-  const verifiedAttendance = selectedAttendanceRecords.filter((r) => (r as any).verified_by).length;
-
-  // Evaluation total
-  const totalScore = criteria.reduce((sum, c) => sum + (evaluation[c.key] || 0), 0);
-  const maxTotal = criteria.reduce((sum, c) => sum + c.maxScore, 0);
-
-  const getGradeLetter = (score: number) => {
-    const pct = (score / maxTotal) * 100;
-    if (pct >= 80) return "A";
-    if (pct >= 70) return "B+";
-    if (pct >= 60) return "B";
-    if (pct >= 50) return "C+";
-    if (pct >= 45) return "C";
-    if (pct >= 40) return "D";
-    return "F";
-  };
-
-  const handleSubmitEvaluation = () => {
-    if (!student) return;
-    const grade = getGradeLetter(totalScore);
-
-    updateApplication(student.id, {
-      grade,
-      gradeStatus: "Submitted",
-    });
-
-    addAuditLog({
-      id: `al-${Date.now()}`,
-      user: user?.name || "",
-      action: "Submitted Grade",
-      target: `${student.studentName} (${student.studentId})`,
-      timestamp: new Date().toISOString(),
-      details: `Grade ${grade} (${totalScore}/${maxTotal}) submitted. Pending DLO approval.`,
-    });
-
-    addNotification({
-      id: `n-${Date.now()}`,
-      type: "grade",
-      title: "Grade Submitted",
-      message: `${user?.name} submitted grade ${grade} for ${student.studentName} (${student.studentId}). Pending DLO approval.`,
-      read: false,
-      timestamp: new Date().toISOString(),
-    });
-
-    toast.success(`Grade ${grade} (${totalScore}/${maxTotal}) submitted for ${student.studentName}. DLO will be notified.`);
-    setSelectedStudent(null);
-    setEvaluation({ ...defaultEvaluation });
-    setActiveTab("logbook");
-  };
-
-  const handleAddVisitNote = (noteData: {
+  // Add site visit note via API, then reload
+  const handleAddVisitNote = async (noteData: {
     date: string;
     observations: string;
     studentEngagement: number;
     companyFeedback: string;
     recommendations: string;
   }) => {
-    const note: SiteVisitNote = {
-      id: `sv-${Date.now()}`,
-      ...noteData,
-    };
-    setSiteVisitNotes((prev) => [note, ...prev]);
-    toast.success("Site visit note recorded.");
+    if (!selectedStudent) return;
+    const res = await apiClient.createSiteVisitation({
+      internship_id: Number(selectedStudent),
+      visit_date: noteData.date,
+      visit_purpose: noteData.observations,
+      observations: noteData.observations,
+    });
+    if (res.success) {
+      toast.success("Site visit note recorded.");
+      const visitsRes = await apiClient.getSiteVisitations({ internship_id: Number(selectedStudent), per_page: 100 });
+      if (visitsRes.success) setSiteVisitNotes((visitsRes.data ?? []).map(normalizeVisitToNote));
+    } else {
+      toast.error("Failed to save site visit note.");
+    }
   };
 
   const tabs: { key: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -240,15 +178,17 @@ export function AcademicEvaluatePage() {
     { key: "evaluation", label: "Evaluation", icon: ClipboardCheck },
   ];
 
+  if (loading) return <SkeletonDashboard statCount={3} />;
+
   // ── STUDENT LIST VIEW ──
   if (!selectedStudent) {
     return (
       <StudentListReview
         assignedStudents={assignedStudents}
-        onReviewStudent={(studentId) => {
-          setSelectedStudent(studentId);
+        logbookEntriesByStudent={logbookEntriesByStudent}
+        onReviewStudent={(internshipId) => {
+          setSelectedStudent(internshipId);
           setActiveTab("logbook");
-          setEvaluation({ ...defaultEvaluation });
         }}
       />
     );
@@ -282,54 +222,41 @@ export function AcademicEvaluatePage() {
             {student?.studentId} · {student?.department} · {student?.companyName}
           </p>
         </div>
-        {student?.status === "Active" && !student?.grade && (
-          <button
-            type="button"
-            onClick={() => setActiveTab("evaluation")}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 font-medium"
-            style={{ fontSize: "0.85rem" }}
-          >
-            <ClipboardCheck className="w-4 h-4" /> View Grade Breakdown
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => setActiveTab("evaluation")}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 font-medium"
+          style={{ fontSize: "0.85rem" }}
+        >
+          <ClipboardCheck className="w-4 h-4" /> Grade Breakdown
+        </button>
       </div>
 
       {/* Student Overview Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-card border border-border rounded-xl p-3.5 text-center">
           <p className="text-muted-foreground" style={{ fontSize: "0.7rem" }}>Log Entries</p>
           <p style={{ fontSize: "1.5rem", lineHeight: 1.2 }} className="font-semibold">{logbookEntries.length}</p>
-          <p className="text-muted-foreground" style={{ fontSize: "0.65rem" }}>
-            {approvedCount} approved
-          </p>
+          <p className="text-muted-foreground" style={{ fontSize: "0.65rem" }}>{approvedCount} approved</p>
         </div>
         <div className="bg-card border border-border rounded-xl p-3.5 text-center">
           <p className="text-muted-foreground" style={{ fontSize: "0.7rem" }}>Attendance</p>
-          <p style={{ fontSize: "1.5rem", lineHeight: 1.2 }} className="font-semibold">{selectedAttendanceRecords.length}</p>
-          <p className="text-muted-foreground" style={{ fontSize: "0.65rem" }}>
-            {verifiedAttendance} verified
-          </p>
+          <p style={{ fontSize: "1.5rem", lineHeight: 1.2 }} className="font-semibold">{attendanceRecords.length}</p>
+          <p className="text-muted-foreground" style={{ fontSize: "0.65rem" }}>{verifiedAttendance} verified</p>
         </div>
         <div className="bg-card border border-border rounded-xl p-3.5 text-center">
           <p className="text-muted-foreground" style={{ fontSize: "0.7rem" }}>Site Visits</p>
           <p style={{ fontSize: "1.5rem", lineHeight: 1.2 }} className="font-semibold">{siteVisitNotes.length}</p>
           <p className="text-muted-foreground" style={{ fontSize: "0.65rem" }}>
-            {siteVisitNotes.length > 0 ? "✓ Submitted" : "⏳ Pending"}
+            {siteVisitNotes.length > 0 ? "✓ Recorded" : "⏳ None yet"}
           </p>
         </div>
         <div className="bg-card border border-border rounded-xl p-3.5 text-center">
-          <p className="text-muted-foreground" style={{ fontSize: "0.7rem" }}>Report</p>
-          <p style={{ fontSize: "1.5rem", lineHeight: 1.2 }} className="font-semibold">—</p>
-          <p className="text-muted-foreground" style={{ fontSize: "0.65rem" }}>
-            ⏳ Pending
+          <p className="text-muted-foreground" style={{ fontSize: "0.7rem" }}>Pending Logs</p>
+          <p style={{ fontSize: "1.5rem", lineHeight: 1.2 }} className={`font-semibold ${pendingCount > 0 ? "text-amber-600" : ""}`}>
+            {pendingCount}
           </p>
-        </div>
-        <div className="bg-card border border-border rounded-xl p-3.5 text-center">
-          <p className="text-muted-foreground" style={{ fontSize: "0.7rem" }}>Grade</p>
-          <p style={{ fontSize: "1.5rem", lineHeight: 1.2 }} className="font-semibold">{student?.grade || "—"}</p>
-          <p className="text-muted-foreground" style={{ fontSize: "0.65rem" }}>
-            {student?.gradeStatus || "Pending"}
-          </p>
+          <p className="text-muted-foreground" style={{ fontSize: "0.65rem" }}>awaiting review</p>
         </div>
       </div>
 
@@ -401,14 +328,14 @@ export function AcademicEvaluatePage() {
             )}
 
             <div className="flex justify-end pt-4">
-               <button
-                  type="button"
-                  onClick={() => setActiveTab("visits")}
-                  className="px-4 py-2 border border-border bg-background text-foreground rounded-lg hover:bg-accent flex items-center gap-2 font-medium"
-                  style={{ fontSize: "0.85rem" }}
-                >
-                  <Building2 className="w-4 h-4" /> Submit Site Visit Score
-               </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("visits")}
+                className="px-4 py-2 border border-border bg-background text-foreground rounded-lg hover:bg-accent flex items-center gap-2 font-medium"
+                style={{ fontSize: "0.85rem" }}
+              >
+                <Building2 className="w-4 h-4" /> Submit Site Visit Score
+              </button>
             </div>
           </div>
         );
@@ -417,26 +344,10 @@ export function AcademicEvaluatePage() {
   );
 }
 
-function attendanceBelongsToStudent(record: AttendanceResponse, studentId: string) {
-  const value = record as any;
-  const recordStudentId =
-    value.internship?.student?.student_id ??
-    value.internship?.student?.studentId ??
-    value.student?.student_id ??
-    value.student?.studentId ??
-    "";
-  return recordStudentId === studentId;
-}
-
 function mapLogbookStatus(status: string | undefined) {
   switch ((status ?? "").toLowerCase()) {
-    case "approved":
-      return "Approved";
-    case "revision_requested":
-      return "Revision Requested";
-    case "submitted":
-    case "draft":
-    default:
-      return "Pending";
+    case "approved": return "Approved";
+    case "revision_requested": return "Revision Requested";
+    default: return "Pending";
   }
 }
