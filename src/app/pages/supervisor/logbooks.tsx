@@ -27,16 +27,9 @@ export function SupervisorLogbooksPage() {
     setLoading(true);
     try {
       const res = await apiClient.getLogbookEntries({ per_page: 100 });
-      // SECURITY: Backend filters by supervisor_id parameter + client-side check
+      // Backend scopes logbook entries to the authenticated supervisor
       if (res.success && Array.isArray(res.data)) {
-        const filtered = res.data.filter((entry: any) => {
-          const supervisorId =
-            entry.internship?.industry_supervisor?.user?.id ??
-            entry.internship?.industry_supervisor?.id ??
-            entry.internship?.industry_supervisor;
-          return supervisorId === user?.id;
-        });
-        setEntries(filtered);
+        setEntries(res.data);
       } else {
         setEntries([]);
       }

@@ -40,12 +40,9 @@ export function SupervisorDashboard() {
         // Filter logs to only include those from assigned students
         if (logsRes.success && Array.isArray(logsRes.data)) {
           const assignedIds = new Set(
-            (dashRes.data?.assigned_internships ?? [])
-              .filter((i: any) => (i.industry_supervisor?.user?.id ?? i.industry_supervisor?.id ?? i.industry_supervisor) === user?.id)
-              .map((i: any) => i.id)
+            (dashRes.data?.assigned_internships ?? []).map((i: any) => i.id)
           );
-          const filtered = logsRes.data.filter((log: any) => assignedIds.has(log.internship_id));
-          setPendingLogs(filtered);
+          setPendingLogs(logsRes.data.filter((log: any) => assignedIds.has(log.internship_id)));
         }
       }
       if (approvalsRes.success) {
@@ -59,12 +56,8 @@ export function SupervisorDashboard() {
     return () => { cancelled = true; clearInterval(interval); };
   }, [user?.id]);
 
-  // Security: Filter internships by current supervisor (client-side check)
-  const allInternships = dashboard?.assigned_internships ?? [];
-  const internships = allInternships.filter((i: any) => {
-    const supervisorId = i.industry_supervisor?.user?.id ?? i.industry_supervisor?.id ?? i.industry_supervisor;
-    return supervisorId === user?.id;
-  });
+  // Backend already scopes assigned_internships to this supervisor via industry_supervisor_id
+  const internships: any[] = dashboard?.assigned_internships ?? [];
   // Filter attendance and assessments to only include assigned students
   const allTodayAttendance: any[] = dashboard?.today_attendance ?? [];
   const todayAttendance = allTodayAttendance.filter((r: any) =>
