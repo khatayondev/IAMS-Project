@@ -12,6 +12,10 @@ interface Row {
   studentId: string;
   companyName: string;
   gradeStatus: string | null;   // backend: draft|calculated|approved|published
+  industrialScore: number | null;
+  siteVisitScore: number | null;
+  reportScore: number | null;
+  presentationScore: number | null;
   finalPercent: number | null;
   letterGrade: string | null;
 }
@@ -49,6 +53,10 @@ export function DLOFinalGradingPage() {
           studentId: i.student?.student_id ?? "—",
           companyName: i.company?.name ?? "—",
           gradeStatus: g?.status ?? null,
+          industrialScore: g?.industrial_assessment_score ?? null,
+          siteVisitScore: g?.site_visitation_score ?? null,
+          reportScore: g?.report_score ?? null,
+          presentationScore: g?.presentation_score ?? null,
           finalPercent: g?.total_score ?? null,
           letterGrade: g?.letter_grade ?? null,
         };
@@ -131,8 +139,11 @@ export function DLOFinalGradingPage() {
               <thead>
                 <tr className="border-b border-border bg-muted/30">
                   <th className="text-left px-4 py-2.5" style={{ fontSize: "0.75rem" }}>Student</th>
-                  <th className="text-left px-4 py-2.5" style={{ fontSize: "0.75rem" }}>Company</th>
-                  <th className="text-left px-4 py-2.5" style={{ fontSize: "0.75rem" }}>Final</th>
+                  <th className="text-center px-4 py-2.5" style={{ fontSize: "0.75rem" }}>Industrial</th>
+                  <th className="text-center px-4 py-2.5" style={{ fontSize: "0.75rem" }}>Site Visit</th>
+                  <th className="text-center px-4 py-2.5" style={{ fontSize: "0.75rem" }}>Report</th>
+                  <th className="text-center px-4 py-2.5" style={{ fontSize: "0.75rem" }}>Present.</th>
+                  <th className="text-center px-4 py-2.5" style={{ fontSize: "0.75rem" }}>Final</th>
                   <th className="text-left px-4 py-2.5" style={{ fontSize: "0.75rem" }}>Status</th>
                   <th className="text-right px-4 py-2.5" style={{ fontSize: "0.75rem" }}></th>
                 </tr>
@@ -146,11 +157,30 @@ export function DLOFinalGradingPage() {
                         <p className="text-muted-foreground" style={{ fontSize: "0.7rem" }}>{r.studentId}</p>
                       </div>
                     </td>
-                    <td className="px-4 py-3" style={{ fontSize: "0.85rem" }}>{r.companyName}</td>
-                    <td className="px-4 py-3" style={{ fontSize: "0.85rem" }}>
+                    <td className="px-4 py-3 text-center" style={{ fontSize: "0.85rem" }}>
+                      {r.industrialScore !== null
+                        ? <span className="font-medium">{Number(r.industrialScore).toFixed(1)}</span>
+                        : <span className="text-muted-foreground text-xs">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-center" style={{ fontSize: "0.85rem" }}>
+                      {r.siteVisitScore !== null
+                        ? <span className="font-medium">{Number(r.siteVisitScore).toFixed(1)}</span>
+                        : <span className="text-muted-foreground text-xs">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-center" style={{ fontSize: "0.85rem" }}>
+                      {r.reportScore !== null
+                        ? <span className="font-medium">{Number(r.reportScore).toFixed(1)}</span>
+                        : <span className="text-muted-foreground text-xs">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-center" style={{ fontSize: "0.85rem" }}>
+                      {r.presentationScore !== null
+                        ? <span className="font-medium">{Number(r.presentationScore).toFixed(1)}</span>
+                        : <span className="text-muted-foreground text-xs">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-center" style={{ fontSize: "0.85rem" }}>
                       {r.finalPercent !== null
-                        ? <span>{Number(r.finalPercent).toFixed(1)}%{r.letterGrade ? ` (${r.letterGrade})` : ""}</span>
-                        : <span className="text-muted-foreground">—</span>}
+                        ? <span className="font-medium">{Number(r.finalPercent).toFixed(1)}%{r.letterGrade ? ` (${r.letterGrade})` : ""}</span>
+                        : <span className="text-muted-foreground text-xs">—</span>}
                     </td>
                     <td className="px-4 py-3"><StatusBadge status={displayStatus(r.gradeStatus)} /></td>
                     <td className="px-4 py-3 text-right space-x-2">
