@@ -113,6 +113,10 @@ export function StudentDashboard() {
   const appStatus = activeInternship?.status ?? "none";
   const supervisorName = activeInternship?.academic_supervisor?.user?.name ?? activeInternship?.academicSupervisor?.user?.name ?? null;
 
+  // Supervisor data from company acceptance upload (pendingApplication or activeInternship)
+  const supervisorData = pendingApplication?.industry_supervisor_name || pendingApplication?.supervisor || activeInternship?.industry_supervisor?.user?.name || activeInternship?.supervisor_name;
+  const supervisorInviteStatus = pendingApplication?.supervisor_approval_status || activeInternship?.supervisor_approval_status || "pending";
+
   if (loading) return <SkeletonDashboard statCount={3} />;
 
   return (
@@ -157,12 +161,45 @@ export function StudentDashboard() {
             <div className="bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-950/30 dark:to-green-950/30 rounded-2xl p-8">
               <h1 className="text-3xl font-bold mb-2">🎉 Application Approved!</h1>
               <p className="text-sm mb-4">Your application for <span className="font-semibold">{pendingApplication?.company?.name || "a position"}</span> has been approved. Download documents and submit the signed company acceptance form to activate your internship.</p>
-              <button
-                onClick={() => navigate("/student/documents")}
-                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-sm transition-colors"
-              >
-                Go to Documents <ArrowRight className="w-4 h-4 inline ml-2" />
-              </button>
+              {supervisorData && (
+                <div className="mb-4 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <User className="w-4 h-4 text-emerald-700" />
+                    <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">Company Supervisor</p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">{supervisorData}</p>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-medium capitalize">
+                        {supervisorInviteStatus === "approved" || supervisorInviteStatus === "accepted" ? "Approved" : "Pending"}
+                      </span>
+                      {supervisorInviteStatus === "approved" || supervisorInviteStatus === "accepted" ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-amber-600" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="space-y-2">
+                <button
+                  onClick={() => navigate("/student/documents")}
+                  className="w-full px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-sm transition-colors"
+                >
+                  Go to Documents <ArrowRight className="w-4 h-4 inline ml-2" />
+                </button>
+                {supervisorData && (supervisorInviteStatus !== "approved" && supervisorInviteStatus !== "accepted") && (
+                  <button
+                    onClick={() => {
+                      toast.info(`Invitation resent to ${supervisorData}`);
+                    }}
+                    className="w-full px-6 py-2 border border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 rounded-lg font-semibold text-sm transition-colors"
+                  >
+                    Resend Supervisor Invite
+                  </button>
+                )}
+              </div>
             </div>
           ) : pendingApplication?.status?.toLowerCase() === "rejected" ? (
             <div className="bg-gradient-to-r from-red-100 to-rose-100 dark:from-red-950/30 dark:to-rose-950/30 rounded-2xl p-8">
