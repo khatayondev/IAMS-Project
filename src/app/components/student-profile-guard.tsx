@@ -21,18 +21,18 @@ export function StudentProfileGuard({ children }: StudentProfileGuardProps) {
       return;
     }
 
-    // Check if profile is already marked as complete
-    const isProfileComplete = localStorage.getItem(`student_profile_complete_${user?.id}`);
+    const currentPath = window.location.pathname;
+
+    // Allow profile-setup page always
+    if (currentPath.includes("/student/profile-setup")) {
+      return;
+    }
 
     // Only redirect if profile is NOT marked complete
-    if (!isProfileComplete) {
-      const currentPath = window.location.pathname;
-      // Allow access to profile-setup page only
-      if (!currentPath.includes("/student/profile-setup")) {
-        navigate("/student/profile-setup", { replace: true });
-      }
+    if (!user.profileComplete) {
+      navigate("/student/profile-setup", { replace: true });
     }
-  }, [user, navigate]);
+  }, [user?.role, user?.profileComplete, navigate]);
 
   return <>{children}</>;
 }
