@@ -161,12 +161,45 @@ export function StudentDashboard() {
             <div className="bg-emerald-100 dark:bg-emerald-950/30 rounded-2xl p-8">
               <h1 className="text-3xl font-bold mb-2">🎉 Application Approved!</h1>
               <p className="text-sm mb-4">Your application for <span className="font-semibold">{pendingApplication?.company?.name || "a position"}</span> has been approved. Download documents and submit the signed company acceptance form to activate your internship.</p>
-              <button
-                onClick={() => navigate("/student/documents")}
-                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-sm transition-colors"
-              >
-                Go to Documents <ArrowRight className="w-4 h-4 inline ml-2" />
-              </button>
+              {supervisorData && (
+                <div className="mb-4 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <User className="w-4 h-4 text-emerald-700" />
+                    <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">Company Supervisor</p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">{supervisorData}</p>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-medium capitalize">
+                        {supervisorInviteStatus === "approved" || supervisorInviteStatus === "accepted" ? "Approved" : "Pending"}
+                      </span>
+                      {supervisorInviteStatus === "approved" || supervisorInviteStatus === "accepted" ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-amber-600" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="space-y-2">
+                <button
+                  onClick={() => navigate("/student/documents")}
+                  className="w-full px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-sm transition-colors"
+                >
+                  Go to Documents <ArrowRight className="w-4 h-4 inline ml-2" />
+                </button>
+                {supervisorData && (supervisorInviteStatus !== "approved" && supervisorInviteStatus !== "accepted") && (
+                  <button
+                    onClick={() => {
+                      toast.info(`Invitation resent to ${supervisorData}`);
+                    }}
+                    className="w-full px-6 py-2 border border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 rounded-lg font-semibold text-sm transition-colors"
+                  >
+                    Resend Supervisor Invite
+                  </button>
+                )}
+              </div>
             </div>
           ) : pendingApplication?.status?.toLowerCase() === "rejected" ? (
             <div className="bg-red-100 dark:bg-red-950/30 rounded-2xl p-8">
