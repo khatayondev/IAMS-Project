@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAppContext } from "../../lib/context";
 import { apiClient } from "../../lib/api-client";
 import { 
@@ -18,6 +18,7 @@ export function StudentAttendancePage() {
   const [internshipInfo, setInternshipInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const hasLoadedOnce = useRef(false);
 
   useEffect(() => {
     loadAttendanceData();
@@ -32,15 +33,12 @@ export function StudentAttendancePage() {
   };
 
   const loadAttendanceData = async () => {
+    if (!hasLoadedOnce.current) setLoading(true);
     try {
-      setLoading(true);
       const dashRes = await apiClient.getDashboard("student");
       const activeInternship = dashRes.data?.active_internship;
 
-      if (!activeInternship?.id) {
-        setLoading(false);
-        return;
-      }
+      if (!activeInternship?.id) return;
 
       setInternshipInfo(activeInternship);
 
@@ -53,24 +51,22 @@ export function StudentAttendancePage() {
       if (attRes.success) {
         const data = attRes.data as any;
         const records = Array.isArray(data) ? data : (data?.attendance ?? []);
-        
-        // Filter only present/absent (ignore late/half_day if any)
-        const filteredRecords = records.filter((r: any) => 
-          r.status === "present" || r.status === "absent"
-        );
-        
-        setAttendanceRecords(filteredRecords);
+
+        setAttendanceRecords(records);
 
         const statsCounts = {
-          present: filteredRecords.filter((r: any) => r.status === "present").length,
-          absent: filteredRecords.filter((r: any) => r.status === "absent").length,
-          total: filteredRecords.length,
+          present: records.filter((r: any) =>
+            ["present", "late", "half_day"].includes(r.status)
+          ).length,
+          absent: records.filter((r: any) => r.status === "absent").length,
+          total: records.length,
         };
         setStats(statsCounts);
       }
     } catch (error) {
       console.error("Failed to load attendance data", error);
     } finally {
+      hasLoadedOnce.current = true;
       setLoading(false);
     }
   };
@@ -86,6 +82,10 @@ export function StudentAttendancePage() {
         return "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700";
       case "absent":
         return "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700";
+      case "late":
+        return "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700";
+      case "half_day":
+        return "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700";
       default:
         return "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700";
     }
@@ -97,10 +97,18 @@ export function StudentAttendancePage() {
         return <CheckCircle2 className="w-3.5 h-3.5" />;
       case "absent":
         return <XCircle className="w-3.5 h-3.5" />;
+      case "late":
+      case "half_day":
+        return <Clock className="w-3.5 h-3.5" />;
       default:
         return null;
     }
   };
+
+  const todayStr = new Date().toISOString().split("T")[0];
+  const todayRecord = attendanceRecords.find(
+    (r) => (r.date || r.attendance_date)?.slice(0, 10) === todayStr
+  );
 
   const attendanceRate = calculateAttendanceRate();
 
@@ -193,6 +201,33 @@ export function StudentAttendancePage() {
           </div>
         </div>
       </div>
+
+      {/* Today's Status */}
+      <Card className="p-4 border-border/60 shadow-sm">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
+          <Clock className="w-4 h-4" />
+          Today — {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+        </h3>
+        {todayRecord ? (
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4" />
+              Checked in {todayRecord.check_in_time ? `at ${todayRecord.check_in_time.slice(0, 5)}` : ""}
+            </p>
+            {todayRecord.check_out_time ? (
+              <p className="text-xs text-muted-foreground">
+                Checked out at {todayRecord.check_out_time.slice(0, 5)}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Check-out is recorded automatically at end of day.</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No check-in recorded yet today. Use the <strong>Check In</strong> button in the header.
+          </p>
+        )}
+      </Card>
 
       {/* Internship details card */}
       <Card className="p-4 border-border/60 shadow-sm">
@@ -295,7 +330,7 @@ export function StudentAttendancePage() {
                           {record.check_in_time && (
                             <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                               <Clock className="w-3 h-3" />
-                              {new Date(record.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {record.check_in_time.slice(0, 5)}
                             </p>
                           )}
                         </div>
@@ -340,6 +375,8 @@ export function StudentAttendancePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
           <div className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /><span>Present – Checked in and completed the day</span></div>
           <div className="flex items-center gap-2"><XCircle className="w-3.5 h-3.5 text-red-500" /><span>Absent – No check‑in recorded</span></div>
+          <div className="flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-amber-500" /><span>Late – Checked in after the expected time</span></div>
+          <div className="flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-blue-500" /><span>Half Day – Partial attendance recorded</span></div>
         </div>
       </div>
     </div>

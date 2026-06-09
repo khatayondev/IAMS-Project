@@ -103,7 +103,6 @@ export function LoginPage() {
               backdropFilter: "blur(12px)",
             }}
           >
-            {/* On desktop override to solid card via inline style above; already clean */}
             <button
               onClick={handleGoogleSignIn}
               disabled={loading}
@@ -127,8 +126,6 @@ export function LoginPage() {
 
             <p className="text-center text-gray-500" style={{ fontSize: "0.73rem" }}>
               HTU staff, students &amp; supervisors all sign in here.
-              <br />
-              First-time supervisors: check your email for your invitation link.
             </p>
           </div>
 
