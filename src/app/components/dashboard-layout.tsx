@@ -79,7 +79,7 @@ const supervisorNav: NavItem[] = [
   { to: "/supervisor/logbooks", icon: BookMarked, label: "Student Logbooks" },
   { to: "/supervisor/evaluate", icon: ClipboardCheck, label: "Assessments", badgeKey: "supervisorOverdueRubrics" },
   { to: "/supervisor/attendance", icon: MapPin, label: "Attendance" },
-  { to: "/supervisor/communications", icon: MessageSquarePlus, label: "Messages" },
+  { to: "/supervisor/communications", icon: MessageSquarePlus, label: "Communications" },
   { to: "/supervisor/help", icon: LifeBuoy, label: "Help & Support" },
   { to: "/supervisor/settings", icon: Settings, label: "Settings" },
 ];

@@ -93,12 +93,6 @@ export function SupervisorDashboard() {
         </p>
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-        <p style={{ fontSize: "0.8rem" }} className="text-blue-800">
-          This portal uses tokenized access — no password required. Review student logbooks, verify attendance check-ins, and submit evaluations from here.
-        </p>
-      </div>
-
       {/* Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
