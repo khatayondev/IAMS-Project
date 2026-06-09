@@ -106,11 +106,17 @@ export function EvaluatePage() {
     let cancelled = false;
     apiClient.getDashboard("industry-supervisor").then((res) => {
       if (!cancelled && res.success) {
-        setAssignedInternships(res.data?.assigned_internships ?? []);
+        const allInternships = res.data?.assigned_internships ?? [];
+        // Security: Filter internships by current supervisor (client-side check)
+        const filtered = allInternships.filter((i: any) => {
+          const supervisorId = i.industry_supervisor?.user?.id ?? i.industry_supervisor?.id ?? i.industry_supervisor;
+          return supervisorId === user?.id;
+        });
+        setAssignedInternships(filtered);
       }
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [user?.id]);
 
   const activeApps = assignedInternships;
 

@@ -42,9 +42,14 @@ export function SupervisorDashboard() {
     return () => { cancelled = true; };
   }, []);
 
-  const internships: any[]    = dashboard?.assigned_internships ?? [];
+  // Security: Filter internships by current supervisor (client-side check)
+  const allInternships = dashboard?.assigned_internships ?? [];
+  const internships = allInternships.filter((i: any) => {
+    const supervisorId = i.industry_supervisor?.user?.id ?? i.industry_supervisor?.id ?? i.industry_supervisor;
+    return supervisorId === user?.id;
+  });
   const todayAttendance: any[] = dashboard?.today_attendance     ?? [];
-  const totalStudents          = dashboard?.assigned_students    ?? internships.length;
+  const totalStudents          = internships.length;
   const pendingAssessments     = dashboard?.pending_assessments  ?? 0;
 
   const presentToday   = todayAttendance.filter((r: any) => ["present", "late"].includes(r.status)).length;
