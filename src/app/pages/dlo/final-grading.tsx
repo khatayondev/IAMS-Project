@@ -109,9 +109,9 @@ export function DLOFinalGradingPage() {
 
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
         <AlertTriangle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-        <p className="text-blue-800" style={{ fontSize: "0.8rem" }}>
-          After all component scores are submitted, compile the grade, then approve and publish it to the student.
-        </p>
+        <div className="text-blue-800" style={{ fontSize: "0.8rem" }}>
+          <p><strong>Workflow:</strong> Compile the grade from all submitted component scores → Approve the final grade → Publish to make it visible to the student.</p>
+        </div>
       </div>
 
       <div className="bg-card border border-border rounded-xl overflow-hidden">
