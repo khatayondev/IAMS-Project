@@ -69,13 +69,13 @@ export function AnnouncementsPanel({ viewRole, canCompose }: Props) {
 
   const handleMarkRead = async (id: string) => {
     await apiClient.markAnnouncementRead(id);
-    setAnnouncements((prev) => prev.map((a) => String(a.id) === id ? { ...a, is_read: true } : a);
+    setAnnouncements((prev) => prev.map((a) => String(a.id) === id ? { ...a, is_read: true } : a));
   };
 
   const handlePin = async (id: string) => {
     const res = await apiClient.pinAnnouncement(id);
     if (res.success) {
-      setAnnouncements((prev) => prev.map((a) => String(a.id) === id ? { ...a, pinned: (res.data as any)?.pinned ?? !a.pinned } : a);
+      setAnnouncements((prev) => prev.map((a) => String(a.id) === id ? { ...a, pinned: (res.data as any)?.pinned ?? !a.pinned } : a));
       toast.success("Pin updated.");
     }
   };
@@ -92,7 +92,8 @@ export function AnnouncementsPanel({ viewRole, canCompose }: Props) {
   };
 
   const filtered = announcements.filter((a) =>
-    !search || a.title?.toLowerCase().includes(search.toLowerCase()) || a.message?.toLowerCase().includes(search.toLowerCase()));
+    !search || a.title?.toLowerCase().includes(search.toLowerCase()) || a.message?.toLowerCase().includes(search.toLowerCase())
+  );
 
   const pinned   = filtered.filter((a) => a.pinned);
   const regular  = filtered.filter((a) => !a.pinned);
@@ -100,21 +101,17 @@ export function AnnouncementsPanel({ viewRole, canCompose }: Props) {
   const unread   = announcements.filter((a) => !a.is_read).length;
   const urgentCt = announcements.filter((a) => a.priority === "urgent" || a.priority === "high").length;
 
-  const readRate = total > 0
-    ? Math.round(announcements.reduce((s, a) => s + (a.reads_count > 0 ? 1 : 0), 0) / total * 100)
-    : 0;
-
   const AnnCard = ({ ann, pinBg }: { ann: any; pinBg?: boolean }) => (
     <div
       className={`border rounded-2xl p-4 cursor-pointer hover:shadow-md transition-all shadow-sm ${
-      pinBg ? "bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 border-amber-300 dark:border-amber-700" : 
+        pinBg ? "bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 border-amber-300 dark:border-amber-700" :
         ann.is_read ? "bg-white dark:bg-gray-900 border-border" : "bg-amber-50/80 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700"
-    }`}
+      }`}
       onClick={() => { setSelectedAnn(ann); if (!ann.is_read) handleMarkRead(String(ann.id)); }}
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 min-w-0">
-          {ann.pinned && <Pin className="w-5 h-5 text-amber-600 shrink-0" />}
+          {ann.pinned && <Pin className="w-4.5 h-4.5 text-amber-600 shrink-0" />}
           {!ann.is_read && <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0 animate-pulse" />}
           <span className="font-semibold truncate" style={{ fontSize: "1rem" }}>{ann.title}</span>
           {(ann.priority === "urgent" || ann.priority === "high") && (
@@ -127,8 +124,8 @@ export function AnnouncementsPanel({ viewRole, canCompose }: Props) {
           {new Date(ann.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
         </span>
       </div>
-      <div className="text-muted-foreground line-clamp-2 [&>p]:inline" style={{ fontSize: "0.9rem" }}>
-        <ReactMarkdown components={{ p: ({ node, ...props }) => <span {...props} />}}>
+      <div className="text-muted-foreground line-clamp-2" style={{ fontSize: "0.9rem" }}>
+        <ReactMarkdown components={{ p: ({ node, ...props }) => <span {...props} /> }}>
           {ann.message}
         </ReactMarkdown>
       </div>
@@ -151,21 +148,22 @@ export function AnnouncementsPanel({ viewRole, canCompose }: Props) {
             <Megaphone className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-foreground">Announcements</h2>
+            <h2 className="text-xl font-bold">Announcements</h2>
             <p className="text-sm text-muted-foreground">
-              {canCompose ? `${viewRole === "clo" ? "Institution-wide" : "Department"} updates` : "Official announcements"} · {total} total{unread > 0 && ` · ${unread} unread`}
+              {canCompose ? `${viewRole === "clo" ? "Institution-wide" : "Department"} updates` : "Official announcements"} • {total} total{unread > 0 && ` • ${unread} unread`}
             </p>
           </div>
         </div>
         {canCompose && (
           <button onClick={() => setShowCompose(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl hover:bg-amber-600 shadow-sm transition-all text-sm">
+            className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl hover:bg-amber-600 shadow-sm transition-all text-sm"
+          >
             <Megaphone className="w-4.5 h-4.5" /> New Announcement
           </button>
         )}
       </div>
 
-      {/* Summary Cards */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: "Total Sent",  value: total,    color: "text-blue-600 bg-blue-50",    icon: Send },
@@ -188,15 +186,13 @@ export function AnnouncementsPanel({ viewRole, canCompose }: Props) {
       {/* Search */}
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
           placeholder="Search announcements..."
           className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-white dark:bg-gray-900 text-sm"
         />
       </div>
 
+      {/* Announcements List */}
       <div className="max-h-[550px] overflow-y-auto pr-2">
         {loading ? (
           <div className="text-center py-12 text-muted-foreground text-sm">Loading…</div>
@@ -207,7 +203,8 @@ export function AnnouncementsPanel({ viewRole, canCompose }: Props) {
                 <h3 className="flex items-center gap-2 mb-3 text-sm font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wide">
                   <Pin className="w-4.5 h-4.5" /> Pinned Announcements
                 </h3>
-                <div className="space-y-3">{pinned.map((a) => <AnnCard key={a.id} ann={a} pinBg={true} />}
+                <div className="space-y-3">
+                  {pinned.map((a) => <AnnCard key={a.id} ann={a} pinBg={true} />)}
                 </div>
               </div>
             )}
@@ -224,7 +221,9 @@ export function AnnouncementsPanel({ viewRole, canCompose }: Props) {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">{regular.map((a) => <AnnCard key={a.id} ann={a} />)}
+                <div className="space-y-3">
+                  {regular.map((a) => <AnnCard key={a.id} ann={a} />)}
+                </div>
               )}
             </div>
           </>
@@ -260,7 +259,7 @@ export function AnnouncementsPanel({ viewRole, canCompose }: Props) {
                 {new Date(selectedAnn.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
               </span>
               {selectedAnn.sender?.name && (
-                <span className="text-muted-foreground text-sm">· by {selectedAnn.sender.name}</span>
+                <span className="text-muted-foreground text-sm">• by {selectedAnn.sender.name}</span>
               )}
             </div>
 
@@ -283,11 +282,13 @@ export function AnnouncementsPanel({ viewRole, canCompose }: Props) {
                 </span>
                 <div className="ml-auto flex gap-2">
                   <button onClick={() => handlePin(String(selectedAnn.id))}
-                    className="px-3 py-2 border border-border rounded-lg hover:bg-accent flex items-center gap-2 text-sm">
+                    className="px-3 py-2 border border-border rounded-lg hover:bg-accent flex items-center gap-2 text-sm"
+                  >
                     <Pin className="w-4 h-4" /> {selectedAnn.pinned ? "Unpin" : "Pin"}
                   </button>
                   <button onClick={() => handleDelete(String(selectedAnn.id))}
-                    className="px-3 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2 text-sm">
+                    className="px-3 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2 text-sm"
+                  >
                     <Trash2 className="w-4 h-4" /> Delete
                   </button>
                 </div>
