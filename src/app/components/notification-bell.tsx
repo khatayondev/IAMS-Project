@@ -6,6 +6,7 @@ import { useAppContext } from "../lib/context";
 import { markNotificationRead as markStoreNotificationRead, setNotifications as setStoreNotifications } from "../lib/store";
 import { toast } from "sonner";
 import type { NotificationResponse } from "../types/api";
+import { getRoutePrefix } from "../services/auth-service";
 
 type NotificationFilter = "all" | "unread" | "read";
 type DisplayNotification = NotificationResponse & {
@@ -85,15 +86,7 @@ export function NotificationBell() {
   const loadNotifications = async () => {
     setLoading(true);
     try {
-      let res;
-
-      // Fetch notifications based on user role
-      if (user?.role === "supervisor") {
-        res = await apiClient.getSupervisorNotifications({ limit: 20 });
-      } else {
-        // For other roles, try to fetch generic notifications
-        res = await apiClient.getSupervisorNotifications({ limit: 20 });
-      }
+      const res = await apiClient.getNotifications({ per_page: 20 });
 
       if (res.success && Array.isArray(res.data)) {
         const normalised = res.data.map(normaliseNotification);
@@ -145,7 +138,7 @@ export function NotificationBell() {
     }
   };
 
-  const handleNotificationClick = (notification: NotificationResponse) => {
+  const handleNotificationClick = (notification: DisplayNotification) => {
     if (!notification.read) {
       // Update immediately to reduce count
       setNotifications((prev) =>
@@ -156,7 +149,11 @@ export function NotificationBell() {
       handleMarkAsRead(notification.id);
     }
     if (notification.action_url) {
-      window.location.href = notification.action_url;
+      const target = notification.action_url.startsWith("/communications")
+        ? `${user?.role ? getRoutePrefix(user.role) : ""}${notification.action_url}`
+        : notification.action_url;
+      setIsOpen(false);
+      navigate(target);
     }
   };
 

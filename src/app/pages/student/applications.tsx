@@ -5,6 +5,9 @@ import { apiClient } from "../../lib/api-client";
 import { useToastAction } from "../../lib/hooks";
 import { useStudentCheckIn } from "../../hooks/use-student-check-in";
 import { ghanaRegions } from "../../lib/mock-data";
+import { useForm, FormProvider } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { applicationSchema, type ApplicationInput } from "../../lib/schemas";
 import {
   Calendar,
   FileText,

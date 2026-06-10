@@ -47,12 +47,12 @@ export function StudentListReview({ assignedStudents, logbookEntriesByStudent, o
             </div>
           ) : (
             assignedStudents.map((s) => {
-              const logs = logbookEntriesByStudent[s.studentId] ?? [];
+              const logs = logbookEntriesByStudent[s.id] ?? [];
               const pending = logs.filter((l) => {
                 const status = (l.status ?? "").toLowerCase();
                 return status === "draft" || status === "submitted";
               }).length;
-              const lastLog = [...logs].sort((a, b) => b.entry_date.localeCompare(a.entry_date))[0];
+              const lastLog = [...logs].sort((a, b) => (b.entry_date ?? "").localeCompare(a.entry_date ?? ""))[0];
               const daysSince = lastLog
                 ? Math.floor((Date.now() - new Date(lastLog.entry_date).getTime()) / (1000 * 60 * 60 * 24))
                 : 999;
@@ -114,7 +114,7 @@ export function StudentListReview({ assignedStudents, logbookEntriesByStudent, o
                         )}
                       </span>
                       <span className="text-muted-foreground flex items-center gap-1" style={{ fontSize: "0.7rem" }}>
-                        <Calendar className="w-3.5 h-3.5 text-primary" /> Last: {lastLog?.date || "None"}
+                        <Calendar className="w-3.5 h-3.5 text-primary" /> Last: {lastLog?.entry_date || "None"}
                       </span>
                     </div>
                   </div>

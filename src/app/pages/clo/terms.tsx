@@ -1,4 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { termSchema, type TermInput } from "../../lib/schemas";
 import { SkeletonStatCards, SkeletonCardGrid, SkeletonPageHeader } from "../../components/skeleton";
 import { StatusBadge } from "../../components/status-badge";
 import { apiClient } from "../../lib/api-client";

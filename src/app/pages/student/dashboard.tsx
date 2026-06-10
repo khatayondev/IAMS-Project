@@ -115,7 +115,8 @@ export function StudentDashboard() {
 
   // Supervisor data from company acceptance upload (pendingApplication or activeInternship)
   const supervisorData = pendingApplication?.industry_supervisor_name || pendingApplication?.supervisor || activeInternship?.industry_supervisor?.user?.name || activeInternship?.supervisor_name;
-  const supervisorInviteStatus = pendingApplication?.supervisor_approval_status || activeInternship?.supervisor_approval_status || "pending";
+  // Check user.id first (most reliable indicator), then backend status, then default to pending
+  const supervisorInviteStatus = (activeInternship?.industry_supervisor?.user?.id ? "approved" : null) || pendingApplication?.supervisor_approval_status || activeInternship?.supervisor_approval_status || "pending";
 
   if (loading) return <SkeletonDashboard statCount={3} />;
 
@@ -350,15 +351,6 @@ export function StudentDashboard() {
                       <div className="min-w-0 flex-1">
                         <p className="text-muted-foreground text-xs">Location</p>
                         <p className="font-medium text-sm truncate">{activeInternship.company.location}</p>
-                      </div>
-                    </div>
-                  )}
-                  {supervisorName && (
-                    <div className="flex items-start gap-2">
-                      <User className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-muted-foreground text-xs">Academic Advisor</p>
-                        <p className="font-medium text-sm truncate">{supervisorName}</p>
                       </div>
                     </div>
                   )}

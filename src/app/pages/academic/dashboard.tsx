@@ -117,7 +117,7 @@ export function AcademicDashboard() {
           <div className="flex gap-3 flex-wrap">
             {pendingLogsCount > 0 && (
               <button
-                onClick={() => navigate("/academic/logbooks")}
+                onClick={() => navigate("/academic/evaluate")}
                 className="flex items-center gap-2 px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
                 style={{ fontSize: "0.8rem" }}
               >
@@ -233,7 +233,7 @@ export function AcademicDashboard() {
               <h3 className="flex items-center gap-2">
                 <BookMarked className="w-4 h-4 text-primary" /> Pending Logbooks
               </h3>
-              <button onClick={() => navigate("/academic/logbooks")} className="text-primary hover:underline" style={{ fontSize: "0.75rem" }}>
+              <button onClick={() => navigate("/academic/evaluate")} className="text-primary hover:underline" style={{ fontSize: "0.75rem" }}>
                 View all
               </button>
             </div>
@@ -254,7 +254,7 @@ export function AcademicDashboard() {
                     </p>
                   </div>
                   <button
-                    onClick={() => navigate("/academic/logbooks")}
+                    onClick={() => navigate("/academic/evaluate")}
                     className="px-2.5 py-1 bg-primary text-primary-foreground rounded-md shrink-0 ml-2"
                     style={{ fontSize: "0.75rem" }}
                   >
