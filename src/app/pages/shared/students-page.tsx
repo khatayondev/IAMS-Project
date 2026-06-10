@@ -141,8 +141,19 @@ export function StudentsPage({ viewRole }: Props) {
   const handleSaveReport = async () => {
     if (!selectedStudent || !reportScore) return;
     setScoreSaving(true);
+
+    // Convert single score (0-100) to 5 sub-scores (0-4 each)
+    // Percentage of max score: reportScore/100
+    // Convert each sub-score: (reportScore/100) * 4
+    const scorePercentage = Number(reportScore) / 100;
+    const subScore = scorePercentage * 4;
+
     const res = await apiClient.gradeReport(selectedStudent, {
-      score: Number(reportScore),
+      content_quality: subScore,
+      organization: subScore,
+      technical_depth: subScore,
+      writing_quality: subScore,
+      formatting: subScore,
       comments: reportComment || undefined,
     });
     setScoreSaving(false);
@@ -159,16 +170,55 @@ export function StudentsPage({ viewRole }: Props) {
   const handleSavePresentation = async () => {
     if (!selectedStudent || !presScore) return;
     setScoreSaving(true);
-    const res = await apiClient.schedulePresentationScore({
-      internship_id: Number(selectedStudent),
-      score: Number(presScore),
-      comments: presComment || undefined,
-    });
-    setScoreSaving(false);
-    if (res.success) {
-      toast.success("Presentation score saved.");
-    } else {
-      toast.error(res.message ?? "Failed to save presentation score.");
+
+    try {
+      // Check if presentation exists for this internship
+      let presentationId = detailGrade?.presentation_id;
+
+      if (!presentationId) {
+        // Need to create presentation first with today's date
+        const schedRes = await apiClient.schedulePresentationScore({
+          internship_id: Number(selectedStudent),
+          presentation_date: new Date().toISOString().split('T')[0],
+        });
+
+        if (!schedRes.success) {
+          toast.error("Failed to create presentation record.");
+          setScoreSaving(false);
+          return;
+        }
+
+        presentationId = schedRes.data?.presentation?.id;
+      }
+
+      if (!presentationId) {
+        toast.error("No presentation ID available.");
+        setScoreSaving(false);
+        return;
+      }
+
+      // Convert DLO score (0-100) to presentation scale (0-20, default max)
+      const presentationMaxScore = 20;
+      const normalizedScore = (Number(presScore) / 100) * presentationMaxScore;
+
+      // Now grade the presentation
+      const gradeRes = await apiClient.gradePresentationScore(String(presentationId), {
+        assessor_1_score: normalizedScore,
+        comments: presComment || undefined,
+      });
+
+      setScoreSaving(false);
+      if (gradeRes.success) {
+        toast.success("Presentation score saved.");
+        // Refresh grade
+        const gr = await apiClient.getGrade(selectedStudent);
+        if (gr.success) setDetailGrade((gr.data as any)?.grade ?? gr.data);
+      } else {
+        toast.error(gradeRes.message ?? "Failed to save presentation score.");
+      }
+    } catch (error) {
+      setScoreSaving(false);
+      toast.error("An error occurred while saving presentation score.");
     }
   };
 
