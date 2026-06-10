@@ -86,15 +86,7 @@ export function NotificationBell() {
   const loadNotifications = async () => {
     setLoading(true);
     try {
-      let res;
-
-      // Fetch notifications based on user role
-      if (user?.role === "supervisor") {
-        res = await apiClient.getSupervisorNotifications({ limit: 20 });
-      } else {
-        // For other roles, try to fetch generic notifications
-        res = await apiClient.getSupervisorNotifications({ limit: 20 });
-      }
+      const res = await apiClient.getNotifications({ per_page: 20 });
 
       if (res.success && Array.isArray(res.data)) {
         const normalised = res.data.map(normaliseNotification);
@@ -146,7 +138,7 @@ export function NotificationBell() {
     }
   };
 
-  const handleNotificationClick = (notification: NotificationResponse) => {
+  const handleNotificationClick = (notification: DisplayNotification) => {
     if (!notification.read) {
       // Update immediately to reduce count
       setNotifications((prev) =>
