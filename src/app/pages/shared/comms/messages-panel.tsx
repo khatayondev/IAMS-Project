@@ -48,7 +48,7 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-export function MessagesPanel({ preselectedRecipientId, onConversationOpenChange }: MessagesPanelProps) {
+export function MessagesPanel({ preselectedRecipientId, preselectedThreadId, onConversationOpenChange }: MessagesPanelProps) {
   const { user } = useAppContext();
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
