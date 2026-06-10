@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { apiClient } from "../../../lib/api-client";
+import { useAppContext } from "../../../lib/context";
+import { getRoutePrefix } from "../../../services/auth-service";
 import { Bell, CheckCheck, Mail, Search, Archive, FileText, Building2, GraduationCap, AlertTriangle, Settings2, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 
 export function NotificationsPanel() {
+  const { user } = useAppContext();
   const [allNotifications, setAllNotifications] = useState<any[]>([]);
   const [filter, setFilter] = useState<string>("All");
   const [search, setSearch] = useState("");
@@ -208,7 +211,12 @@ export function NotificationsPanel() {
                     key={n.id}
                     onClick={() => {
                       if (!n.read) handleMarkRead(n.id);
-                      if (n.actionUrl) navigate(n.actionUrl);
+                      if (n.actionUrl) {
+                        const target = n.actionUrl.startsWith("/communications")
+                          ? `${user?.role ? getRoutePrefix(user.role) : ""}${n.actionUrl}`
+                          : n.actionUrl;
+                        navigate(target);
+                      }
                     }}
                     className={`bg-white dark:bg-gray-900 border rounded-xl p-4 flex items-start gap-4 transition-all group shadow-sm ${
                       !n.read ? "border-blue-300 bg-blue-50/80 hover:bg-blue-50 dark:border-blue-700 dark:bg-blue-950/30" : "border-border hover:bg-gray-50 dark:hover:bg-gray-800"

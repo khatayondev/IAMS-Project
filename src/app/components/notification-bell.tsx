@@ -6,6 +6,7 @@ import { useAppContext } from "../lib/context";
 import { markNotificationRead as markStoreNotificationRead, setNotifications as setStoreNotifications } from "../lib/store";
 import { toast } from "sonner";
 import type { NotificationResponse } from "../types/api";
+import { getRoutePrefix } from "../services/auth-service";
 
 type NotificationFilter = "all" | "unread" | "read";
 type DisplayNotification = NotificationResponse & {
@@ -156,7 +157,11 @@ export function NotificationBell() {
       handleMarkAsRead(notification.id);
     }
     if (notification.action_url) {
-      window.location.href = notification.action_url;
+      const target = notification.action_url.startsWith("/communications")
+        ? `${user?.role ? getRoutePrefix(user.role) : ""}${notification.action_url}`
+        : notification.action_url;
+      setIsOpen(false);
+      navigate(target);
     }
   };
 

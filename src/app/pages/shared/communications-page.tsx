@@ -100,7 +100,11 @@ export function CommunicationsPage({ viewRole }: Props) {
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-background">
           {activeTab === "messages" && (
             <div className="h-full">
-              <MessagesPanel preselectedRecipientId={searchParams.get("recipient") ?? undefined} onConversationOpenChange={setMobileChatOpen} />
+              <MessagesPanel
+                preselectedRecipientId={searchParams.get("recipient") ?? undefined}
+                preselectedThreadId={searchParams.get("thread") ?? undefined}
+                onConversationOpenChange={setMobileChatOpen}
+              />
             </div>
           )}
           

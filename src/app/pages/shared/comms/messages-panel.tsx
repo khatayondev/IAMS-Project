@@ -31,6 +31,7 @@ interface NewConversationForm {
 
 interface MessagesPanelProps {
   preselectedRecipientId?: string;
+  preselectedThreadId?: string;
   onConversationOpenChange?: (open: boolean) => void;
 }
 
@@ -61,6 +62,7 @@ export function MessagesPanel({ preselectedRecipientId, onConversationOpenChange
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const preselectedHandledRef = useRef(false);
+  const preselectedThreadHandledRef = useRef(false);
 
   const userId = String(user?.id || "");
 
@@ -124,6 +126,17 @@ export function MessagesPanel({ preselectedRecipientId, onConversationOpenChange
       setShowNewConversation(true);
     }
   }, [preselectedRecipientId, contacts, threads]);
+
+  // When arriving from a notification with a specific thread to open
+  useEffect(() => {
+    if (!preselectedThreadId || threads.length === 0 || preselectedThreadHandledRef.current) return;
+
+    const existingThread = threads.find((t) => String(t.id) === preselectedThreadId);
+    if (existingThread) {
+      preselectedThreadHandledRef.current = true;
+      setSelectedThread(String(existingThread.id));
+    }
+  }, [preselectedThreadId, threads]);
 
   useEffect(() => {
     if (selectedThread) {
