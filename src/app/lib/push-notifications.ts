@@ -122,7 +122,7 @@ export async function subscribeToPushNotifications(): Promise<NotificationSubscr
 
     console.log("[Push] Subscribed to push notifications:", subscription);
 
-    // Send subscription to backend
+    // Send subscription to backend (when API is ready)
     await sendSubscriptionToBackend(subscription);
     setBrowserNotificationsEnabled(true);
 
@@ -196,12 +196,9 @@ export async function isSubscribedToPushNotifications(): Promise<boolean> {
   return !!subscription;
 }
 
-/**
- * Get notification permission status
- */
 export function getNotificationPermission(): NotificationPermission {
   if (typeof window === "undefined" || !("Notification" in window)) {
-    return "denied";
+    return "default";
   }
   return Notification.permission;
 }
@@ -228,12 +225,41 @@ async function sendSubscriptionToBackend(subscription: PushSubscription): Promis
   if (!token) return;
 
   try {
-    const subscriptionJson = subscription.toJSON();
-    const response = await fetch(getApiUrl("/api/v1/push/subscribe"), {
+    await fetch(getApiUrl("/api/v1/notifications/subscribe"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(subscription),
+    });
+  } catch (error) {
+    console.error("[Push] Failed to send subscription to backend:", error);
+  }
+}
+
+export async function areBrowserNotificationsEnabled(): Promise<boolean> {
+  return (
+    isBrowserNotificationSupported() &&
+    getBrowserNotificationsPreference() &&
+    getNotificationPermission() === "granted"
+  );
+}
+
+/**
+ * Send subscription to backend
+ */
+async function sendSubscriptionToBackend(
+  subscription: PushSubscription
+): Promise<void> {
+  try {
+    const subscriptionJson = subscription.toJSON();
+
+    const response = await fetch(getApiUrl("/api/v1/push/subscribe"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getApiAuthToken()}`,
       },
       body: JSON.stringify(subscriptionJson),
     });
@@ -247,14 +273,6 @@ async function sendSubscriptionToBackend(subscription: PushSubscription): Promis
     console.warn("[Push] Could not send subscription to backend:", error);
     // Don't throw — subscription is still valid locally
   }
-}
-
-export async function areBrowserNotificationsEnabled(): Promise<boolean> {
-  return (
-    isBrowserNotificationSupported() &&
-    getBrowserNotificationsPreference() &&
-    getNotificationPermission() === "granted"
-  );
 }
 
 /**
@@ -285,4 +303,33 @@ export async function sendTestNotification(): Promise<void> {
     console.error("[Push] Failed to send test notification:", error);
     throw error;
   }
+}
+
+/**
+ * Convert VAPID public key from base64
+ */
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, "+")
+    .replace(/_/g, "/");
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+
+  return outputArray;
+}
+
+/**
+ * Get notification permission status
+ */
+export function getNotificationPermission(): NotificationPermission {
+  if (typeof window === "undefined" || !("Notification" in window)) {
+    return "denied";
+  }
+  return Notification.permission;
 }

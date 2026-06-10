@@ -868,7 +868,7 @@ export const apiClient = {
     const response = await requestApi<unknown>(API_ENDPOINTS.LOGBOOK_ENTRIES, {
       method: "GET",
       // SECURITY: Add supervisor context for server-side filtering
-      query: applyDomainScoping(filters as Record<string, unknown>),
+      query: addSupervisorContext(filters as Record<string, unknown>),
     });
     return {
       success: response.success,
@@ -913,7 +913,7 @@ export const apiClient = {
     const response = await requestApi<unknown>(API_ENDPOINTS.ATTENDANCE, {
       method: "GET",
       // SECURITY: Add supervisor context for server-side filtering
-      query: applyDomainScoping(filters as Record<string, unknown>),
+      query: addSupervisorContext(filters as Record<string, unknown>),
     });
     return {
       success: response.success,
@@ -930,7 +930,7 @@ export const apiClient = {
     const response = await requestApi<unknown>(
       "/api/v1/attendance",
       // SECURITY: Add supervisor context for server-side filtering
-      { method: "GET", query: applyDomainScoping({ ...filters, internship_id: internshipId }) }
+      { method: "GET", query: addSupervisorContext({ ...filters, internship_id: internshipId }) }
     );
     const attendance = response.success ? extractCollection<any>(response, "attendance") : [];
     console.log(`[API] getInternshipAttendance(${internshipId}):`, {
@@ -947,7 +947,7 @@ export const apiClient = {
     const response = await requestApi<unknown>(
       API_ENDPOINTS.ATTENDANCE_MISSED,
       // SECURITY: Add supervisor context for server-side filtering
-      { method: "GET", query: applyDomainScoping(baseQuery) }
+      { method: "GET", query: addSupervisorContext(baseQuery) }
     );
     return {
       success: response.success,

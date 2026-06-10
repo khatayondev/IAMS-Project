@@ -8,7 +8,7 @@ import { apiClient } from "../../lib/api-client";
 import type { TermDashboardResponse } from "../../types/api";
 import {
   Plus, Calendar, Archive, Eye, X, Play, Edit2, CheckCircle2,
-  Clock, FileText, TrendingUp, GraduationCap, Layers, Copy
+  Clock, FileText, TrendingUp, GraduationCap, Layers
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -171,21 +171,6 @@ export function TermsPage() {
       internshipStart: term.internshipStart, internshipEnd: term.internshipEnd,
       levels: term.eligibleLevels.length > 0 ? term.eligibleLevels : ["L300"],
       selectedDepts: term.departments,
-    });
-    setShowModal(true);
-  };
-
-  const openDuplicate = (term: TermShape) => {
-    setEditTarget(null); // It's a new term
-    setForm({
-      name: `${term.name} (Copy)`,
-      type: term.type,
-      applicationStart: term.applicationStart,
-      applicationEnd: term.applicationEnd,
-      internshipStart: term.internshipStart,
-      internshipEnd: term.internshipEnd,
-      levels: [...term.eligibleLevels],
-      selectedDepts: [...term.departments],
     });
     setShowModal(true);
   };
@@ -429,13 +414,6 @@ export function TermsPage() {
                   title="Edit term"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => openDuplicate(t)}
-                  className="py-1.5 px-3 border border-border rounded-lg hover:bg-accent text-muted-foreground transition-colors"
-                  title="Duplicate term"
-                >
-                  <Copy className="w-3.5 h-3.5" />
                 </button>
                 {t.status === "Upcoming" && (
                   <button
@@ -834,13 +812,6 @@ export function TermsPage() {
                 style={{ fontSize: "0.85rem" }}
               >
                 <Edit2 className="w-4 h-4" /> Edit
-              </button>
-              <button
-                onClick={() => { setSelectedTerm(null); openDuplicate(selectedTerm); }}
-                className="px-4 py-2 border border-border rounded-lg hover:bg-accent flex items-center gap-2"
-                style={{ fontSize: "0.85rem" }}
-              >
-                <Copy className="w-4 h-4" /> Duplicate
               </button>
               {selectedTerm.status === "Upcoming" && (
                 <button

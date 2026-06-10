@@ -23,7 +23,7 @@ import { GoogleCallbackPage } from "./pages/auth/google-callback";
 // CLO Pages
 const CLODashboard = lazy(() => import("./pages/clo/dashboard").then(m => ({ default: m.CLODashboard })));
 const TermsPage = lazy(() => import("./pages/clo/terms").then(m => ({ default: m.TermsPage })));
-const UsersPage = lazy(() => import("./pages/shared/users-page").then(m => ({ default: m.UsersPage })));
+const UsersPage = lazy(() => import("./pages/clo/users").then(m => ({ default: m.UsersPage })));
 const AuditLogsPage = lazy(() => import("./pages/clo/audit").then(m => ({ default: m.AuditLogsPage })));
 const DepartmentsPage = lazy(() => import("./pages/clo/departments").then(m => ({ default: m.DepartmentsPage })));
 const Templates = lazy(() => import("./pages/templates").then(m => ({ default: m.Templates })));
@@ -76,7 +76,6 @@ function SuspensePage({ children }: { children: React.ReactNode }) {
 
 function CLOApplications() { return <SuspensePage><ApplicationsPage viewRole="clo" /></SuspensePage>; }
 function CLOCompanies() { return <SuspensePage><CompaniesPage viewRole="clo" /></SuspensePage>; }
-function CLOUsers() { return <SuspensePage><UsersPage viewRole="clo" /></SuspensePage>; }
 function CLOStudents() { return <SuspensePage><StudentsPage viewRole="clo" /></SuspensePage>; }
 function CLOGrades() { return <SuspensePage><GradesPage viewRole="clo" /></SuspensePage>; }
 function CLOReports() { return <SuspensePage><ReportsPage viewRole="clo" /></SuspensePage>; }
@@ -87,7 +86,6 @@ function CLOCommunications() { return <SuspensePage><CommunicationsPage viewRole
 
 function DLOApplications() { return <SuspensePage><ApplicationsPage viewRole="dlo" /></SuspensePage>; }
 function DLOCompanies() { return <SuspensePage><CompaniesPage viewRole="dlo" /></SuspensePage>; }
-function DLOUsers() { return <SuspensePage><UsersPage viewRole="dlo" /></SuspensePage>; }
 function DLOStudents() { return <SuspensePage><StudentsPage viewRole="dlo" /></SuspensePage>; }
 function DLOGrades() { return <SuspensePage><GradesPage viewRole="dlo" /></SuspensePage>; }
 function DLOReports() { return <SuspensePage><ReportsPage viewRole="dlo" /></SuspensePage>; }
@@ -108,7 +106,6 @@ function SupervisorCommunications() { return <SuspensePage><CommunicationsPage v
 function SupervisorSettings() { return <SuspensePage><SettingsPage /></SuspensePage>; }
 
 function HODStudents() { return <SuspensePage><StudentsPage viewRole="hod" /></SuspensePage>; }
-function HODUsers() { return <SuspensePage><UsersPage viewRole="hod" /></SuspensePage>; }
 function HODReports() { return <SuspensePage><ReportsPage viewRole="hod" /></SuspensePage>; }
 function HODCommunications() { return <SuspensePage><CommunicationsPage viewRole="hod" /></SuspensePage>; }
 function HODSettings() { return <SuspensePage><SettingsPage /></SuspensePage>; }
@@ -159,7 +156,7 @@ export const router = createBrowserRouter([
           { path: "applications", Component: CLOApplications },
           { path: "companies", Component: CLOCompanies },
           { path: "terms", element: <SuspensePage><TermsPage /></SuspensePage> },
-          { path: "users", Component: CLOUsers },
+          { path: "users", element: <SuspensePage><UsersPage /></SuspensePage> },
           { path: "students", Component: CLOStudents },
           { path: "grades", Component: CLOGrades },
           { path: "reports", Component: CLOReports },
@@ -186,7 +183,6 @@ export const router = createBrowserRouter([
           { index: true, element: <SuspensePage><DLODashboard /></SuspensePage> },
           { path: "applications", Component: DLOApplications },
           { path: "companies", Component: DLOCompanies },
-          { path: "users", Component: DLOUsers },
           { path: "students", Component: DLOStudents },
           { path: "supervisors", element: <SuspensePage><SupervisorsPage /></SuspensePage> },
           { path: "assignments", element: <SuspensePage><DLOAssignmentsPage /></SuspensePage> },
@@ -280,7 +276,6 @@ export const router = createBrowserRouter([
         ),
         children: [
           { index: true, element: <SuspensePage><HODDashboard /></SuspensePage> },
-          { path: "users", Component: HODUsers },
           { path: "students", Component: HODStudents },
           { path: "reports", Component: HODReports },
           { path: "approvals", element: <SuspensePage><HODApprovalsPage /></SuspensePage> },

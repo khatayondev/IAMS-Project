@@ -29,11 +29,15 @@ interface NewConversationForm {
   message: string;
 }
 
+interface MessagesPanelProps {
+  preselectedRecipientId?: string;
+}
+
 function humanizeRole(role: string): string {
   return role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export function MessagesPanel({ preselectedRecipientId }: { preselectedRecipientId?: string }) {
+export function MessagesPanel({ preselectedRecipientId }: MessagesPanelProps) {
   const { user } = useAppContext();
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
@@ -152,16 +156,6 @@ export function MessagesPanel({ preselectedRecipientId }: { preselectedRecipient
     setMessages(prev => [...prev, optimisticMsg]);
 
     const res = await apiClient.sendMessage(selectedThread, { content });
-    if (!res.success) {
-      toast.error("Failed to send message");
-      setMessages(prev => prev.filter(m => m.id !== tempId));
-    } else {
-      fetchMessages();
-      fetchThreads();
-    }
-  };
-
-  const handleNewConversation = async () => {
     if (!newForm.recipientId || !newForm.subject.trim() || !newForm.message.trim()) return;
     setLoading(true);
     try {
@@ -175,19 +169,11 @@ export function MessagesPanel({ preselectedRecipientId }: { preselectedRecipient
         setSelectedThread(String(res.data.threadId));
         setShowNewConversation(false);
         setNewForm({ recipientId: "", subject: "", message: "" });
-        toast.success("Conversation started!");
-        fetchThreads();
       } else {
-        toast.error(res.message || "Failed to create conversation");
-      }
+        recipient_id: Number(newForm.recipientId),
     } catch (e) {
-      toast.error("An error occurred");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getInitials = (name: string) => name?.split(" ").map((w) => w[0]).join("").slice(0, 2) || "?";
+        message: newForm.message,
+      } as any);
 
   function getThreadLabel(thread: Thread) {
     const other = thread.participants?.find((p: any) => String(p.id) !== userId);
@@ -218,28 +204,15 @@ export function MessagesPanel({ preselectedRecipientId }: { preselectedRecipient
               <Plus className="w-5 h-5" />
             </button>
           </div>
-          
+    <div className="flex h-full overflow-hidden">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
+        <div className="p-4 space-y-4">
               type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search chats..."
-              className="w-full pl-10 pr-4 py-2.5 bg-muted/50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 outline-none"
-              style={{ fontSize: "0.85rem" }}
-            />
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          {filteredThreads.length === 0 ? (
-            <div className="p-10 text-center space-y-4">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
-                <MessageSquare className="w-8 h-8 text-muted-foreground" />
+            <h2 className="text-xl font-bold">Chats</h2>
               </div>
               <div>
-                <p className="font-semibold text-foreground">No messages yet</p>
+              className="p-2 bg-primary text-primary-foreground rounded-full hover:opacity-90 shadow-md transition-transform active:scale-95"
                 <p className="text-xs text-muted-foreground mt-1">Start a conversation with your supervisor or student</p>
               </div>
               <button
@@ -252,7 +225,7 @@ export function MessagesPanel({ preselectedRecipientId }: { preselectedRecipient
           ) : (
             <div className="divide-y divide-border/50">
               {filteredThreads.map((thread) => {
-                const label = getThreadLabel(thread);
+              className="w-full pl-9 pr-3 py-2 bg-muted/50 border-none rounded-xl focus:ring-2 focus:ring-primary/20 outline-none"
                 const role = getThreadRole(thread);
                 const isActive = selectedThread === String(thread.id);
                 return (
@@ -260,17 +233,17 @@ export function MessagesPanel({ preselectedRecipientId }: { preselectedRecipient
                     key={thread.id}
                     onClick={() => setSelectedThread(String(thread.id))}
                     className={`w-full text-left p-4 hover:bg-muted/50 transition-all relative ${
-                      isActive ? "bg-emerald-50/80 dark:bg-emerald-950/30 after:absolute after:left-0 after:top-0 after:bottom-0 after:w-1 after:bg-emerald-500" : ""
+            <div className="p-8 text-center space-y-4">
                     }`}
                   >
                     <div className="flex gap-3 items-center">
                       <div className="relative shrink-0">
-                        <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-700 dark:text-emerald-300 font-bold">
+                <p className="font-medium">No messages yet</p>
                           {getInitials(label)}
                         </div>
                         <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-gray-900 rounded-full" />
                       </div>
-                      <div className="flex-1 min-w-0">
+                className="px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 text-sm font-medium transition-colors"
                         <div className="flex items-center justify-between mb-0.5">
                           <span className="font-bold text-sm truncate pr-2 text-foreground">{label}</span>
                           <span className="text-[10px] text-muted-foreground whitespace-nowrap">
@@ -289,31 +262,31 @@ export function MessagesPanel({ preselectedRecipientId }: { preselectedRecipient
                         <div className="shrink-0 flex items-center">
                           <span className="w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold shadow-sm">
                             {thread.unreadCount}
-                          </span>
+                    <div className="flex gap-3">
                         </div>
                       )}
                     </div>
                   </button>
-                );
+                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-card rounded-full" />
               })}
             </div>
           )}
-        </div>
+                          <span className="font-bold text-sm truncate pr-2">{label}</span>
       </div>
 
       {/* Message Window Area */}
       <div className={`flex-1 min-w-0 flex flex-col relative bg-gradient-to-b from-emerald-50/30 to-transparent dark:from-emerald-950/10 dark:to-transparent ${!selectedThread ? "hidden md:flex" : "flex"}`}>
         {!selectedThread ? (
-          <div className="flex-1 flex items-center justify-center p-10 text-center bg-white dark:bg-gray-900">
-            <div className="max-w-xs space-y-4">
+                          <span className="text-[10px] px-1.5 py-0.5 bg-muted rounded-md text-muted-foreground font-medium">{role}</span>
+                          <span className="text-[10px] text-primary font-medium truncate">{thread.subject}</span>
               <div className="w-24 h-24 bg-emerald-50/50 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto">
-                <MessageSquare className="w-12 h-12 text-emerald-500/60" />
+                        <p className={`text-xs truncate ${thread.unreadCount > 0 ? "text-foreground font-bold" : "text-muted-foreground"}`}>
               </div>
               <div>
                 <h3 className="text-2xl font-bold text-foreground">Your Messages</h3>
                 <p className="text-sm text-muted-foreground mt-2">
                   Send secure messages to your academic or industrial supervisors and keep track of your attachment progress.
-                </p>
+                          <span className="w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-[10px] font-bold shadow-sm">
               </div>
               <button
                 onClick={() => setShowNewConversation(true)}
@@ -328,22 +301,22 @@ export function MessagesPanel({ preselectedRecipientId }: { preselectedRecipient
             {/* Chat Header */}
             <div className="h-16 border-b border-border flex items-center justify-between px-4 bg-white dark:bg-gray-900/90 backdrop-blur-sm sticky top-0 z-10">
               <div className="flex items-center gap-3 min-w-0">
-                <button 
+      <div className={`flex-1 flex flex-col relative bg-muted/5 ${!selectedThread ? "hidden md:flex" : "flex"}`}>
                   onClick={() => setSelectedThread(null)} 
-                  className="md:hidden p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors"
+          <div className="flex-1 flex items-center justify-center p-12 text-center bg-background">
                 >
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
+              <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mx-auto">
+                <MessageSquare className="w-10 h-10 text-primary opacity-40" />
                 <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-700 dark:text-emerald-300 font-bold shrink-0">
                   {currentThread ? getInitials(getThreadLabel(currentThread)) : ""}
-                </div>
+                <h3 className="text-xl font-bold">Your Messages</h3>
                 <div className="min-w-0">
                   <h3 className="text-sm font-bold truncate leading-tight text-foreground">
                     {currentThread ? getThreadLabel(currentThread) : ""}
                   </h3>
                   <div className="flex items-center gap-1.5">
                     <span className="w-2 h-2 bg-emerald-500 rounded-full" />
-                    <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">
+                className="px-6 py-2.5 bg-primary text-primary-foreground rounded-full hover:shadow-lg transition-all font-medium"
                       {getThreadRole(currentThread!)} • Active
                     </span>
                   </div>
@@ -352,7 +325,7 @@ export function MessagesPanel({ preselectedRecipientId }: { preselectedRecipient
               <div className="flex items-center gap-1">
                 <button className="p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors"><Phone className="w-4.5 h-4.5" /></button>
                 <button className="p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors"><Video className="w-4.5 h-4.5" /></button>
-                <button className="p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors"><MoreVertical className="w-4.5 h-4.5" /></button>
+            <div className="h-16 border-b border-border flex items-center justify-between px-4 bg-card/80 backdrop-blur-md sticky top-0 z-10">
               </div>
             </div>
 
@@ -364,21 +337,21 @@ export function MessagesPanel({ preselectedRecipientId }: { preselectedRecipient
                 backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.02) 1px, transparent 1px)',
                 backgroundSize: '20px 20px'
               }}
-            >
+                  <h3 className="text-sm font-bold truncate leading-tight">
               {messages.length === 0 ? (
                 <div className="h-full flex items-center justify-center">
                   <div className="text-center p-8 bg-white dark:bg-gray-900 border border-border rounded-2xl shadow-sm max-w-xs">
                     <p className="text-sm font-semibold text-foreground">No messages yet</p>
-                    <p className="text-xs text-muted-foreground mt-1">Be the first to say hello!</p>
+                    <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
                   </div>
                 </div>
               ) : (
                 <div className="space-y-6">
                   {messages.map((msg, idx) => {
                     const isMine = String(msg.senderId) === userId;
-                    const showAvatar = !isMine && (idx === 0 || String(messages[idx-1].senderId) !== String(msg.senderId));
-                    
-                    return (
+                <button className="p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors"><Phone className="w-4 h-4" /></button>
+                <button className="p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors"><Video className="w-4 h-4" /></button>
+                <button className="p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors"><MoreVertical className="w-4 h-4" /></button>
                       <div key={msg.id} className={`flex ${isMine ? "justify-end" : "justify-start"} items-end gap-2`}>
                         {!isMine && (
                           <div className={`w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-[10px] font-bold text-emerald-700 dark:text-emerald-300 shrink-0 transition-opacity ${showAvatar ? "opacity-100" : "opacity-0"}`}>
@@ -394,12 +367,13 @@ export function MessagesPanel({ preselectedRecipientId }: { preselectedRecipient
                           <div
                             className={`px-4 py-2.5 shadow-sm transition-all rounded-2xl ${
                               isMine 
-                                ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-br-md" 
+                    <p className="text-sm font-medium">No messages yet</p>
                                 : "bg-white dark:bg-gray-800 border border-border text-foreground rounded-bl-md"
                             }`}
                           >
                             <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                           </div>
+                  {/* Group messages by date would be nice, but let's keep it simple for now */}
                           <div className={`flex items-center gap-1.5 ${isMine ? "justify-end pr-1" : "pl-1"}`}>
                             <span className="text-[9px] text-muted-foreground font-semibold">
                               {new Date(msg.timestamp).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
@@ -411,26 +385,26 @@ export function MessagesPanel({ preselectedRecipientId }: { preselectedRecipient
                     );
                   })}
                 </div>
-              )}
+                        <div className={`flex flex-col space-y-1 max-w-[85%] sm:max-w-[70%]`}>
             </div>
 
             {/* Chat Input */}
             <div className="p-3 sm:p-4 bg-white dark:bg-gray-900 border-t border-border">
               <div className="max-w-4xl mx-auto flex items-end gap-2 bg-muted/40 p-1.5 rounded-2xl border border-border/50 focus-within:border-emerald-500/50 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all">
                 <button className="p-2.5 text-muted-foreground hover:text-emerald-500 transition-colors"><Plus className="w-5 h-5" /></button>
-                <textarea
+                            className={`px-4 py-2.5 shadow-sm transition-all ${
                   value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  onKeyDown={(e) => {
+                                ? "bg-primary text-primary-foreground rounded-2xl rounded-br-sm" 
+                                : "bg-card border border-border text-foreground rounded-2xl rounded-bl-sm"
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       handleSend();
                     }
                   }}
-                  placeholder="Message..."
+                            <span className="text-[9px] text-muted-foreground font-medium">
                   rows={1}
                   className="flex-1 min-w-0 bg-transparent border-none focus:ring-0 py-2.5 px-1 text-sm resize-none min-h-[40px] max-h-[120px]"
-                />
+                            {isMine && <CheckCircle2 className="w-3 h-3 text-primary opacity-50" />}
                 <button
                   onClick={handleSend}
                   disabled={!messageText.trim()}
@@ -441,8 +415,8 @@ export function MessagesPanel({ preselectedRecipientId }: { preselectedRecipient
                   }`}
                 >
                   <Send className="w-5 h-5" />
-                </button>
-              </div>
+            <div className="p-4 bg-background border-t border-border">
+              <div className="max-w-4xl mx-auto flex items-end gap-2 bg-muted/30 p-1.5 rounded-2xl border border-border/50 focus-within:border-primary/50 focus-within:ring-4 focus-within:ring-primary/5 transition-all">
               <p className="text-[10px] text-center text-muted-foreground mt-2">
                 Press Enter to send, Shift + Enter for new line
               </p>
@@ -455,7 +429,7 @@ export function MessagesPanel({ preselectedRecipientId }: { preselectedRecipient
       {showNewConversation && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setShowNewConversation(false)}>
           <div className="bg-white dark:bg-gray-900 border border-border rounded-3xl w-full max-w-md shadow-xl overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 bg-gradient-to-r from-emerald-500 to-teal-500 text-white">
+                  className="flex-1 bg-transparent border-none focus:ring-0 py-2.5 px-1 text-sm resize-none min-h-[40px] max-h-[120px]"
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/20 rounded-xl">
@@ -479,20 +453,20 @@ export function MessagesPanel({ preselectedRecipientId }: { preselectedRecipient
                   className="w-full px-4 py-3 bg-muted/50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
                 >
                   <option value="">Select a contact...</option>
-                  {contacts.map((c) => (
-                    <option key={c.id} value={String(c.id)}>{c.name} — {humanizeRole(c.role ?? "")}</option>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setShowNewConversation(false)}>
+          <div className="bg-card border border-border rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
                   ))}
                 </select>
               </div>
-
+                  <div className="p-2 bg-white/20 rounded-xl">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Subject</label>
                 <input 
                   type="text" 
-                  value={newForm.subject} 
+                    <p className="text-xs opacity-80">Start a conversation with a contact</p>
                   onChange={(e) => setNewForm({ ...newForm, subject: e.target.value })} 
                   placeholder="What is this about?" 
-                  className="w-full px-4 py-3 bg-muted/50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm" 
+                <button onClick={() => setShowNewConversation(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X className="w-5 h-5" /></button>
                 />
               </div>
 
@@ -502,7 +476,7 @@ export function MessagesPanel({ preselectedRecipientId }: { preselectedRecipient
                   value={newForm.message} 
                   onChange={(e) => setNewForm({ ...newForm, message: e.target.value })} 
                   placeholder="Write your message here..." 
-                  className="w-full px-4 py-3 bg-muted/50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm min-h-[120px] resize-none" 
+                  className="w-full px-4 py-3 bg-muted/50 border-none rounded-xl focus:ring-2 focus:ring-primary outline-none text-sm appearance-none"
                 />
               </div>
             </div>
